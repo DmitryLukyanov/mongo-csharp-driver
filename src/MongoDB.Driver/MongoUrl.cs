@@ -40,6 +40,7 @@ namespace MongoDB.Driver
         private readonly string _authenticationMechanism;
         private readonly IEnumerable<KeyValuePair<string, string>> _authenticationMechanismProperties;
         private readonly string _authenticationSource;
+        private readonly IEnumerable<MongoCompressor> _compressors;
         private readonly ConnectionMode _connectionMode;
         private readonly TimeSpan _connectTimeout;
         private readonly string _databaseName;
@@ -90,6 +91,7 @@ namespace MongoDB.Driver
             _authenticationSource = builder.AuthenticationSource;
             _connectionMode = builder.ConnectionMode;
             _connectTimeout = builder.ConnectTimeout;
+            _compressors = builder.Compressors;
             _databaseName = builder.DatabaseName;
             _fsync = builder.FSync;
             _guidRepresentation = builder.GuidRepresentation;
@@ -450,6 +452,14 @@ namespace MongoDB.Driver
         public TimeSpan? WTimeout
         {
             get { return _wTimeout; }
+        }
+
+        /// <summary>
+        /// Gets the compressors that should be requested.
+        /// </summary>
+        public IEnumerable<MongoCompressor> Compressors
+        {
+            get { return _compressors; }
         }
 
         // public operators

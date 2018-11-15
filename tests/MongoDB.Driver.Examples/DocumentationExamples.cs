@@ -18,6 +18,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using System.Collections.Generic;
 using System.Linq;
+using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
 
 namespace MongoDB.Driver.Examples
@@ -1246,6 +1248,370 @@ namespace MongoDB.Driver.Examples
             Render(filter).Should().Be("{ status : \"D\" }");
         }
 
+        [Fact]
+        public void Example_59()
+        {
+            RequireServer.Check().Supports(Feature.Aggregate);
+
+            //db.sales.aggregate([ 
+            //    { $match : { "items.fruit":"banana" } },
+            //    { $sort : { "date" : 1 } }
+            //])
+
+            // Start Example 59
+            var emptyPipeline = new EmptyPipelineDefinition<BsonDocument>();
+
+            var matchStage = PipelineStageDefinitionBuilder.Match(new BsonDocumentFilterDefinition<BsonDocument>(new BsonDocument("items.fruit", "banana")));
+            var sortStage = PipelineStageDefinitionBuilder.Sort(new BsonDocumentSortDefinition<BsonDocument>(new BsonDocument("date", 1)));
+
+            var aggregatePipeline = emptyPipeline
+                .AppendStage(matchStage)
+                .AppendStage(sortStage);
+
+            var result = collection.Aggregate(aggregatePipeline);
+            // End Example 59
+
+            Render(aggregatePipeline).Should().Be("[{ \"$match\" : { \"items.fruit\" : \"banana\" } },   { \"$sort\" : { \"date\" : 1 } }]");
+        }
+
+        [Fact]
+        public void Example_60()
+        {
+            RequireServer.Check().Supports(Feature.Aggregate);
+
+            //db.sales.aggregate([
+            //{
+            //    $unwind: "$items"
+            //},
+            //{   $match: { "items.fruit" : "banana", }
+            //},
+            //{
+            //    $group: { _id: { day: { $dayOfWeek: "$date" } }, count: { $sum: "$items.quantity" } }
+            //},
+            //{
+            //    $project: { dayOfWeek: "$_id.day", numberSold: "$count", _id: 0 }
+            //},
+            //{
+            //    $sort: { "numberSold": 1 }
+            //}])
+
+            // Start Example 60
+            var emptyPipeline = new EmptyPipelineDefinition<BsonDocument>();
+
+            var unwindStage = PipelineStageDefinitionBuilder.Unwind<BsonDocument, BsonDocument>(new StringFieldDefinition<BsonDocument>("items"));
+            var matchStage = PipelineStageDefinitionBuilder.Match(new BsonDocumentFilterDefinition<BsonDocument>(new BsonDocument("items.fruit", "banana")));
+            var groupStage = PipelineStageDefinitionBuilder.Group(new BsonDocumentProjectionDefinition<BsonDocument, BsonDocument>(new BsonDocument
+            {
+                {
+                    "_id", new BsonDocument("day", new BsonDocument("$dayOfWeek", "$date"))
+                },
+                {
+                    "count", new BsonDocument("$sum", "$items.quantity")
+                }
+            }));
+            var projectStage = PipelineStageDefinitionBuilder.Project(new BsonDocumentProjectionDefinition<BsonDocument, BsonDocument>(new BsonDocument
+            {
+                {
+                    "dayOfWeek", "$_id.day"
+                },
+                {
+                    "numberSold", "$count"
+                },
+                {
+                    "_id", 0
+                }
+            }));
+            var sortStage = PipelineStageDefinitionBuilder.Sort(new BsonDocumentSortDefinition<BsonDocument>(new BsonDocument("numberSold", 1)));
+
+            var aggregatePipeline = emptyPipeline
+                .AppendStage(unwindStage)
+                .AppendStage(matchStage)
+                .AppendStage(groupStage)
+                .AppendStage(projectStage)
+                .AppendStage(sortStage);
+
+            var result = collection.Aggregate(aggregatePipeline);
+            // End Example 60
+
+            Render(aggregatePipeline).Should().Be(@"
+[{
+    '$unwind': '$items'
+},
+{
+    '$match': { 'items.fruit': 'banana' }
+},
+{
+    '$group': {
+        '_id': { 'day': { '$dayOfWeek': '$date' } },
+        'count': { '$sum': '$items.quantity' }
+    }
+},
+{
+    '$project': { 'dayOfWeek': '$_id.day', 'numberSold': '$count', '_id': 0 }
+},
+{
+    '$sort': { 'numberSold': 1 }
+}]");
+        }
+
+        [Fact]
+        public void Example_61()
+        {
+            RequireServer.Check().Supports(Feature.Aggregate);
+
+            //db.sales.aggregate([
+            //{
+            //    $unwind: "$items"
+            //},
+            //{
+            //    $group: {
+            //        _id: { day: { $dayOfWeek: "$date" } },
+            //        items_sold: { $sum: "$items.quantity" },
+            //        revenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }
+            //    }
+            //},
+            //{
+            //    $project: { day: "$_id.day", revenue: 1, items_sold: 1, 
+            //                discount: { $cond: { if : { $lte: ["$revenue", 250] }, then: 25, else : 0 }}
+            //    }
+            //}])
+
+            // Start Example 61
+            var emptyPipeline = new EmptyPipelineDefinition<BsonDocument>();
+
+            var unwindStage = PipelineStageDefinitionBuilder.Unwind<BsonDocument, BsonDocument>(new StringFieldDefinition<BsonDocument>("items"));
+            var groupStage = PipelineStageDefinitionBuilder.Group(new BsonDocumentProjectionDefinition<BsonDocument, BsonDocument>(new BsonDocument
+            {
+                {
+                    "_id", new BsonDocument("day", new BsonDocument("$dayOfWeek", "$date"))
+                },
+                {
+                    "items_sold", new BsonDocument("$sum", "$items.quantity")
+                },
+                {
+                    "revenue", new BsonDocument("$sum", new BsonDocument("$multiply", new BsonArray(new []{"$items.quantity", "$items.price"})))
+                }
+            }));
+            var projectStage = PipelineStageDefinitionBuilder.Project(new BsonDocumentProjectionDefinition<BsonDocument, BsonDocument>(new BsonDocument
+            {
+                {
+                    "day", "$_id.day"
+                },
+                {
+                    "revenue", "1"
+                },
+                {
+                    "items_sold", "1"
+                },
+                {
+                    "discount", new BsonDocument("$cond", new BsonDocument
+                    {
+                        { "if", new BsonDocument("$lte", new BsonArray(new object []{"$revenue", 250}))},
+                        { "then", 25},
+                        { "else", 0}
+                    })
+                }
+            }));
+
+            var aggregatePipeline = emptyPipeline
+                .AppendStage(unwindStage)
+                .AppendStage(groupStage)
+                .AppendStage(projectStage);
+
+            var result = collection.Aggregate(aggregatePipeline);
+            // End Example 61
+
+            Render(aggregatePipeline).Should().Be(@"
+[{
+    '$unwind': '$items'
+},
+{
+    '$group': {
+        '_id': {
+            'day': { '$dayOfWeek': '$date' }
+        },
+        'items_sold': { '$sum': '$items.quantity' },
+        'revenue': {
+            '$sum': { '$multiply': ['$items.quantity', '$items.price'] }
+        }
+    }
+},
+{
+    '$project': {
+        'day': '$_id.day',
+        'revenue': '1',
+        'items_sold': '1',
+        'discount': { '$cond': { 'if': { '$lte': ['$revenue', 250] }, 'then': 25, 'else': 0 }
+        }
+    }
+}]");
+        }
+
+        [Fact]
+        public void Example_62()
+        {
+            RequireServer.Check().Supports(Feature.AggregateLet);
+
+            //db.air_alliances.aggregate( [
+            //{
+            //    $lookup:
+            //    {
+            //        from: "air_airlines",
+            //        let: { constituents: "$airlines" },
+            //        pipeline: [ {  $match: { $expr: { $in : [ "$name", "$$constituents" ]  } } } ],
+            //        as : "airlines"
+            //    }
+            //},
+            //{
+            //    $project : {
+            //        "_id" : 0,
+            //        "name" : 1,
+            //        airlines : { 
+            //            $filter : {
+            //                input : "$airlines",
+            //                    as : "airline",
+            //                cond : { $eq: ["$$airline.country", "Canada"] }
+            //            }
+            //        }
+            //    }
+            //}
+            //])
+
+            // Start Example 62
+            var emptyPipeline = new EmptyPipelineDefinition<BsonDocument>();
+
+            var lookupStage = new BsonDocumentPipelineStageDefinition<BsonDocument, BsonDocument>(new BsonDocument("$lookup", new BsonDocument
+            {
+                { "from","air_airlines" },
+                { "let", new BsonDocument("constituents", "$airlines") },
+                { "pipeline", new BsonArray().Add(new BsonDocument("$match",
+                    new BsonDocument("$expr",
+                        new BsonDocument("$in",
+                            new BsonArray().AddRange(new []{"$name","$$constituents"})))))
+                },
+                { "as", "airlines"}
+            }));
+            var projectStage = PipelineStageDefinitionBuilder.Project(new BsonDocumentProjectionDefinition<BsonDocument, BsonDocument>(new BsonDocument
+            {
+                { "_id", 0 },
+                { "name", 1 },
+                {
+                    "airlines", new BsonDocument("$filter", new BsonDocument
+                    {
+                        {"input", "$airlines"},
+                        {"as", "airline"},
+                        {"cond", new BsonDocument("$eq", new BsonArray().AddRange(new[] {"$$airline.country", "Canada"}))}
+                    })
+                }
+            }));
+
+            var aggregatePipeline = emptyPipeline
+                .AppendStage(lookupStage)
+                .AppendStage(projectStage);
+
+            var result = collection.Aggregate(aggregatePipeline);
+            // End Example 62
+
+            Render(aggregatePipeline).Should().Be(@"
+[{
+    '$lookup': {
+        'from': 'air_airlines',
+        'let': { 'constituents': '$airlines' },
+        'pipeline': [{ '$match': { '$expr': { '$in': ['$name', '$$constituents'] } } }],
+        'as': 'airlines'
+    }
+},
+{
+    '$project': {
+        '_id': 0,
+        'name': 1,
+        'airlines': {
+            '$filter': {
+                'input': '$airlines',
+                'as': 'airline',
+                'cond': { '$eq': ['$$airline.country', 'Canada'] }
+            }
+        }
+    }
+}]");
+        }
+
+        [Fact]
+        public void Example_63()
+        {
+            //db.runCommand({buildInfo: 1})
+
+            // Start Example 63
+            var command = new JsonCommand<BsonDocument>("{buildInfo: 1}");
+            var result = database.RunCommand(command);
+            // End Example 63
+
+            command.Json.Should().Be("{buildInfo: 1}");
+            GetBsonValueByKey(result, "version").Should().NotBeNullOrEmpty();
+            GetBsonValueByKey(result, "ok").Should().NotBeNullOrEmpty().And.Be("1");
+        }
+
+        [Fact]
+        public void Example_64()
+        {
+            //db.runCommand({collStats:"restaurants"})
+
+            const string collectionName = "restaurants";
+            var restaurantsCollection = database.GetCollection<BsonDocument>(collectionName);
+            restaurantsCollection.InsertOne(new BsonDocument("TestKey", "TestValue"));
+            string @namespace = restaurantsCollection.CollectionNamespace.ToString();
+
+            // Start Example 64
+            var command = new JsonCommand<BsonDocument>("{collStats:'restaurants'}");
+            var result = database.RunCommand(command);
+            // End Example 64
+
+            database.DropCollection(collectionName);
+
+            command.Json.Should().Be("{collStats:'restaurants'}");
+            GetBsonValueByKey(result, "ns").Should().NotBeNullOrEmpty().And.Be(@namespace);
+            GetBsonValueByKey(result, "ok").Should().NotBeNullOrEmpty().And.Be("1");
+        }
+
+        [Fact]
+        public void Example_65()
+        {
+            RequireServer.Check().Supports(Feature.CreateIndexesCommand);
+
+            //db.records.createIndex( { score: 1 } )
+
+            // Start Example 65
+            var builder = Builders<BsonDocument>.IndexKeys;
+            var keys = builder.Ascending("score");
+            var indexModel = new CreateIndexModel<BsonDocument>(keys);
+            var result = collection.Indexes.CreateOne(indexModel);
+            // End Example 65
+
+            result.Should().Be("score_1");
+        }
+
+        [Fact]
+        public void Example_66()
+        {
+            RequireServer.Check().Supports(Feature.PartialIndexes);
+
+            //db.restaurants.createIndex(
+            //{ cuisine: 1, name: 1 },
+            //{ partialFilterExpression: { rating: { $gt: 5 } } }
+            //)
+
+            // Start Example 66
+            var builder = Builders<BsonDocument>.IndexKeys;
+            var keys = builder.Ascending("cuisine").Ascending("name");
+            var indexModel = new CreateIndexModel<BsonDocument>(keys, new CreateIndexOptions());
+            indexModel.Options.PartialFilterExpression = Builders<BsonDocument>.Filter.Gt(document => document["rating"], 5);
+            var result = collection.Indexes.CreateOne(indexModel);
+            // End Example 66
+
+            Render(indexModel.Options.PartialFilterExpression).Should().Be("{ \"rating\" : { \"$gt\" : 5 } }");
+            result.Should().Be("cuisine_1_name_1");
+        }
+
         // private methods
         private IEnumerable<BsonDocument> ParseMultiple(params string[] documents)
         {
@@ -1273,12 +1639,26 @@ namespace MongoDB.Driver.Examples
             return update.Render(serializer, registry);
         }
 
+        private BsonArray Render(PipelineDefinition<BsonDocument, BsonDocument> pipeline)
+        {
+            var registry = BsonSerializer.SerializerRegistry;
+            var serializer = registry.GetSerializer<BsonDocument>();
+            var documents = pipeline.Render(serializer, registry).Documents;
+            return new BsonArray(documents);
+        }
+
         private void RemoveIds(IEnumerable<BsonDocument> documents)
         {
             foreach (var document in documents)
             {
                 document.Remove("_id");
             }
+        }
+
+        private string GetBsonValueByKey(BsonDocument document, string key)
+        {
+            BsonValue value;
+            return document.TryGetValue(key, out value) ? value.ToString() : null;
         }
     }
 }

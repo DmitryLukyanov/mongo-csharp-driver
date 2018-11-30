@@ -674,6 +674,35 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Appends a $lookup stage to the pipeline.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
+        /// <param name="sourcePipeline">The source pipeline.</param>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="pipeline">The lookup pipeline.</param>
+        /// <param name="as">The "as" field.</param>
+        /// <param name="let">The "let" field.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The stage.</returns>
+        public static PipelineDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TOutput>(
+            this PipelineDefinition<TInput, TInput> sourcePipeline,
+            IMongoCollection<TForeignDocument> foreignCollection,
+            PipelineDefinition<TForeignDocument, TOutput> pipeline,
+            FieldDefinition<TOutput> @as,
+            BsonDocument let = null,
+            AggregateLookupOptions<TForeignDocument, TOutput> options = null)
+        {
+            Ensure.IsNotNull(sourcePipeline, nameof(sourcePipeline));
+
+            return sourcePipeline.AppendStage(PipelineStageDefinitionBuilder.Lookup<TInput, TForeignDocument, TOutput>
+                (
+                    foreignCollection, pipeline, @as, let, options
+                ));
+        }
+
+        /// <summary>
         /// Appends a lookup stage to the pipeline.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

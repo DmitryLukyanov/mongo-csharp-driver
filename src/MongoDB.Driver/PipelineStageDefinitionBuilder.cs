@@ -812,6 +812,56 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Creates a $lookup stage.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="pipeline">The pipeline. </param>
+        /// <param name="as">The "as" field.</param>
+        /// <param name="let">The "let" field.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The stage.</returns>
+        public static PipelineStageDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TOutput>(
+            IMongoCollection<TForeignDocument> foreignCollection,
+            PipelineDefinition<TForeignDocument, TOutput> pipeline,
+            FieldDefinition<TOutput> @as,
+            BsonDocument let = null,
+            AggregateLookupOptions<TForeignDocument, TOutput> options = null)
+        {
+            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
+            Ensure.IsNotNull(pipeline, nameof(pipeline));
+            Ensure.IsNotNull(@as, nameof(@as));
+
+            options = options ?? new AggregateLookupOptions<TForeignDocument, TOutput>();
+            const string operatorName = "$lookup";
+            var stage = new DelegatedPipelineStageDefinition<TInput, TOutput>(
+                operatorName,
+                (inputSerializer, sr) =>
+                {
+                    var foreignSerializer = options.ForeignSerializer ?? inputSerializer as IBsonSerializer<TForeignDocument> ?? sr.GetSerializer<TForeignDocument>();
+                    var outputSerializer = options.ResultSerializer ?? inputSerializer as IBsonSerializer<TOutput> ?? sr.GetSerializer<TOutput>();
+                    var pipelineDocuments = new BsonArray(pipeline.Render(foreignSerializer, sr).Documents);
+
+                    var lookupBody = new BsonDocument
+                    {
+                        {"from", foreignCollection.CollectionNamespace.CollectionName},
+                    };
+                    if (let != null) lookupBody.Add(new BsonElement("let", let));
+                    lookupBody.AddRange(new Dictionary<string, object>()
+                    {
+                        { "pipeline", pipelineDocuments},
+                        { "as", @as.Render(outputSerializer, sr).FieldName}
+                    });
+
+                    return new RenderedPipelineStageDefinition<TOutput>(operatorName, new BsonDocument(operatorName, lookupBody), outputSerializer);
+                });
+
+            return stage;
+        }
+
+        /// <summary>
         /// Creates a $match stage.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

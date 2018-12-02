@@ -19,6 +19,7 @@ using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
@@ -191,6 +192,100 @@ namespace MongoDB.Driver.Tests
             }
 
             result.Should().Be(1);
+        }
+
+        public class Order
+        {
+            [BsonElement("_id")]
+            public ObjectId Id { get; set; }
+            [BsonElement("item")]
+            public string Item { get; set; }
+            [BsonElement("price")]
+            public int Price { get; set; }
+            [BsonElement("ordered")]
+            public int Ordered { get; set; }
+            [BsonElement("stockdata")]
+            public StockData[] StockData { get; set; }
+        }
+
+        public class Warehouse
+        {
+            [BsonElement("stock_item")]
+            public string StockItem { get; set; }
+            [BsonElement("instock")]
+            public int Instock { get; set; }
+        }
+
+        public class StockData
+        {
+            [BsonElement("instock")]
+            public int Instock { get; set; }
+        }
+
+        [Fact]
+        public void Lookup_should_return_the_expected_result()
+        {
+            string databaseName = "test";
+            string ordersCollectionName = "orders";
+            string warehousesCollectionName = "warehouses";
+
+            var client = CreateClient();
+            DropCollection(client, databaseName, ordersCollectionName);
+            DropCollection(client, databaseName, warehousesCollectionName);
+
+            var ordersCollection = client.GetDatabase(databaseName).GetCollection<Order>(ordersCollectionName);
+            var warehousesCollection = client.GetDatabase(databaseName).GetCollection<Warehouse>(warehousesCollectionName);
+
+            var orderDocuments = new[]
+            {
+                new Order { Item = "almonds", Price = 12, Ordered = 2 },
+                new Order { Item = "pecans", Price = 20, Ordered = 1 },
+                new Order { Item = "cookies", Price = 10, Ordered = 60 }
+            };
+            ordersCollection.InsertMany(orderDocuments);
+
+            var warehouseDocuments = new[]
+            {
+                new Warehouse { StockItem = "almonds", Instock = 120},
+                new Warehouse { StockItem = "pecans", Instock = 80},
+                new Warehouse { StockItem = "almonds", Instock = 60},
+                new Warehouse { StockItem = "cookies", Instock = 40},
+                new Warehouse { StockItem = "cookies", Instock = 80},
+            };
+            warehousesCollection.InsertMany(warehouseDocuments);
+
+            var pipeline = PipelineDefinition<Warehouse, StockData[]>.Create
+            (
+                new BsonDocument("$match", new BsonDocument("$expr",
+                    new BsonDocument("$and", new BsonArray
+                    {
+                        new BsonDocument("$eq", new BsonArray {"$stock_item", "$$order_item"}),
+                        new BsonDocument("$gte", new BsonArray {"$instock", "$$order_qty"})
+                    }))),
+                new BsonDocument("$project", new BsonDocument
+                    {
+                        { "stock_item", 0 }, { "_id", 0 }
+                    })
+            );
+
+            var result = ordersCollection.Aggregate()
+                .Lookup(warehousesCollectionName, 
+                    new BsonDocument { { "order_item", "$item"} , { "order_qty", "$ordered"} },
+                    pipeline,
+                    new StringFieldDefinition<Order, StockData[]>("stockdata"))
+                .ToList()
+                .Select(item =>
+                {
+                    var document = item.ToBsonDocument();
+                    document.Remove("_id");
+                    return document;
+                })
+                .ToList();
+
+            result.Count.Should().Be(3);
+            result[0].Should().Be("{ 'item' : 'almonds', 'price' : 12, 'ordered' : 2, 'stockdata' : [{ 'instock' : 120 }, { 'instock' : 60 }] }");
+            result[1].Should().Be("{ 'item' : 'pecans', 'price' : 20, 'ordered' : 1, 'stockdata' : [{ 'instock' : 80 }] }");
+            result[2].Should().Be("{ 'item' : 'cookies', 'price' : 10, 'ordered' : 60, 'stockdata' : [{ 'instock' : 80 }] }");
         }
 
         [Theory]
@@ -500,7 +595,18 @@ namespace MongoDB.Driver.Tests
         {
             public int Y;
         }
+
+        private IMongoClient CreateClient()
+        {
+            return new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
+        }
+
+        private void DropCollection(IMongoClient client, string databaseName, string collectionName)
+        {
+            client.GetDatabase(databaseName).DropCollection(collectionName);
+        }
     }
+
 
     internal static class AggregateFluentReflector
     {

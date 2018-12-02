@@ -816,18 +816,19 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
         /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TAs">The "as" type.</typeparam>
         /// <typeparam name="TOutput">The type of the output documents.</typeparam>
         /// <param name="foreignCollection">The foreign collection.</param>
-        /// <param name="pipeline">The pipeline. </param>
+        /// <param name="pipeline">The pipeline.</param>
         /// <param name="as">The "as" field.</param>
         /// <param name="let">The "let" field.</param>
         /// <param name="options">The options.</param>
         /// <returns>The stage.</returns>
-        public static PipelineStageDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TOutput>(
+        public static PipelineStageDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TAs, TOutput>(
             IMongoCollection<TForeignDocument> foreignCollection,
-            PipelineDefinition<TForeignDocument, TOutput> pipeline,
-            FieldDefinition<TOutput> @as,
-            BsonDocument let = null,
+            BsonDocument let,
+            PipelineDefinition<TForeignDocument, TAs> pipeline,
+            FieldDefinition<TOutput, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TOutput> options = null)
         {
             Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));

@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Misc;
 
@@ -144,6 +145,18 @@ namespace MongoDB.Driver
             Ensure.IsNotNull(foreignCollectionName, nameof(foreignCollectionName));
             var foreignCollection = _collection.Database.GetCollection<TForeignDocument>(foreignCollectionName);
             return WithPipeline(_pipeline.Lookup(foreignCollection, localField, foreignField, @as, options));
+        }
+
+        public override IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAs, TNewResult>(
+            string foreignCollectionName, 
+            BsonDocument let,
+            PipelineDefinition<TForeignDocument, TAs> pipeline, 
+            FieldDefinition<TNewResult, TAs> @as, 
+            AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
+        {
+            Ensure.IsNotNull(foreignCollectionName, nameof(foreignCollectionName));
+            var foreignCollection = _collection.Database.GetCollection<TForeignDocument>(foreignCollectionName);
+            return WithPipeline(_pipeline.Lookup(foreignCollection, let, pipeline, @as));
         }
 
         public override IAggregateFluent<TResult> Match(FilterDefinition<TResult> filter)

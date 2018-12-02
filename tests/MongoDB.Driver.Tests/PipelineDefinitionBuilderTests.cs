@@ -19,6 +19,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Xunit;
 
 namespace MongoDB.Driver.Tests
@@ -71,6 +72,24 @@ namespace MongoDB.Driver.Tests
             ChangeStreamStageOptions options = null;
 
             var exception = Record.Exception(() => pipeline.ChangeStream(options));
+
+            var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            argumentNullException.ParamName.Should().Be("pipeline");
+        }
+
+        [Fact]
+        public void Lookup_should_throw_when_pipeline_is_null()
+        {
+            PipelineDefinition<BsonDocument, BsonDocument> pipeline = null;
+            IMongoCollection<BsonDocument> collection = null;
+
+            var exception = Record.Exception(() => pipeline.Lookup
+            (
+                collection,
+                new BsonDocument(),
+                new EmptyPipelineDefinition<BsonDocument>(),
+                new StringFieldDefinition<BsonDocument, BsonDocument>("asValue")
+            ));
 
             var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumentNullException.ParamName.Should().Be("pipeline");

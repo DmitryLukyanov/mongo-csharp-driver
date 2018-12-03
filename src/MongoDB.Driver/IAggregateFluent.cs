@@ -205,25 +205,27 @@ namespace MongoDB.Driver
         /// <param name="options">The options.</param>
         /// <returns>The fluent aggregate interface.</returns>
         IAggregateFluent<TNewResult> Lookup<TForeignDocument, TNewResult>(string foreignCollectionName, FieldDefinition<TResult> localField, FieldDefinition<TForeignDocument> foreignField, FieldDefinition<TNewResult> @as, AggregateLookupOptions<TForeignDocument, TNewResult> options = null);
-        
+
         /// <summary>
         /// Appends a lookup stage to the pipeline.
         /// </summary>
         /// <typeparam name="TForeignDocument">The type of the foreign document.</typeparam>
-        /// <typeparam name="TAs">The "as" type.</typeparam>
+        /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
         /// <typeparam name="TNewResult">The type of the new result.</typeparam>
         /// <param name="foreignCollectionName">Name of the other collection.</param>
-        /// <param name="let">The "let" field.</param>
-        /// <param name="pipeline">The pipeline field.</param>
-        /// <param name="as">The field in <typeparamref name="TAs" /> to place the foreign results.</param>
+        /// <param name="let">The "let" definition.</param>
+        /// <param name="pipeline">The pipeline.</param>
+        /// <param name="as">The field in <typeparamref name="TNewResult" /> to place the foreign results.</param>
         /// <param name="options">The options.</param>
         /// <returns>The fluent aggregate interface.</returns>
-        IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAs, TNewResult>(
+        IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
             string foreignCollectionName,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAs> pipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TNewResult, TAs> @as,
-            AggregateLookupOptions<TForeignDocument, TNewResult> options = null);
+            AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
+            where TAs : IEnumerable<TAsElement>;
 
         /// <summary>
         /// Appends a match stage to the pipeline.

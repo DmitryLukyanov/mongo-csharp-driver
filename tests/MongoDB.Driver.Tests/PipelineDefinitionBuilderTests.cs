@@ -17,9 +17,10 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using Xunit;
 
 namespace MongoDB.Driver.Tests
@@ -80,7 +81,9 @@ namespace MongoDB.Driver.Tests
         [Fact]
         public void Lookup_should_throw_when_pipeline_is_null()
         {
-            PipelineDefinition<BsonDocument, BsonDocument> pipeline = null;
+            RequireServer.Check().Supports(Feature.AggregateLet);
+
+            PipelineDefinition<BsonDocument, IEnumerable<BsonDocument>> pipeline = null;
             IMongoCollection<BsonDocument> collection = null;
 
             var exception = Record.Exception(() => pipeline.Lookup
@@ -88,7 +91,7 @@ namespace MongoDB.Driver.Tests
                 collection,
                 new BsonDocument(),
                 new EmptyPipelineDefinition<BsonDocument>(),
-                new StringFieldDefinition<BsonDocument, BsonDocument>("asValue")
+                new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("asValue")
             ));
 
             var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;

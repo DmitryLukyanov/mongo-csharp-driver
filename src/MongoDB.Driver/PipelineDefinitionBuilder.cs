@@ -707,25 +707,27 @@ namespace MongoDB.Driver
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
         /// <typeparam name="TIntermediate">The type of the intermediate documents.</typeparam>
         /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
-        /// <typeparam name="TAs">The "as" type.</typeparam>
+        /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
         /// <typeparam name="TOutput">The type of the output documents.</typeparam>
         /// <param name="pipeline">The source pipeline.</param>
         /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="let">The "let" definition.</param>
         /// <param name="lookupPipeline">The lookup pipeline.</param>
-        /// <param name="as">The "as" field.</param>
-        /// <param name="let">The "let" field.</param>
+        /// <param name="as">The field in <typeparamref name="TOutput" /> to place the foreign results.</param>
         /// <param name="options">The options.</param>
         /// <returns>The stage.</returns>
-        public static PipelineDefinition<TInput, TOutput> Lookup<TInput, TIntermediate, TForeignDocument, TAs, TOutput>(
+        public static PipelineDefinition<TInput, TOutput> Lookup<TInput, TIntermediate, TForeignDocument, TAsElement, TAs, TOutput>(
             this PipelineDefinition<TInput, TIntermediate> pipeline,
             IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAs> lookupPipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> lookupPipeline,
             FieldDefinition<TOutput, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TOutput> options = null)
+            where TAs : IEnumerable<TAsElement>
         {
             Ensure.IsNotNull(pipeline, nameof(pipeline));
-            return pipeline.AppendStage(PipelineStageDefinitionBuilder.Lookup<TIntermediate, TForeignDocument, TAs, TOutput>
+            return pipeline.AppendStage(PipelineStageDefinitionBuilder.Lookup<TIntermediate, TForeignDocument, TAsElement, TAs, TOutput>
             (
                 foreignCollection, let, lookupPipeline, @as, options
             ));

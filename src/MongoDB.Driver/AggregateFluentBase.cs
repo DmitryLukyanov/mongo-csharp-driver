@@ -132,12 +132,13 @@ namespace MongoDB.Driver
         }
 
         /// <inheritdoc />
-        public virtual IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAs, TNewResult>(
+        public virtual IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
             string foreignCollectionName,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAs> pipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TNewResult, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
+            where TAs : IEnumerable<TAsElement>
         {
             throw new NotImplementedException();
         }

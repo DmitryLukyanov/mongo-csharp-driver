@@ -816,20 +816,22 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
         /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
-        /// <typeparam name="TAs">The "as" type.</typeparam>
+        /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
         /// <typeparam name="TOutput">The type of the output documents.</typeparam>
         /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="let">The "let" definition.</param>
         /// <param name="pipeline">The pipeline.</param>
-        /// <param name="as">The "as" field.</param>
-        /// <param name="let">The "let" field.</param>
+        /// <param name="as">The field in <typeparamref name="TOutput" /> to place the foreign results.</param>
         /// <param name="options">The options.</param>
         /// <returns>The stage.</returns>
-        public static PipelineStageDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TAs, TOutput>(
+        public static PipelineStageDefinition<TInput, TOutput> Lookup<TInput, TForeignDocument, TAsElement, TAs, TOutput>(
             IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAs> pipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TOutput, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TOutput> options = null)
+            where TAs : IEnumerable<TAsElement>
         {
             Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
             Ensure.IsNotNull(pipeline, nameof(pipeline));
@@ -850,7 +852,7 @@ namespace MongoDB.Driver
                         {"from", foreignCollection.CollectionNamespace.CollectionName},
                     };
                     if (let != null) lookupBody.Add(new BsonElement("let", let));
-                    lookupBody.AddRange(new Dictionary<string, object>()
+                    lookupBody.AddRange(new Dictionary<string, BsonValue>
                     {
                         { "pipeline", pipelineDocuments},
                         { "as", @as.Render(outputSerializer, sr).FieldName}

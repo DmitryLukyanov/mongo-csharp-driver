@@ -133,7 +133,7 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public virtual IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
-            string foreignCollectionName,
+            IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
             PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TNewResult, TAs> @as,

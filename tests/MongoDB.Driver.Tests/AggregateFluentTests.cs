@@ -195,7 +195,7 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-        public void Lookup_with_let_and_bson_params_should_return_the_expected_result()
+        public void Lookup_with_let_and_bsondocuments_params_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
 
@@ -235,17 +235,18 @@ namespace MongoDB.Driver.Tests
                         new BsonDocument("$eq", new BsonArray { "$stock_item", "$$order_item" }),
                         new BsonDocument("$gte", new BsonArray { "$instock", "$$order_qty" })
                     })))
-                .Project<BsonDocument, BsonDocument, BsonDocument>(Builders<BsonDocument>
-                    .Projection
+                .Project<BsonDocument, BsonDocument, BsonDocument>(
+                    Builders<BsonDocument>.Projection
                         .Exclude("stock_item")
                         .Exclude("_id"));
 
             var result = ordersCollection
                 .Aggregate()
-                .Lookup(warehousesCollectionName,
+                .Lookup<BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
+                    warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
                     pipeline,
-                    new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata"))
+                    "stockdata")
                 .ToList()
                 .Select(item =>
                 {
@@ -332,17 +333,18 @@ namespace MongoDB.Driver.Tests
                         new BsonDocument("$eq", new BsonArray { "$stock_item", "$$order_item" }),
                         new BsonDocument("$gte", new BsonArray { "$instock", "$$order_qty" })
                     })))
-                .Project<Warehouse, Warehouse, StockData>(Builders<Warehouse>
-                    .Projection
+                .Project<Warehouse, Warehouse, StockData>(
+                    Builders<Warehouse>.Projection
                         .Exclude(warehouses => warehouses.StockItem)
                         .Exclude(warehouses => warehouses.Id));
 
             var result = ordersCollection
                 .Aggregate()
-                .Lookup(warehousesCollectionName,
+                .Lookup<Order, Warehouse, StockData, IEnumerable<StockData>, Order>(
+                    warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
                     pipeline,
-                    new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData))
+                    order => order.StockData)
                 .ToList()
                 .Select(item =>
                 {
@@ -398,14 +400,15 @@ namespace MongoDB.Driver.Tests
                     {
                         new BsonDocument("$eq", new BsonArray { "$stock_item", "not_exist_item" }),
                     })))
-                .Project<Warehouse, Warehouse, StockData>(Builders<Warehouse>
-                    .Projection
+                .Project<Warehouse, Warehouse, StockData>(
+                    Builders<Warehouse>.Projection
                         .Exclude(warehouses => warehouses.StockItem)
                         .Exclude(warehouses => warehouses.Id));
 
             var result = ordersCollection
                 .Aggregate()
-                .Lookup(warehousesCollectionName,
+                .Lookup(
+                    warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
                     pipeline,
                     new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData))
@@ -424,8 +427,9 @@ namespace MongoDB.Driver.Tests
             result[2].Should().Be("{ 'item' : 'cookies', 'price' : 10, 'ordered' : 60, 'stockdata' : [] }");
         }
 
-        [Fact]
-        public void Lookup_without_let_should_return_the_expected_result()
+        [Theory]
+        [ParameterAttributeData]
+        public void Lookup_without_let_should_return_the_expected_result([Values(null, "{}")] string emptyLetValue)
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
 
@@ -459,15 +463,16 @@ namespace MongoDB.Driver.Tests
             warehousesCollection.InsertMany(warehouseDocuments);
 
             var pipeline = new EmptyPipelineDefinition<Warehouse>()
-                .Project<Warehouse, Warehouse, StockData>(Builders<Warehouse>
-                    .Projection
+                .Project<Warehouse, Warehouse, StockData>(
+                    Builders<Warehouse>.Projection
                         .Exclude(warehouses => warehouses.StockItem)
                         .Exclude(warehouses => warehouses.Id));
 
             var result = ordersCollection
                 .Aggregate()
-                .Lookup(warehousesCollectionName,
-                    null,
+                .Lookup(
+                    warehousesCollection,
+                    emptyLetValue != null ? BsonDocument.Parse(emptyLetValue) : null, 
                     pipeline,
                     new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData))
                 .ToList()

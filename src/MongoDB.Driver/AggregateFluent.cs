@@ -148,14 +148,13 @@ namespace MongoDB.Driver
         }
 
         public override IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
-            string foreignCollectionName,
+            IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
             PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TNewResult, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
         {
-            Ensure.IsNotNull(foreignCollectionName, nameof(foreignCollectionName));
-            var foreignCollection = _collection.Database.GetCollection<TForeignDocument>(foreignCollectionName);
+            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
             return WithPipeline(_pipeline.Lookup(foreignCollection, let, pipeline, @as));
         }
 

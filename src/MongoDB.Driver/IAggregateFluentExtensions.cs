@@ -371,6 +371,61 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Appends a lookup stage to the pipeline.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="aggregate">The aggregate.</param>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="let">The "let" definition.</param>
+        /// <param name="pipeline">The pipeline.</param>
+        /// <param name="as">The field in the result to place the foreign matches.</param>
+        /// <returns>The fluent aggregate interface.</returns>
+        public static IAggregateFluent<BsonDocument> Lookup<TResult>(
+            this IAggregateFluent<TResult> aggregate,
+            IMongoCollection<BsonDocument> foreignCollection,
+            BsonDocument let,
+            PipelineDefinition<BsonDocument, BsonDocument> pipeline,
+            FieldDefinition<BsonDocument, IEnumerable<BsonDocument>> @as)
+        {
+            Ensure.IsNotNull(aggregate, nameof(aggregate));
+            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
+            return aggregate.AppendStage(PipelineStageDefinitionBuilder.Lookup<TResult, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(foreignCollection, let, pipeline, @as));
+        }
+
+        /// <summary>
+        /// Appends a lookup stage to the pipeline.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection.</typeparam>
+        /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TNewResult">The type of the new result.</typeparam>
+        /// <param name="aggregate">The aggregate.</param>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="let">The "let" definition.</param>
+        /// <param name="pipeline">The foreign field.</param>
+        /// <param name="as">The field in the result to place the foreign matches.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The fluent aggregate interface.</returns>
+        public static IAggregateFluent<TNewResult> Lookup<TResult, TForeignDocument, TAsElement, TAs, TNewResult>(
+            this IAggregateFluent<TResult> aggregate,
+            IMongoCollection<TForeignDocument> foreignCollection,
+            BsonDocument let,
+            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
+            Expression<Func<TNewResult, TAs>> @as,
+            AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
+            where TAs : IEnumerable<TAsElement>
+        {
+            Ensure.IsNotNull(aggregate, nameof(aggregate));
+            return aggregate.AppendStage(PipelineStageDefinitionBuilder.Lookup<TResult, TForeignDocument, TAsElement, TAs, TNewResult>(
+                foreignCollection, 
+                let, 
+                pipeline, 
+                @as, 
+                options));
+        }
+
+        /// <summary>
         /// Appends a match stage to the pipeline.
         /// </summary>
         /// <typeparam name="TResult">The type of the result.</typeparam>

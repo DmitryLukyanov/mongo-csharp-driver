@@ -213,14 +213,14 @@ namespace MongoDB.Driver
         /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
         /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
         /// <typeparam name="TNewResult">The type of the new result.</typeparam>
-        /// <param name="foreignCollectionName">Name of the other collection.</param>
+        /// <param name="foreignCollection">The other collection.</param>
         /// <param name="let">The "let" definition.</param>
         /// <param name="pipeline">The pipeline.</param>
         /// <param name="as">The field in <typeparamref name="TNewResult" /> to place the foreign results.</param>
         /// <param name="options">The options.</param>
         /// <returns>The fluent aggregate interface.</returns>
         IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
-            string foreignCollectionName,
+            IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
             PipelineDefinition<TForeignDocument, TAsElement> pipeline,
             FieldDefinition<TNewResult, TAs> @as,

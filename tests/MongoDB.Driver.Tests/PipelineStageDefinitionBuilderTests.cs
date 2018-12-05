@@ -122,21 +122,21 @@ namespace MongoDB.Driver.Tests
                         new BsonDocument("$eq", new BsonArray { "$stock_item", "$$order_item" }),
                         new BsonDocument("$gte", new BsonArray { "$instock", "$$order_qty" })
                     })))
-                .Project(Builders<BsonDocument>.Projection
-                    .Exclude("_id")
-                    .Exclude("stock_item"));
+                .Project(
+                    Builders<BsonDocument>.Projection
+                        .Exclude("_id")
+                        .Exclude("stock_item"));
             
-            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument,BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>
-                (
-                    warehousesCollection,
-                    new BsonDocument
-                    {
-                        { "order_item", "$item" },
-                        { "order_qty", "$ordered" }
-                    },
-                    pipeline,
-                    new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
-                );
+            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument,BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
+                warehousesCollection,
+                new BsonDocument
+                {
+                    { "order_item", "$item" },
+                    { "order_qty", "$ordered" }
+                },
+                pipeline,
+                new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
+            );
 
             RenderStage(result).Document.Should().Be(@"
                 {
@@ -176,13 +176,12 @@ namespace MongoDB.Driver.Tests
 
             var pipeline = new EmptyPipelineDefinition<BsonDocument>();
 
-            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument >
-                (
-                    warehousesCollection,
-                    null,
-                    pipeline,
-                    new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
-                );
+            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument >(
+                warehousesCollection,
+                null, 
+                pipeline,
+                new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
+            );
 
             RenderStage(result).Document.Should().Be(@"
                 {
@@ -230,21 +229,20 @@ namespace MongoDB.Driver.Tests
                         new BsonDocument("$eq", new BsonArray { "$stock_item", "$$order_item" }),
                         new BsonDocument("$gte", new BsonArray { "$instock", "$$order_qty" })
                     })))
-                .Project<Warehouse, Warehouse, StockData>(Builders<Warehouse>
-                    .Projection
-                    .Exclude(warehouses => warehouses.StockItem));
+                .Project<Warehouse, Warehouse, StockData>(
+                    Builders<Warehouse>.Projection
+                        .Exclude(warehouses => warehouses.StockItem));
 
-            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument, Warehouse, StockData, IEnumerable<StockData>, Order>
-                (
-                    warehousesCollection,
-                    new BsonDocument
-                    {
-                        { "order_item", "$item" },
-                        { "order_qty", "$ordered" }
-                    },
-                    pipeline,
-                    new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData)
-                );
+            var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument, Warehouse, StockData, IEnumerable<StockData>, Order>(
+                warehousesCollection,
+                new BsonDocument
+                {
+                    { "order_item", "$item" },
+                    { "order_qty", "$ordered" }
+                },
+                pipeline,
+                order => order.StockData
+            );
 
             RenderStage(result).Document.Should().Be(@"
                 {
@@ -283,8 +281,7 @@ namespace MongoDB.Driver.Tests
 
             Assert.Throws<ArgumentNullException>(() =>
             {
-                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>
-                (
+                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
                     null,
                     null,
                     new EmptyPipelineDefinition<BsonDocument>(),
@@ -296,8 +293,7 @@ namespace MongoDB.Driver.Tests
             {
                 var client = new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
                 var warehousesCollection = client.GetDatabase("test").GetCollection<BsonDocument>(warehousesCollectionName);
-                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>
-                (
+                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
                     warehousesCollection,
                     null,
                     null,
@@ -309,12 +305,11 @@ namespace MongoDB.Driver.Tests
             {
                 var client = new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
                 var warehousesCollection = client.GetDatabase("test").GetCollection<BsonDocument>(warehousesCollectionName);
-                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>
-                (
+                PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
                     warehousesCollection,
                     null,
                     new EmptyPipelineDefinition<BsonDocument>(),
-                    null
+                    (StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>)null
                 );
             });
         }

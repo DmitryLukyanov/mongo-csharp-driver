@@ -86,8 +86,7 @@ namespace MongoDB.Driver.Tests
             PipelineDefinition<BsonDocument, IEnumerable<BsonDocument>> pipeline = null;
             IMongoCollection<BsonDocument> collection = null;
 
-            var exception = Record.Exception(() => pipeline.Lookup
-            (
+            var exception = Record.Exception(() => pipeline.Lookup(
                 collection,
                 new BsonDocument(),
                 new EmptyPipelineDefinition<BsonDocument>(),

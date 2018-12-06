@@ -115,7 +115,7 @@ namespace MongoDB.Driver.Tests
             var client = new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
             var warehousesCollection = client.GetDatabase("test").GetCollection<BsonDocument>("warehouses");
 
-            var pipeline = new EmptyPipelineDefinition<BsonDocument>()
+            var lookupPipeline = new EmptyPipelineDefinition<BsonDocument>()
                 .Match(new BsonDocument("$expr",
                     new BsonDocument("$and", new BsonArray
                     {
@@ -134,7 +134,7 @@ namespace MongoDB.Driver.Tests
                     { "order_item", "$item" },
                     { "order_qty", "$ordered" }
                 },
-                pipeline,
+                lookupPipeline,
                 new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
             );
 
@@ -174,12 +174,12 @@ namespace MongoDB.Driver.Tests
             var client = new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
             var warehousesCollection = client.GetDatabase("test").GetCollection<BsonDocument>("warehouses");
 
-            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
+            var lookupPipeline = new EmptyPipelineDefinition<BsonDocument>();
 
             var result = PipelineStageDefinitionBuilder.Lookup<BsonDocument, BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument >(
                 warehousesCollection,
-                null, 
-                pipeline,
+                null,
+                lookupPipeline,
                 new StringFieldDefinition<BsonDocument, IEnumerable<BsonDocument>>("stockdata")
             );
 
@@ -222,7 +222,7 @@ namespace MongoDB.Driver.Tests
             var client = new MongoClient(CoreTestConfiguration.ConnectionString.ToString());
             var warehousesCollection = client.GetDatabase("test").GetCollection<Warehouse>("warehouses");
 
-            var pipeline = new EmptyPipelineDefinition<Warehouse>()
+            var lookupPipeline = new EmptyPipelineDefinition<Warehouse>()
                 .Match(new BsonDocument("$expr",
                     new BsonDocument("$and", new BsonArray
                     {
@@ -240,7 +240,7 @@ namespace MongoDB.Driver.Tests
                     { "order_item", "$item" },
                     { "order_qty", "$ordered" }
                 },
-                pipeline,
+                lookupPipeline,
                 order => order.StockData
             );
 

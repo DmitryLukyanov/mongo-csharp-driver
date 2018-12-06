@@ -199,7 +199,7 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-        public void Lookup_expressive_should_generate_the_correct_group_when_using_BsonDocument()
+        public void Lookup_expressive_should_generate_the_correct_lookup_when_using_BsonDocument()
         {
             var subject = CreateSubject().Lookup(
                 CreateCollection<BsonDocument>("foreign"),
@@ -213,7 +213,7 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-        public void Lookup_expressive_should_generate_the_correct_group_when_using_lambdas()
+        public void Lookup_expressive_should_generate_the_correct_lookup_when_using_lambdas()
         {
             var subject = CreateSubject()
                 .Lookup<Person, NameMeaning, NameMeaning, IEnumerable<NameMeaning>, LookedUpPerson>(

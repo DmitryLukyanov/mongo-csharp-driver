@@ -209,20 +209,20 @@ namespace MongoDB.Driver
         /// <summary>
         /// Appends a lookup stage to the pipeline.
         /// </summary>
-        /// <typeparam name="TForeignDocument">The type of the foreign document.</typeparam>
-        /// <typeparam name="TAsElement">The inner type of <typeparamref name="TAs" /> collection.</typeparam>
-        /// <typeparam name="TAs">The type of <typeparamref name="TAs" /> collection.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TAsElement">The type of the as field elements.</typeparam>
+        /// <typeparam name="TAs">The type of the as field.</typeparam>
         /// <typeparam name="TNewResult">The type of the new result.</typeparam>
-        /// <param name="foreignCollection">The other collection.</param>
+        /// <param name="foreignCollection">The foreign collection.</param>
         /// <param name="let">The "let" definition.</param>
-        /// <param name="pipeline">The pipeline.</param>
-        /// <param name="as">The field in <typeparamref name="TNewResult" /> to place the foreign results.</param>
+        /// <param name="lookupPipeline">The lookup pipeline.</param>
+        /// <param name="as">The as field in <typeparamref name="TNewResult" /> in which to place the results of the lookup pipeline.</param>
         /// <param name="options">The options.</param>
         /// <returns>The fluent aggregate interface.</returns>
         IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
             IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> lookupPipeline,
             FieldDefinition<TNewResult, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
             where TAs : IEnumerable<TAsElement>;

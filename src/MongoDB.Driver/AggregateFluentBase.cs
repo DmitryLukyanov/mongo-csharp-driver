@@ -135,7 +135,7 @@ namespace MongoDB.Driver
         public virtual IAggregateFluent<TNewResult> Lookup<TForeignDocument, TAsElement, TAs, TNewResult>(
             IMongoCollection<TForeignDocument> foreignCollection,
             BsonDocument let,
-            PipelineDefinition<TForeignDocument, TAsElement> pipeline,
+            PipelineDefinition<TForeignDocument, TAsElement> lookupPipeline,
             FieldDefinition<TNewResult, TAs> @as,
             AggregateLookupOptions<TForeignDocument, TNewResult> options = null)
             where TAs : IEnumerable<TAsElement>

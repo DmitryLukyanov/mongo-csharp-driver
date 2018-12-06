@@ -228,7 +228,7 @@ namespace MongoDB.Driver.Tests
             };
             warehousesCollection.InsertMany(warehouseDocuments);
 
-            var pipeline = new EmptyPipelineDefinition<BsonDocument>()
+            var lookupPipeline = new EmptyPipelineDefinition<BsonDocument>()
                 .Match(new BsonDocument("$expr",
                     new BsonDocument("$and", new BsonArray
                     {
@@ -245,7 +245,7 @@ namespace MongoDB.Driver.Tests
                 .Lookup<BsonDocument, BsonDocument, IEnumerable<BsonDocument>, BsonDocument>(
                     warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
-                    pipeline,
+                    lookupPipeline,
                     "stockdata")
                 .ToList()
                 .Select(item =>
@@ -326,7 +326,7 @@ namespace MongoDB.Driver.Tests
             };
             warehousesCollection.InsertMany(warehouseDocuments);
 
-            var pipeline = new EmptyPipelineDefinition<Warehouse>()
+            var lookupPipeline = new EmptyPipelineDefinition<Warehouse>()
                 .Match(new BsonDocument("$expr",
                     new BsonDocument("$and", new BsonArray
                     {
@@ -343,7 +343,7 @@ namespace MongoDB.Driver.Tests
                 .Lookup<Order, Warehouse, StockData, IEnumerable<StockData>, Order>(
                     warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
-                    pipeline,
+                    lookupPipeline,
                     order => order.StockData)
                 .ToList()
                 .Select(item =>
@@ -394,7 +394,7 @@ namespace MongoDB.Driver.Tests
             };
             warehousesCollection.InsertMany(warehouseDocuments);
 
-            var pipeline = new EmptyPipelineDefinition<Warehouse>()
+            var lookupPipeline = new EmptyPipelineDefinition<Warehouse>()
                 .Match(new BsonDocument("$expr",
                     new BsonDocument("$and", new BsonArray
                     {
@@ -410,7 +410,7 @@ namespace MongoDB.Driver.Tests
                 .Lookup(
                     warehousesCollection,
                     new BsonDocument { { "order_item", "$item" }, { "order_qty", "$ordered" } },
-                    pipeline,
+                    lookupPipeline,
                     new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData))
                 .ToList()
                 .Select(item =>
@@ -462,7 +462,7 @@ namespace MongoDB.Driver.Tests
             };
             warehousesCollection.InsertMany(warehouseDocuments);
 
-            var pipeline = new EmptyPipelineDefinition<Warehouse>()
+            var lookupPipeline = new EmptyPipelineDefinition<Warehouse>()
                 .Project<Warehouse, Warehouse, StockData>(
                     Builders<Warehouse>.Projection
                         .Exclude(warehouses => warehouses.StockItem)
@@ -472,8 +472,8 @@ namespace MongoDB.Driver.Tests
                 .Aggregate()
                 .Lookup(
                     warehousesCollection,
-                    emptyLetValue != null ? BsonDocument.Parse(emptyLetValue) : null, 
-                    pipeline,
+                    emptyLetValue != null ? BsonDocument.Parse(emptyLetValue) : null,
+                    lookupPipeline,
                     new ExpressionFieldDefinition<Order, IEnumerable<StockData>>(order => order.StockData))
                 .ToList()
                 .Select(item =>

@@ -18,6 +18,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using System;
@@ -107,7 +108,7 @@ namespace MongoDB.Driver.Tests
             stage.Document.Should().Be("{ $changeStream : { fullDocument : \"default\" } }");
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_let_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -166,7 +167,7 @@ namespace MongoDB.Driver.Tests
                 }");
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_without_optional_let_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -214,7 +215,7 @@ namespace MongoDB.Driver.Tests
             public int Instock { get; set; }
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_entity_generic_params_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -272,7 +273,7 @@ namespace MongoDB.Driver.Tests
                 }");
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_empty_required_params_should_throw_expected_exception()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);

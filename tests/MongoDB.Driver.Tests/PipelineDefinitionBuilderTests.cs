@@ -17,6 +17,7 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using System;
@@ -78,7 +79,7 @@ namespace MongoDB.Driver.Tests
             argumentNullException.ParamName.Should().Be("pipeline");
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_should_throw_when_pipeline_is_null()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);

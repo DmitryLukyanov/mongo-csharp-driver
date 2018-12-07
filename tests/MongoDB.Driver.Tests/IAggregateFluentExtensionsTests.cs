@@ -17,10 +17,12 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Driver.Core.Operations;
-using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
+using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.Operations;
+using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
+using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -198,9 +200,11 @@ namespace MongoDB.Driver.Tests
             AssertLast(subject, expectedLookup);
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_expressive_should_generate_the_correct_lookup_when_using_BsonDocument()
         {
+            RequireServer.Check().Supports(Feature.AggregateLet);
+
             var subject = CreateSubject().Lookup(
                 CreateCollection<BsonDocument>("foreign"),
                 new BsonDocument("name", "value"),
@@ -212,9 +216,11 @@ namespace MongoDB.Driver.Tests
             AssertLast(subject, expectedLookup);
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_expressive_should_generate_the_correct_lookup_when_using_lambdas()
         {
+            RequireServer.Check().Supports(Feature.AggregateLet);
+
             var subject = CreateSubject()
                 .Lookup<Person, NameMeaning, NameMeaning, IEnumerable<NameMeaning>, LookedUpPerson>(
                     CreateCollection<NameMeaning>(),

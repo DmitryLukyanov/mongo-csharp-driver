@@ -194,7 +194,7 @@ namespace MongoDB.Driver.Tests
             result.Should().Be(1);
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_let_and_bsondocuments_params_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -292,7 +292,7 @@ namespace MongoDB.Driver.Tests
             public int Instock { get; set; }
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_let_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -360,7 +360,7 @@ namespace MongoDB.Driver.Tests
             result[2].Should().Be("{ 'item' : 'cookies', 'price' : 10, 'ordered' : 60, 'stockdata' : [{ 'instock' : 80 }] }");
         }
 
-        [Fact]
+        [SkippableFact]
         public void Lookup_with_let_and_mismatched_pipeline_condition_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);
@@ -427,7 +427,7 @@ namespace MongoDB.Driver.Tests
             result[2].Should().Be("{ 'item' : 'cookies', 'price' : 10, 'ordered' : 60, 'stockdata' : [] }");
         }
 
-        [Theory]
+        [SkippableTheory]
         [ParameterAttributeData]
         public void Lookup_without_let_should_return_the_expected_result([Values(null, "{}")] string emptyLetValue)
         {

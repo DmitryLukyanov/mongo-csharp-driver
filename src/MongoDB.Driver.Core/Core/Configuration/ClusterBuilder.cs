@@ -179,8 +179,8 @@ namespace MongoDB.Driver.Core.Configuration
         {
             Ensure.IsNotNull(wrapper, nameof(wrapper));
 
-            var streamFactoryWrapper = _streamFactoryWrapper;
-            _streamFactoryWrapper = inner => wrapper(streamFactoryWrapper(inner));
+            var previous = _streamFactoryWrapper; // use a local variable to ensure the previous values is captured properly by the lambda
+            _streamFactoryWrapper = inner => wrapper(previous(inner));
             return this;
         }
 

@@ -65,20 +65,32 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Fact]
-        public void RegisterStreamFactory_should_complement_previous_RegisterStreamFactory_call()
+        public void RegisterStreamFactory_should_complement_previous_RegisterStreamFactory_call_in_right_order()
         {
-            string testValue = "TestValue";
-
             var subject = new ClusterBuilder();
-            subject.RegisterStreamFactory(factory => new StreamFactoryTest { TestValue = testValue });
-            subject.RegisterStreamFactory(factory =>
-            {
-                var testFactory = (StreamFactoryTest)factory;
-                testFactory.TestValue.Should().Be(testValue);
-                return factory;
-            });
-            var streamFactoryWrapper = subject.GetStreamFactoryWrapperFunc();
-            streamFactoryWrapper(null);
+            subject.RegisterStreamFactory(
+                factory => {
+                    var testFactory = (StreamFactoryTest)factory;
+                    testFactory.TestValue.Should().Be(1);
+                    testFactory.TestValue++;
+                    return factory;
+                });
+            subject.RegisterStreamFactory(
+                factory => {
+                    var testFactory = (StreamFactoryTest)factory;
+                    testFactory.TestValue.Should().Be(2);
+                    testFactory.TestValue++;
+                    return factory;
+                });
+            subject.RegisterStreamFactory(
+                factory => {
+                    var testFactory = (StreamFactoryTest)factory;
+                    testFactory.TestValue.Should().Be(3);
+                    testFactory.TestValue++;
+                    return factory;
+                });
+            var streamFactoryWrapper = subject._streamFactoryWrapper();
+            streamFactoryWrapper(new StreamFactoryTest { TestValue = 1 });
         }
     }
 
@@ -94,13 +106,13 @@ namespace MongoDB.Driver.Core.Configuration
             throw new NotImplementedException();
         }
 
-        public string TestValue { get; set; }
+        public int TestValue { get; set; }
     }
 
     public static class ClusterBuilderReflector
     {
         internal static IServerMonitorFactory CreateServerMonitorFactory(this ClusterBuilder obj) => (IServerMonitorFactory)Reflector.Invoke(obj, nameof(CreateServerMonitorFactory));
 
-        internal static Func<IStreamFactory, IStreamFactory> GetStreamFactoryWrapperFunc(this ClusterBuilder obj) => (Func<IStreamFactory, IStreamFactory>)Reflector.GetFieldValue(obj, "_streamFactoryWrapper");
+        internal static Func<IStreamFactory, IStreamFactory> _streamFactoryWrapper(this ClusterBuilder obj) => (Func<IStreamFactory, IStreamFactory>)Reflector.GetFieldValue(obj, nameof(_streamFactoryWrapper));
     }
 }

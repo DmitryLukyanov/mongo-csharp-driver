@@ -14,6 +14,10 @@
 */
 
 using System;
+using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core.Authentication;
@@ -59,10 +63,44 @@ namespace MongoDB.Driver.Core.Configuration
 
             var serverSettings = result._settings();
         }
+
+        [Fact]
+        public void RegisterStreamFactory_should_complement_previous_RegisterStreamFactory_call()
+        {
+            string testValue = "TestValue";
+
+            var subject = new ClusterBuilder();
+            subject.RegisterStreamFactory(factory => new StreamFactoryTest { TestValue = testValue });
+            subject.RegisterStreamFactory(factory =>
+            {
+                var testFactory = (StreamFactoryTest)factory;
+                testFactory.TestValue.Should().Be(testValue);
+                return factory;
+            });
+            var streamFactoryWrapper = subject.GetStreamFactoryWrapperFunc();
+            streamFactoryWrapper(null);
+        }
+    }
+
+    public class StreamFactoryTest : IStreamFactory
+    {
+        public Stream CreateStream(EndPoint endPoint, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Stream> CreateStreamAsync(EndPoint endPoint, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string TestValue { get; set; }
     }
 
     public static class ClusterBuilderReflector
     {
         internal static IServerMonitorFactory CreateServerMonitorFactory(this ClusterBuilder obj) => (IServerMonitorFactory)Reflector.Invoke(obj, nameof(CreateServerMonitorFactory));
+
+        internal static Func<IStreamFactory, IStreamFactory> GetStreamFactoryWrapperFunc(this ClusterBuilder obj) => (Func<IStreamFactory, IStreamFactory>)Reflector.GetFieldValue(obj, "_streamFactoryWrapper");
     }
 }

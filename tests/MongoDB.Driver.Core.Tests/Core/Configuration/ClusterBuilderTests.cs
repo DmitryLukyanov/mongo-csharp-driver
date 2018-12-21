@@ -14,15 +14,13 @@
 */
 
 using System;
-using System.IO;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Servers;
+using Moq;
 using Xunit;
 
 namespace MongoDB.Driver.Core.Configuration
@@ -65,48 +63,18 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Fact]
-        public void RegisterStreamFactory_should_complement_previous_RegisterStreamFactory_call_in_right_order()
+        public void StreamFactoryWrappers_should_be_called_in_the_correct_order()
         {
             var subject = new ClusterBuilder();
-            subject.RegisterStreamFactory(
-                factory => {
-                    var testFactory = (StreamFactoryTest)factory;
-                    testFactory.TestValue.Should().Be(1);
-                    testFactory.TestValue++;
-                    return factory;
-                });
-            subject.RegisterStreamFactory(
-                factory => {
-                    var testFactory = (StreamFactoryTest)factory;
-                    testFactory.TestValue.Should().Be(2);
-                    testFactory.TestValue++;
-                    return factory;
-                });
-            subject.RegisterStreamFactory(
-                factory => {
-                    var testFactory = (StreamFactoryTest)factory;
-                    testFactory.TestValue.Should().Be(3);
-                    testFactory.TestValue++;
-                    return factory;
-                });
-            var streamFactoryWrapper = subject._streamFactoryWrapper();
-            streamFactoryWrapper(new StreamFactoryTest { TestValue = 1 });
-        }
-    }
+            var calls = new List<int>();
+            subject.RegisterStreamFactory(factory => { calls.Add(1); return factory; });
+            subject.RegisterStreamFactory(factory => { calls.Add(2); return factory; });
+            subject.RegisterStreamFactory(factory => { calls.Add(3); return factory; });
 
-    public class StreamFactoryTest : IStreamFactory
-    {
-        public Stream CreateStream(EndPoint endPoint, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
+            subject._streamFactoryWrapper()(Mock.Of<IStreamFactory>());
 
-        public Task<Stream> CreateStreamAsync(EndPoint endPoint, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
+            calls.Should().Equal(1, 2, 3);
         }
-
-        public int TestValue { get; set; }
     }
 
     public static class ClusterBuilderReflector

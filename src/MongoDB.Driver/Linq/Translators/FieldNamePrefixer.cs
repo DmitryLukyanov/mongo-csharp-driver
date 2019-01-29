@@ -53,7 +53,8 @@ namespace MongoDB.Driver.Linq.Translators
                 node.Document,
                 node.PrependFieldName(_prefix),
                 node.Serializer,
-                node.Original);
+                node.Original,
+                node.OutOfCurrentScopePrefix);
         }
 
         protected internal override Expression VisitPipeline(PipelineExpression node)

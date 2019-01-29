@@ -20,7 +20,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using MongoDB.Bson;
 using MongoDB.Driver.Linq.Expressions;
 using MongoDB.Driver.Linq.Expressions.ResultOperators;
@@ -34,15 +33,38 @@ namespace MongoDB.Driver.Linq.Translators
         public static BsonValue Translate(Expression node, ExpressionTranslationOptions translationOptions)
         {
             var builder = new AggregateLanguageTranslator(translationOptions);
-            return builder.TranslateValue(node);
+            var result = builder.TranslateValue(node);
+            result = builder.ReplaceTemplates(result);
+            return result;
         }
 
         private readonly AggregateStringTranslationMode _stringTranslationMode;
+        private readonly Dictionary<string, string> _mapHistory;
+        private const string MapTemplateBody = "{{MapTemplate}}";
+        private const string MapTemplate = "{{" + MapTemplateBody + "{{{0}}}}}";
 
         private AggregateLanguageTranslator(ExpressionTranslationOptions translationOptions)
         {
             translationOptions = translationOptions ?? ExpressionTranslationOptions.Default;
             _stringTranslationMode = translationOptions.StringTranslationMode.GetValueOrDefault(AggregateStringTranslationMode.Bytes);
+            _mapHistory = new Dictionary<string, string>();
+        }
+
+        private BsonValue ReplaceTemplates(BsonValue bsonValue)
+        {
+            var value = bsonValue.ToString();
+            foreach (var map in _mapHistory)
+            {
+                string template = string.Format(MapTemplate, map.Value);
+                value = value.Replace(template, map.Key);
+            }
+
+            if (value.Contains(MapTemplateBody))
+            {
+                throw new MongoException("The query transformation has not been finished: Incorrect parameters mapping.");
+            }
+
+            return BsonDocument.Parse(value);
         }
 
         private BsonValue TranslateValue(Expression node)
@@ -590,12 +612,27 @@ namespace MongoDB.Driver.Linq.Translators
             var inValue = TranslateValue(FieldNamePrefixer.Prefix(node.Selector, "$" + node.ItemName));
             if (inputValue.BsonType == BsonType.String && inValue.BsonType == BsonType.String)
             {
-                // if inputValue is a BsonString and inValue is a BsonString, 
-                // then it is a simple field inclusion...
-                // inValue is prefixed with a $${node.ItemName}, so we remove the itemName and the 2 $s.
-                return inputValue.ToString() + inValue.ToString().Substring(node.ItemName.Length + 2);
+                var memberInfo = node.Source as IExpressionMemberInfo;
+                if (memberInfo == null || string.IsNullOrWhiteSpace(memberInfo.OutOfCurrentScopePrefix))
+                {
+
+                    // if inputValue is a BsonString and inValue is a BsonString, 
+                    // then it is a simple field inclusion...
+                    // inValue is prefixed with a $${node.ItemName}, so we remove the itemName and the 2 $s.
+                    return inputValue.ToString() + inValue.ToString().Substring(node.ItemName.Length + 2);
+                }
+                else
+                {
+                    // If the field expression uses expression parameters outside of the current expression level 
+                    // then the generated value should be trimmed and do not have the expression input parameter from the current level.
+                    // Here we just add a template which will be replaced in the end of transformation.
+                    string templateValue = string.Format(MapTemplate, memberInfo.OutOfCurrentScopePrefix);
+                    string currentLevelParams = inputValue.ToString().Substring(inValue.ToString().IndexOf('.'));
+                    return templateValue + /*currentLevelParams +*/ inValue.ToString().Substring(node.ItemName.Length + 2);
+                }
             }
 
+            _mapHistory.Add(inputValue.ToString(), node.ItemName);
             return new BsonDocument("$map", new BsonDocument
             {
                 { "input", inputValue },
@@ -648,6 +685,7 @@ namespace MongoDB.Driver.Linq.Translators
             var inputValue = TranslateValue(node.Source);
             var condValue = TranslateValue(FieldNamePrefixer.Prefix(node.Predicate, "$" + node.ItemName));
 
+            _mapHistory.Add(inputValue.ToString(), node.ItemName);
             return new BsonDocument("$filter", new BsonDocument
             {
                 { "input", inputValue },
@@ -706,9 +744,11 @@ namespace MongoDB.Driver.Linq.Translators
                 {
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
 
+                    var input = TranslateValue(whereExpression.Source);
+                    _mapHistory.Add(input.ToString(), whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
-                        { "input", TranslateValue(whereExpression.Source) },
+                        { "input", input },
                         { "as", whereExpression.ItemName },
                         { "in", inValue}
                     });
@@ -741,10 +781,11 @@ namespace MongoDB.Driver.Linq.Translators
                 else
                 {
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
-
+                    var input = TranslateValue(whereExpression.Source);
+                    _mapHistory.Add(input.ToString(), whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
-                        { "input", TranslateValue(whereExpression.Source) },
+                        { "input", input },
                         { "as", whereExpression.ItemName },
                         { "in", inValue}
                     });
@@ -778,11 +819,12 @@ namespace MongoDB.Driver.Linq.Translators
             {
                 var source = TranslateValue(node.Source);
                 var value = TranslateValue(resultOperator.Value);
-
+                var @as = "x";
+                _mapHistory.Add(source.ToString(), @as);
                 result = new BsonDocument("$anyElementTrue", new BsonDocument("$map", new BsonDocument
                 {
                     { "input", source },
-                    { "as", "x" },
+                    { "as", @as },
                     { "in", new BsonDocument("$eq", new BsonArray(new [] { "$$x", value})) }
                 }));
                 return true;

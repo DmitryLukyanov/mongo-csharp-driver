@@ -16,13 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
-using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver;
-using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Linq;
 using MongoDB.Driver.Tests.Linq;
@@ -1134,6 +1131,26 @@ namespace Tests.MongoDB.Driver.Linq
                 2,
                 "{ $project: { Id: '$_id', First: '$A', Second: '$B', _id: 0 } }",
                 "{ $group: { _id: '$First', Stuff: { $push: { Id: '$Id', Second: '$Second' } } } }");
+        }
+
+
+        [Fact]
+        public void Select_with_using_expression_input_parameters_inside_children_levels()
+        {
+            var query = CreateQuery().Select(g => new
+            {
+                Result = g.G.Where(sc1 => sc1.N > g.G.Min(sc2 => sc2.N))
+            });
+
+            var commonResult = Assert(
+                query,
+                2,
+                "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'sc1', 'cond' : { '$gt' : ['$$sc1.N', { '$min' : '$G.N' }] } } }, '_id' : 0 } }");
+
+            commonResult[0].Result.Count().Should().Be(1);
+            commonResult[0].Result.First().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(1);
+            commonResult[1].Result.First().N.Should().Be(4);
         }
 
         [Fact]

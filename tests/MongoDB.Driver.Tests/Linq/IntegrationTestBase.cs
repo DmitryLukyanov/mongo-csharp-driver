@@ -81,7 +81,8 @@ namespace MongoDB.Driver.Tests.Linq
                                     {
                                         D = "Delilah"
                                     }
-                            }
+                            },
+                            N = 1
                         },
                         new C
                         {
@@ -91,7 +92,8 @@ namespace MongoDB.Driver.Tests.Linq
                                 F = 55,
                                 H = 66,
                                 I = new [] { "insecure"}
-                            }
+                            },
+                            N = 2
                         }
                 },
                 Id = 10,
@@ -134,7 +136,8 @@ namespace MongoDB.Driver.Tests.Linq
                                 F = 333,
                                 H = 444,
                                 I = new [] { "igloo" }
-                            }
+                            },
+                            N = 3
                         },
                         new C
                         {
@@ -144,7 +147,8 @@ namespace MongoDB.Driver.Tests.Linq
                                 F = 555,
                                 H = 666,
                                 I = new [] { "icy" }
-                            }
+                            },
+                            N = 4
                         }
                 },
                 Id = 20,
@@ -231,6 +235,8 @@ namespace MongoDB.Driver.Tests.Linq
 
         public class C
         {
+            public int N { get; set; }
+
             public string D { get; set; }
 
             public E E { get; set; }

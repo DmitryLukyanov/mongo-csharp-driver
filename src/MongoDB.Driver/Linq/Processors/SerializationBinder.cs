@@ -22,7 +22,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Linq.Expressions;
 using MongoDB.Driver.Linq.Processors.EmbeddedPipeline;
-using MongoDB.Driver.Support;
 
 namespace MongoDB.Driver.Linq.Processors
 {
@@ -37,6 +36,7 @@ namespace MongoDB.Driver.Linq.Processors
         private readonly IBindingContext _bindingContext;
         private bool _isInEmbeddedPipeline;
         private readonly bool _isClientSideProjection;
+        private string _outOfScopePrefix;
 
         private SerializationBinder(IBindingContext bindingContext, bool isClientSideProjection)
         {
@@ -103,12 +103,22 @@ namespace MongoDB.Driver.Linq.Processors
 
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
+            var oldOutOfScopePrefix = _outOfScopePrefix;
+            if (_isInEmbeddedPipeline && node.Parameters.Any())
+            {
+                //todo: what if there are several of them?
+                _outOfScopePrefix = node.Parameters.First().Name;
+            }
+
             // Don't visit the parameters. We cannot replace a parameter expression
             // with a document and we don't have a new parameter type to use because
             // we don't know why we are binding yet.
-            return node.Update(
+            var result = node.Update(
                 Visit(node.Body),
                 node.Parameters);
+            _outOfScopePrefix = oldOutOfScopePrefix;
+
+            return result;
         }
 
         protected override Expression VisitMember(MemberExpression node)
@@ -151,6 +161,7 @@ namespace MongoDB.Driver.Linq.Processors
                                 mex);
                         }
                     }
+                    SaveOutscopePrefix(newNode, _outOfScopePrefix);
                 }
             }
 
@@ -396,6 +407,15 @@ namespace MongoDB.Driver.Linq.Processors
             }
 
             return node;
+        }
+
+        private void SaveOutscopePrefix(Expression expression, string value)
+        {
+            var memberInfo = expression as IExpressionMemberInfo;
+            if (memberInfo != null)
+            {
+                memberInfo.OutOfCurrentScopePrefix = value;
+            }
         }
     }
 }

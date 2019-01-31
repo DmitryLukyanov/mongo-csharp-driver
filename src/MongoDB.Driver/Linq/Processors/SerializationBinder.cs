@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Linq.Processors
         private readonly IBindingContext _bindingContext;
         private bool _isInEmbeddedPipeline;
         private readonly bool _isClientSideProjection;
-        private string _outOfScopePrefix;
+        private bool _isOutOfCurrentScope;
 
         private SerializationBinder(IBindingContext bindingContext, bool isClientSideProjection)
         {
@@ -103,11 +103,10 @@ namespace MongoDB.Driver.Linq.Processors
 
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
-            var oldOutOfScopePrefix = _outOfScopePrefix;
-            if (_isInEmbeddedPipeline && node.Parameters.Any())
+            var oldIsOutOfCurrentScope = _isOutOfCurrentScope;
+            if (_isInEmbeddedPipeline)
             {
-                //todo: what if there are several of them?
-                _outOfScopePrefix = node.Parameters.First().Name;
+                _isOutOfCurrentScope = true;
             }
 
             // Don't visit the parameters. We cannot replace a parameter expression
@@ -116,7 +115,7 @@ namespace MongoDB.Driver.Linq.Processors
             var result = node.Update(
                 Visit(node.Body),
                 node.Parameters);
-            _outOfScopePrefix = oldOutOfScopePrefix;
+            _isOutOfCurrentScope = oldIsOutOfCurrentScope;
 
             return result;
         }
@@ -161,7 +160,10 @@ namespace MongoDB.Driver.Linq.Processors
                                 mex);
                         }
                     }
-                    SaveOutscopePrefix(newNode, _outOfScopePrefix);
+
+                    var rawParameterExpression = (node.Expression as ParameterExpression);
+                    if (_isOutOfCurrentScope && rawParameterExpression != null)
+                        SaveOutOfScopePrefix(newNode, rawParameterExpression.Name);
                 }
             }
 
@@ -409,7 +411,7 @@ namespace MongoDB.Driver.Linq.Processors
             return node;
         }
 
-        private void SaveOutscopePrefix(Expression expression, string value)
+        private void SaveOutOfScopePrefix(Expression expression, string value)
         {
             var memberInfo = expression as IExpressionMemberInfo;
             if (memberInfo != null)

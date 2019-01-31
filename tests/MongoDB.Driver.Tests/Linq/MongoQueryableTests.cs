@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Linq;
 using MongoDB.Driver.Tests.Linq;
@@ -1134,23 +1135,32 @@ namespace Tests.MongoDB.Driver.Linq
         }
 
 
-        [Fact]
-        public void Select_with_using_expression_input_parameters_inside_children_levels()
+        [SkippableFact]
+        public void Select_with_using_top_level_expression_input_parameters_inside_children_levels()
         {
-            var query = CreateQuery().Select(g => new
-            {
-                Result = g.G.Where(sc1 => sc1.N > g.G.Min(sc2 => sc2.N))
-            });
+            RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+
+            var query = CreateQuery()
+                .Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Min(g2 => g2.N))});
 
             var commonResult = Assert(
                 query,
                 2,
-                "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'sc1', 'cond' : { '$gt' : ['$$sc1.N', { '$min' : '$G.N' }] } } }, '_id' : 0 } }");
+                "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$gt' : ['$$g1.N', { '$min' : '$G.N' }] } } }, '_id' : 0 } }");
 
             commonResult[0].Result.Count().Should().Be(1);
             commonResult[0].Result.First().N.Should().Be(2);
             commonResult[1].Result.Count().Should().Be(1);
             commonResult[1].Result.First().N.Should().Be(4);
+
+            // It looks like the below test generates a wrong query. The server returns the following error:
+            // Command aggregate failed: $anyElementTrue's argument must be an array, but is null.
+            //query = CreateQuery()
+            //    .Select(g => new { Result = g.G.Where(g1 => g1.B == g1.S.Any(g2 => g2.N > g.G.Min(g3 => g3.N))) });
+            //Assert(
+            //    query,
+            //    2,
+            //    "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$eq' : ['$$g1.B', { '$anyElementTrue' : { '$map' : { 'input' : '$$g1.S', 'as' : 'g2', 'in' : { '$gt' : ['$$g2.N', { '$min' : '$G.N' }] } } } }] } } }, '_id' : 0 } }");
         }
 
         [Fact]

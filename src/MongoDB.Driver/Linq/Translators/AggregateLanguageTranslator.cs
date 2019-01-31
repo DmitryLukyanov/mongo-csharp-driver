@@ -34,37 +34,23 @@ namespace MongoDB.Driver.Linq.Translators
         {
             var builder = new AggregateLanguageTranslator(translationOptions);
             var result = builder.TranslateValue(node);
-            result = builder.ReplaceTemplates(result);
+            if (builder._isTemplateMappingRequired)
+            {
+                result = TemplateHelper.ReplaceTemplates(result, builder._mapHistory);
+            }
+
             return result;
         }
 
         private readonly AggregateStringTranslationMode _stringTranslationMode;
         private readonly Dictionary<string, string> _mapHistory;
-        private const string MapTemplateBody = "{{MapTemplate}}";
-        private const string MapTemplate = "{{" + MapTemplateBody + "{{{0}}}}}";
+        private bool _isTemplateMappingRequired;
 
         private AggregateLanguageTranslator(ExpressionTranslationOptions translationOptions)
         {
             translationOptions = translationOptions ?? ExpressionTranslationOptions.Default;
             _stringTranslationMode = translationOptions.StringTranslationMode.GetValueOrDefault(AggregateStringTranslationMode.Bytes);
             _mapHistory = new Dictionary<string, string>();
-        }
-
-        private BsonValue ReplaceTemplates(BsonValue bsonValue)
-        {
-            var value = bsonValue.ToString();
-            foreach (var map in _mapHistory)
-            {
-                string template = string.Format(MapTemplate, map.Value);
-                value = value.Replace(template, map.Key);
-            }
-
-            if (value.Contains(MapTemplateBody))
-            {
-                throw new MongoException("The query transformation has not been finished: Incorrect parameters mapping.");
-            }
-
-            return BsonDocument.Parse(value);
         }
 
         private BsonValue TranslateValue(Expression node)
@@ -623,12 +609,11 @@ namespace MongoDB.Driver.Linq.Translators
                 }
                 else
                 {
+                    _isTemplateMappingRequired = true;
                     // If the field expression uses expression parameters outside of the current expression level 
-                    // then the generated value should be trimmed and do not have the expression input parameter from the current level.
+                    // then the generated value should be trimmed and do not have the expression prefix from the current level.
                     // Here we just add a template which will be replaced in the end of transformation.
-                    string templateValue = string.Format(MapTemplate, memberInfo.OutOfCurrentScopePrefix);
-                    string currentLevelParams = inputValue.ToString().Substring(inValue.ToString().IndexOf('.'));
-                    return templateValue + /*currentLevelParams +*/ inValue.ToString().Substring(node.ItemName.Length + 2);
+                    return TemplateHelper.CreateTemplate(memberInfo.OutOfCurrentScopePrefix) + inValue.ToString().Substring(node.ItemName.Length + 2);
                 }
             }
 
@@ -1317,6 +1302,58 @@ namespace MongoDB.Driver.Linq.Translators
 
             result = null;
             return false;
+        }
+
+        private static class TemplateHelper
+        {
+            private const string MapTemplateStartDelimiter = "#{{";
+            private const string MapTemplateEndDelimiter = "}}#";
+            private const string MapTemplate = MapTemplateStartDelimiter + "{{{0}}}" + MapTemplateEndDelimiter;
+
+            private static string GetNotReplacedTemplate(string value)
+            {
+                var startIndexOf = value.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
+                var endIndexOf = value.IndexOf(MapTemplateEndDelimiter, StringComparison.Ordinal);
+                if (startIndexOf != -1 && endIndexOf != -1 && endIndexOf > startIndexOf)
+                {
+                    endIndexOf = endIndexOf + MapTemplateEndDelimiter.Length;
+                    if (endIndexOf <= value.Length) return value.Substring(startIndexOf, endIndexOf - startIndexOf);
+                }
+
+                return null;
+            }
+
+            public static BsonValue ReplaceTemplates(BsonValue bsonValue, Dictionary<string,string> mapHistory)
+            {
+                var value = bsonValue.ToString();
+                foreach (var map in mapHistory)
+                {
+                    value = value.Replace(string.Format(MapTemplate, map.Value), map.Key);
+                }
+
+                var topLevelParameter = GetNotReplacedTemplate(value);
+                if (!string.IsNullOrWhiteSpace(topLevelParameter) && mapHistory.Any())
+                {
+                    // This case can happen no more than once when we use a top-level input expression parameter
+                    // in the scope of children expressions. Since we don't have any mentioning of the top-level input parameters
+                    // in any SERVER operators, then we can have the single not replaced template 
+                    // which will mean that this is a top-level input parameter.
+                    // We need to handle this case additionally.
+                    value = value.Replace(topLevelParameter, mapHistory.Last().Key);
+                }
+
+                if (value.Contains(MapTemplateStartDelimiter) || value.Contains(MapTemplateEndDelimiter))
+                {
+                    throw new MongoException("The query transformation has not been finished: Incorrect parameters mapping.");
+                }
+
+                return BsonDocument.Parse(value);
+            }
+
+            public static string CreateTemplate(string value)
+            {
+                return string.Format(MapTemplate, value);
+            }
         }
     }
 }

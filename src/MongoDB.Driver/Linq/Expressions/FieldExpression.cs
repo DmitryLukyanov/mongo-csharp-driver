@@ -20,7 +20,7 @@ using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Linq.Expressions
 {
-    internal sealed class FieldExpression : SerializationExpression, IFieldExpression
+    internal sealed class FieldExpression : SerializationExpression, IFieldExpression, IExpressionMemberInfo
     {
         private readonly Expression _document;
         private readonly string _fieldName;
@@ -69,6 +69,8 @@ namespace MongoDB.Driver.Linq.Expressions
         {
             get { return _original; }
         }
+
+        public string OutOfCurrentScopePrefix { get; set; }
 
         public override IBsonSerializer Serializer
         {

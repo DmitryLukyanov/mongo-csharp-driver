@@ -921,6 +921,8 @@ namespace MongoDB.Driver.Linq.Translators
                 return null;
             }
 
+            ValidatePipelineExpressionThrowIfNotValid(whereExpression);
+
             FilterDefinition<BsonDocument> filter;
             var renderWithoutElemMatch = CanAnyBeRenderedWithoutElemMatch(whereExpression.Predicate);
 
@@ -1651,6 +1653,16 @@ namespace MongoDB.Driver.Linq.Translators
             }
 
             return fieldExpression;
+        }
+
+        private void ValidatePipelineExpressionThrowIfNotValid(WhereExpression whereExpression)
+        {
+            var memberInfoCollection = ExpressionInfoCollector.Collect(whereExpression)?.ToList();
+            var unsupportedField = memberInfoCollection?.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.OutOfCurrentScopePrefix));
+            if (!string.IsNullOrWhiteSpace(unsupportedField?.OutOfCurrentScopePrefix))
+            {
+                throw new NotSupportedException($"The LINQ expression: {whereExpression} has the member \"{unsupportedField.OutOfCurrentScopePrefix}\" which can not be used to build a correct Mongo query");
+            }
         }
 
         // nested types

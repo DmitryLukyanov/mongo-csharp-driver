@@ -15,14 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Linq.Expressions;
 using MongoDB.Driver.Linq.Processors.EmbeddedPipeline;
-using MongoDB.Driver.Support;
 
 namespace MongoDB.Driver.Linq.Processors
 {
@@ -37,6 +35,7 @@ namespace MongoDB.Driver.Linq.Processors
         private readonly IBindingContext _bindingContext;
         private bool _isInEmbeddedPipeline;
         private readonly bool _isClientSideProjection;
+        private bool _isOutOfCurrentScope;
 
         private SerializationBinder(IBindingContext bindingContext, bool isClientSideProjection)
         {
@@ -103,12 +102,21 @@ namespace MongoDB.Driver.Linq.Processors
 
         protected override Expression VisitLambda<T>(Expression<T> node)
         {
+            var oldIsOutOfCurrentScope = _isOutOfCurrentScope;
+            if (_isInEmbeddedPipeline)
+            {
+                _isOutOfCurrentScope = true;
+            }
+
             // Don't visit the parameters. We cannot replace a parameter expression
             // with a document and we don't have a new parameter type to use because
             // we don't know why we are binding yet.
-            return node.Update(
+            var result = node.Update(
                 Visit(node.Body),
                 node.Parameters);
+            _isOutOfCurrentScope = oldIsOutOfCurrentScope;
+
+            return result;
         }
 
         protected override Expression VisitMember(MemberExpression node)
@@ -151,6 +159,10 @@ namespace MongoDB.Driver.Linq.Processors
                                 mex);
                         }
                     }
+
+                    var rawParameterExpression = (node.Expression as ParameterExpression);
+                    if (_isOutOfCurrentScope && rawParameterExpression != null)
+                        SaveOutOfScopePrefix(newNode, rawParameterExpression.Name);
                 }
             }
 
@@ -396,6 +408,15 @@ namespace MongoDB.Driver.Linq.Processors
             }
 
             return node;
+        }
+
+        private void SaveOutOfScopePrefix(Expression expression, string value)
+        {
+            var memberInfo = expression as IExpressionMemberInfo;
+            if (memberInfo != null)
+            {
+                memberInfo.OutOfCurrentScopePrefix = value;
+            }
         }
     }
 }

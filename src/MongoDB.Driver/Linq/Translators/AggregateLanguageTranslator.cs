@@ -309,7 +309,16 @@ namespace MongoDB.Driver.Linq.Translators
                 }
             }
 
-            return "$" + currentName;
+            var originalMemberExpression = (expression.Original as MemberExpression);
+            if (!string.IsNullOrWhiteSpace(expression.OutOfCurrentScopePrefix) && originalMemberExpression != null)
+            {
+                _isTemplateMappingRequired = true;
+                return $"{TemplateHelper.CreateTemplate(expression.OutOfCurrentScopePrefix)}.{originalMemberExpression.Member.Name})";
+            }
+            else
+            {
+                return "$" + currentName;
+            }
         }
 
         private BsonValue TranslateGroupingKey(GroupingKeyExpression node)

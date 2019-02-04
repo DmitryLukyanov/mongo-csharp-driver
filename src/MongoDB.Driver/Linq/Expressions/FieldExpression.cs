@@ -20,7 +20,7 @@ using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Linq.Expressions
 {
-    internal sealed class FieldExpression : SerializationExpression, IFieldExpression, IExpressionMemberInfo
+    internal sealed class FieldExpression : SerializationExpression, IFieldExpression, IHasOutOfCurrentScopePrefix
     {
         private readonly Expression _document;
         private readonly string _fieldName;

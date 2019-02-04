@@ -82,8 +82,7 @@ namespace MongoDB.Driver.Tests.Linq
                                         D = "Delilah"
                                     }
                             },
-                            N = 1,
-                            Y = new List<E> { new E { F = 101 }, new V { W = 102 } }
+                            N = 1
                         },
                         new C
                         {
@@ -94,8 +93,7 @@ namespace MongoDB.Driver.Tests.Linq
                                 H = 66,
                                 I = new [] { "insecure"}
                             },
-                            N = 2,
-                            Y = new List<E> { new E { F = 103 }, new V { W = 104 } }
+                            N = 2
                         }
                 },
                 Id = 10,
@@ -139,8 +137,7 @@ namespace MongoDB.Driver.Tests.Linq
                                 H = 444,
                                 I = new [] { "igloo" }
                             },
-                            N = 3,
-                            Y = new List<E> { new E { F = 105 }, new V { W = 106 } }
+                            N = 3
                         },
                         new C
                         {
@@ -248,7 +245,6 @@ namespace MongoDB.Driver.Tests.Linq
             public IEnumerable<C> S { get; set; }
 
             public IEnumerable<E> X { get; set; }
-            public IEnumerable<E> Y { get; set; }
         }
 
         public class E

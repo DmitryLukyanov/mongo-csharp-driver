@@ -15,7 +15,7 @@
 
 namespace MongoDB.Driver.Linq.Expressions
 {
-    internal interface IExpressionMemberInfo
+    internal interface IHasOutOfCurrentScopePrefix
     {
         string OutOfCurrentScopePrefix { get; set; }
     }

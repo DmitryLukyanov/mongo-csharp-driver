@@ -163,7 +163,9 @@ namespace MongoDB.Driver.Linq.Processors
 
                     var rawParameterExpression = (node.Expression as ParameterExpression);
                     if (_isOutOfCurrentScope && rawParameterExpression != null)
-                        SaveOutOfScopePrefix(newNode, rawParameterExpression.Name);
+                    {
+                        SetOutOfCurrentScopePrefixIfPossible(newNode, rawParameterExpression.Name);
+                    }
                 }
             }
 
@@ -411,9 +413,9 @@ namespace MongoDB.Driver.Linq.Processors
             return node;
         }
 
-        private void SaveOutOfScopePrefix(Expression expression, string value)
+        private void SetOutOfCurrentScopePrefixIfPossible(Expression expression, string value)
         {
-            var memberInfo = expression as IExpressionMemberInfo;
+            var memberInfo = expression as IHasOutOfCurrentScopePrefix;
             if (memberInfo != null)
             {
                 memberInfo.OutOfCurrentScopePrefix = value;

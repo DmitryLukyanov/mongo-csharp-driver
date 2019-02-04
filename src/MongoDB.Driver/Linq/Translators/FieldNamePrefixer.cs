@@ -49,9 +49,13 @@ namespace MongoDB.Driver.Linq.Translators
                     node.Original);
             }
 
+            var prefix = !string.IsNullOrWhiteSpace(node.OutOfCurrentScopePrefix)
+                ? node.OutOfCurrentScopePrefix
+                : _prefix;
+
             return new FieldExpression(
                 node.Document,
-                node.PrependFieldName(_prefix),
+                node.PrependFieldName(prefix),
                 node.Serializer,
                 node.Original,
                 node.OutOfCurrentScopePrefix);

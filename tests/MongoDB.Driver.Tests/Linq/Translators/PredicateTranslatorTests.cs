@@ -543,7 +543,7 @@ namespace MongoDB.Driver.Tests.Linq.Translators
             Assert(
                 x => x.C == new C { D = "Dexter" },
                 0,
-                "{C: {D: 'Dexter', E: null, S: null, X: null}}");
+                "{ C : { B : false, N : 0, D : 'Dexter', E : null, S : null, X : null } }");
         }
 
         [Fact]
@@ -552,7 +552,7 @@ namespace MongoDB.Driver.Tests.Linq.Translators
             Assert(
                 x => x.C.Equals(new C { D = "Dexter" }),
                 0,
-                "{C: {D: 'Dexter', E: null, S: null, X: null}}");
+                "{ C : { B : false, N : 0, D : 'Dexter', E : null, S : null, X : null } }");
         }
 
         [Fact]
@@ -561,7 +561,7 @@ namespace MongoDB.Driver.Tests.Linq.Translators
             Assert(
                 x => x.C != new C { D = "Dexter" },
                 2,
-                "{C: {$ne: {D: 'Dexter', E: null, S: null, X: null}}}");
+                "{ C : { $ne : { B : false, N : 0, D : 'Dexter', E : null, S : null, X : null } } }");
         }
 
         [Fact]

@@ -26,6 +26,7 @@ namespace MongoDB.Driver.Linq.Expressions
         private readonly string _fieldName;
         private readonly Expression _original;
         private readonly IBsonSerializer _serializer;
+        private string _outOfCurrentScopePrefix;
 
         public FieldExpression(string fieldName, IBsonSerializer serializer)
             : this(null, fieldName, serializer, null)
@@ -48,7 +49,7 @@ namespace MongoDB.Driver.Linq.Expressions
             _fieldName = Ensure.IsNotNull(fieldName, nameof(fieldName));
             _serializer = Ensure.IsNotNull(serializer, nameof(serializer));
             _original = original;
-            OutOfCurrentScopePrefix = outOfCurrentScopePrefix;
+            _outOfCurrentScopePrefix = outOfCurrentScopePrefix;
         }
 
         public Expression Document
@@ -61,7 +62,11 @@ namespace MongoDB.Driver.Linq.Expressions
             get { return _fieldName; }
         }
 
-        public string OutOfCurrentScopePrefix { get; set; }
+        public string OutOfCurrentScopePrefix
+        {
+            get { return _outOfCurrentScopePrefix; }
+            set { _outOfCurrentScopePrefix = value; }
+        }
 
         public override ExtensionExpressionType ExtensionType
         {

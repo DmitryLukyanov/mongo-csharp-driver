@@ -1138,7 +1138,7 @@ namespace Tests.MongoDB.Driver.Linq
         [SkippableFact]
         public void Select_with_using_top_level_expression_input_parameters_inside_children_levels()
         {
-            RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+            RequireServer.Check().Supports(Feature.AggregateFilter);
 
             var query = CreateQuery()
                 .Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Min(g2 => g2.N)) });
@@ -1163,11 +1163,75 @@ namespace Tests.MongoDB.Driver.Linq
             //    "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$eq' : ['$$g1.B', { '$anyElementTrue' : { '$map' : { 'input' : '$$g1.S', 'as' : 'g2', 'in' : { '$gt' : ['$$g2.N', { '$min' : '$G.N' }] } } } }] } } }, '_id' : 0 } }");
         }
 
+        [SkippableFact]
+        public void Select_with_using_several_top_level_expression_input_parameters_inside_children_level()
+        {
+            RequireServer.Check().Supports(Feature.AggregateFilter);
+
+            var query = CreateQuery()
+                .Select(g => new { Result = g.G.Where(g1 => g1.N > (g.G.Min(g2 => g2.N) + (g.C.N))) });
+
+            var commonResult = Assert(
+                query,
+                2,
+                "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$gt' : ['$$g1.N', { '$add' : [{ '$min' : '$G.N' }, '$C.N'] } ] } } }, '_id' : 0 } }");
+
+            commonResult[0].Result.Count().Should().Be(1);
+            commonResult[0].Result.First().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(1);
+            commonResult[1].Result.First().N.Should().Be(4);
+        }
+
+        [SkippableFact]
+        public void Select_with_using_several_expression_parameters_from_different_levels_inside_children_level()
+        {
+            RequireServer.Check().Supports(Feature.AggregateFilter);
+
+            var query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Count(g2 => g2.N > g1.N)) });
+
+            var commonResult = Assert(
+                query,
+                2,
+                @"{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$gt' : ['$$g1.N', { '$size' : { '$filter' : { 'input' : '$G', 'as' : 'g2', 'cond' : { '$gt' : ['$$g2.N', '$$g1.N'] } } } }] } } }, '_id' : 0 } }");
+
+            commonResult[0].Result.Count().Should().Be(1);
+            commonResult[0].Result.First().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(2);
+            commonResult[1].Result.First().N.Should().Be(3);
+            commonResult[1].Result.Last().N.Should().Be(4);
+
+            query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > (g.G.Count(g2 => g2.N > g1.N) + g.C.N)) });
+
+            commonResult = Assert(
+                query,
+                2,
+                "{ $project:{ 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$gt' : ['$$g1.N', { '$add' : [{ '$size' : { '$filter' : { 'input' : '$G', 'as' : 'g2', 'cond' : { '$gt' : ['$$g2.N', '$$g1.N'] } } } }, '$C.N'] }] } } }, '_id' : 0 } }");
+
+            commonResult[0].Result.Count().Should().Be(1);
+            commonResult[0].Result.First().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(2);
+            commonResult[1].Result.First().N.Should().Be(3);
+            commonResult[1].Result.Last().N.Should().Be(4);
+
+            query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > (g.G.Count(g2 => g2.N > g.C.E.F) + g.C.N)) });
+
+            commonResult = Assert(
+                query,
+                2,
+                "{ $project:{ 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$gt' : ['$$g1.N', { '$add' : [{ '$size' : { '$filter' : { 'input' : '$G', 'as' : 'g2', 'cond' : { '$gt' : ['$$g2.N', '$C.E.F'] } } } }, '$C.N'] }] } } }, '_id' : 0 } }");
+
+            commonResult[0].Result.Count().Should().Be(2);
+            commonResult[0].Result.First().N.Should().Be(1);
+            commonResult[0].Result.Last().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(2);
+            commonResult[1].Result.First().N.Should().Be(3);
+            commonResult[1].Result.Last().N.Should().Be(4);
+        }
 
         [SkippableFact]
         public void Select_with_using_top_level_expression_input_parameters_inside_children_levels_and_with_inner_select()
         {
-            RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+            RequireServer.Check().Supports(Feature.AggregateFilter);
 
             var query = CreateQuery()
                 .Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Select(g2 => g2.E).Min(g3 => g3.F)) });
@@ -1184,7 +1248,7 @@ namespace Tests.MongoDB.Driver.Linq
         [SkippableFact]
         public void Select_with_using_local_collection_inside_children_expression_levels()
         {
-            RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+            RequireServer.Check().Supports(Feature.AggregateFilter);
 
             var local = new[] { 1, 2, 3 };
             var query = CreateQuery()
@@ -1204,22 +1268,22 @@ namespace Tests.MongoDB.Driver.Linq
         //[SkippableFact]
         //public void Select_with_using_top_level_expression_input_parameters_inside_children_levels_and_with_inner_select22()
         //{
-            //this test doesn't return correct Select result, but it looks like it's minor problem.
-            //RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+        //this test doesn't return correct Select result, but it looks like it's minor problem.
+        //RequireServer.Check().Supports(Feature.AggregateArrayFilter);
 
-            //var query = CreateQuery()
-            //    .Select(g => new { Result = g.G.Where(g1 => g1.N < g1.S.Select(g2 => g1.E).Min(g3 => g3.F)) });
+        //var query = CreateQuery()
+        //    .Select(g => new { Result = g.G.Where(g1 => g1.N < g1.S.Select(g2 => g1.E).Min(g3 => g3.F)) });
 
-            //var commonResult = Assert(
-            //    query,
-            //    2,
-            // generated query:
-            //    //"{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.S.E.F' }] } } }, '_id' : 0 } }"
-            // expected query:
-            //    "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.E.F' }] } } }, '_id' : 0 } }"
-            //    );
-            //commonResult[0].Result.Count().Should().Be(2);
-            //commonResult[1].Result.Count().Should().Be(2);
+        //var commonResult = Assert(
+        //    query,
+        //    2,
+        // generated query:
+        //    //"{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.S.E.F' }] } } }, '_id' : 0 } }"
+        // expected query:
+        //    "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.E.F' }] } } }, '_id' : 0 } }"
+        //    );
+        //commonResult[0].Result.Count().Should().Be(2);
+        //commonResult[1].Result.Count().Should().Be(2);
         //}
 
         [Fact]

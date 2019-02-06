@@ -296,10 +296,12 @@ namespace MongoDB.Driver.Linq.Translators
                 if (field != null)
                 {
                     currentName = field.FieldName + "." + currentName;
+                    currentName = _templatesState.CreateTemplateIfRequired((FieldExpression)field, currentName);
                     parent = field.Document;
                 }
                 else
                 {
+                    currentName = _templatesState.CreateTemplateIfRequired(expression, currentName);
                     var array = parent as ArrayIndexExpression;
                     if (array != null)
                     {
@@ -603,31 +605,13 @@ namespace MongoDB.Driver.Linq.Translators
             var inValue = TranslateValue(FieldNamePrefixer.Prefix(node.Selector, "$" + node.ItemName));
             if (inputValue.BsonType == BsonType.String && inValue.BsonType == BsonType.String)
             {
-                var memberInfo = node.Source as IHasOutOfCurrentScopePrefix;
-                string prefix;
-                if (memberInfo == null || string.IsNullOrWhiteSpace(memberInfo.OutOfCurrentScopePrefix))
-                {
-
-                    // if inputValue is a BsonString and inValue is a BsonString, 
-                    // then it is a simple field inclusion...
-                    prefix = inputValue.ToString();
-                }
-                else
-                {
-                    // If a field expression uses expression parameters outside of the current expression level 
-                    // then the generated value should be trimmed and do not have the expression prefix from the current level.
-                    // Here we just add a template which will be replaced in the end of transformation.
-                    prefix = _templatesState.CreateTemplate(memberInfo.OutOfCurrentScopePrefix, inputValue);
-                }
-
-                // inValue is prefixed with a $${node.ItemName}. Also, inValue can have single $ prefix
-                // in case when node is used outside of expression scope where it was defined.
-                // so we remove the itemName and all $s. Assuming that '$' can be only in the beginning of inValue.
-                var inValueString = inValue.ToString();
-                return prefix + inValueString.Substring(node.ItemName.Length + inValueString.LastIndexOf('$') + 1);
+                // if inputValue is a BsonString and inValue is a BsonString, 
+                // then it is a simple field inclusion...
+                // inValue is prefixed with a $${node.ItemName}, so we remove the itemName and the 2 $s.
+                return inputValue.ToString() + inValue.ToString().Substring(node.ItemName.Length + 2);
             }
 
-            _templatesState.AddMapping(inputValue, node.ItemName);
+            _templatesState.AddMapping(node.ItemName);
             return new BsonDocument("$map", new BsonDocument
             {
                 { "input", inputValue },
@@ -680,7 +664,7 @@ namespace MongoDB.Driver.Linq.Translators
             var inputValue = TranslateValue(node.Source);
             var condValue = TranslateValue(FieldNamePrefixer.Prefix(node.Predicate, "$" + node.ItemName));
 
-            _templatesState.AddMapping(inputValue, node.ItemName);
+            _templatesState.AddMapping(node.ItemName);
             return new BsonDocument("$filter", new BsonDocument
             {
                 { "input", inputValue },
@@ -740,7 +724,7 @@ namespace MongoDB.Driver.Linq.Translators
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
 
                     var input = TranslateValue(whereExpression.Source);
-                    _templatesState.AddMapping(input, whereExpression.ItemName);
+                    _templatesState.AddMapping(whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
                         { "input", input },
@@ -777,7 +761,7 @@ namespace MongoDB.Driver.Linq.Translators
                 {
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
                     var input = TranslateValue(whereExpression.Source);
-                    _templatesState.AddMapping(input, whereExpression.ItemName);
+                    _templatesState.AddMapping(whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
                         { "input", input },
@@ -815,7 +799,7 @@ namespace MongoDB.Driver.Linq.Translators
                 var source = TranslateValue(node.Source);
                 var value = TranslateValue(resultOperator.Value);
                 var @as = "x";
-                _templatesState.AddMapping(source, @as);
+                _templatesState.AddMapping(@as);
                 result = new BsonDocument("$anyElementTrue", new BsonDocument("$map", new BsonDocument
                 {
                     { "input", source },
@@ -1321,50 +1305,56 @@ namespace MongoDB.Driver.Linq.Translators
             private const string MapTemplateEndDelimiter = ">#";
             #endregion
 
-            private readonly Dictionary<BsonValue, BsonValue> _usedQueryMaps = new Dictionary<BsonValue, BsonValue>();
-            
-            // This dictionary contains references between out of scope prefixes and field expressions
-            // which are used to get document fields.
-            private readonly Dictionary<string, BsonValue> _outOfScopeDocumentsToFieldsMapping = new Dictionary<string, BsonValue>();
+            private readonly List<string> _usedQueryMaps = new List<string>();
 
             #region Static methods
-            private static string GetNotReplacedTemplate(string value)
+            private static bool TryParseTemplate(string value, ref int startIndex, out string template)
             {
-                var startIndexOf = value.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
-                var endIndexOf = value.IndexOf(MapTemplateEndDelimiter, StringComparison.Ordinal);
+                template = null;
+                var startIndexOf = value.IndexOf(MapTemplateStartDelimiter, startIndex, StringComparison.Ordinal);
+                var endIndexOf = value.IndexOf(MapTemplateEndDelimiter, startIndex, StringComparison.Ordinal);
                 if (startIndexOf != -1 && endIndexOf != -1 && endIndexOf > startIndexOf)
                 {
                     endIndexOf = endIndexOf + MapTemplateEndDelimiter.Length;
-                    if (endIndexOf <= value.Length) return value.Substring(startIndexOf, endIndexOf - startIndexOf);
+                    if (endIndexOf <= value.Length)
+                    {
+                        template = value.Substring(startIndexOf, endIndexOf - startIndexOf);
+                        startIndex = endIndexOf;
+                        return true;
+                    }
                 }
 
-                return null;
+                startIndex = -1;
+                return false;
             }
 
-            private static string GetTemplateValue(string template)
+            private static bool TryGetTemplateElement(string value, out BsonElement element)
             {
-                var firstLetterIndex = template.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
+                element = new BsonElement();
+                var firstLetterIndex = value.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
                 if (firstLetterIndex == -1)
                 {
-                    return null;
+                    return false;
                 }
 
                 firstLetterIndex += MapTemplateStartDelimiter.Length;
-                var lastLetterIndex = template.IndexOf(MapTemplateEndDelimiter, StringComparison.Ordinal);
+                var lastLetterIndex = value.IndexOf(MapTemplateEndDelimiter, StringComparison.Ordinal);
                 if (lastLetterIndex == -1)
                 {
-                    return null;
+                    return false;
                 }
 
                 if (lastLetterIndex > firstLetterIndex)
                 {
-                    return template.Substring(firstLetterIndex, template.Length - firstLetterIndex - MapTemplateStartDelimiter.Length);
+                    var elementValue = value.Substring(firstLetterIndex, lastLetterIndex - firstLetterIndex);
+                    element = BsonDocument.Parse(elementValue).GetElement(0);
+                    return true;
                 }
 
-                return null;
+                return false;
             }
 
-            private static string AddDelimiterBrackets(string value)
+            private static string AddTemplateDelimiterBrackets(string value)
             {
                 return $"{MapTemplateStartDelimiter}{value}{MapTemplateEndDelimiter}";
             }
@@ -1376,10 +1366,46 @@ namespace MongoDB.Driver.Linq.Translators
                     var dotIndex = value.IndexOf('.');
                     if (dotIndex != -1)
                     {
-                        return $"${value.Substring(dotIndex + 1)}";
+                        return $"{value.Substring(dotIndex + 1)}";
                     }
                 }
                 return value;
+            }
+
+            private static Dictionary<string, List<string>> CollectTemplates(string value)
+            {
+                var templates = new Dictionary<string, List<string>>(); ;
+                int startIndex = 0;
+                while (startIndex != -1)
+                {
+                    string template;
+                    if (TryParseTemplate(value, ref startIndex, out template))
+                    {
+                        BsonElement element;
+                        if (TryGetTemplateElement(template, out element))
+                        {
+                            if (templates.ContainsKey(element.Name))
+                            {
+                                templates[element.Name].Add(element.Value.ToString());
+                            }
+                            else
+                            {
+                                templates.Add(element.Name, new List<string> {element.Value.ToString()});
+                            }
+                        }
+                        else
+                        {
+                            throw new MongoException("The query transformation has not been finished: Incorrect template format.");
+                        }
+                    }
+                }
+
+                return templates;
+            }
+
+            private static string CreateTemplateBody(string key, string value)
+            {
+                return $"{{'{key}':'{value}'}}";
             }
 
             public static TemplatesState Create()
@@ -1388,37 +1414,57 @@ namespace MongoDB.Driver.Linq.Translators
             }
             #endregion
 
-            public bool IsMappingRequired => _outOfScopeDocumentsToFieldsMapping.Any();
+            public bool IsMappingRequired { get; private set; }
 
-            public void AddMapping(BsonValue key, BsonValue value)
+            public void AddMapping(string value)
             {
-                _usedQueryMaps.Add(key, value);
+                _usedQueryMaps.Add(value);
             }
 
             public BsonValue ReplaceTemplates(BsonValue bsonValue)
             {
                 var value = bsonValue.ToString();
-                foreach (var map in _usedQueryMaps)
+                var templates = CollectTemplates(value);
+                if (!templates.Any())
                 {
-                    var oldValue = AddDelimiterBrackets(map.Value.ToString());
-                    var newValue = map.Key.ToString();
-                    value = value.Replace(oldValue, newValue);
+                    return bsonValue;
                 }
 
-                var topLevelParameter = GetNotReplacedTemplate(value);
-                if (!string.IsNullOrWhiteSpace(topLevelParameter) && _usedQueryMaps.Any())
+                foreach (var map in _usedQueryMaps)
                 {
-                    var templateValue = GetTemplateValue(topLevelParameter);
-                    if (templateValue != null)
+                    List<string> fields;
+                    if (templates.TryGetValue(map, out fields))
                     {
-                        // This case can happen no more than for one template when we use a top-level input expression parameter
-                        // in the scope of children expressions. Since the top-level expression input params are not
-                        // specified in any $map operator, then to handle this case we just need to remove $map prefix.
-                        // See: $$g.G.N - In case if this field are used outside of the expression scope where it was defined
-                        // and `g` is top-level expression input param, then we need to replace this field to $G.N.
-                        var valueWithPrefix = _outOfScopeDocumentsToFieldsMapping[templateValue];
-                        value = value.Replace(topLevelParameter, RemoveMapPrefixIfThere(valueWithPrefix.ToString()));
+                        foreach (var field in fields)
+                        {
+                            // if we found a template parameter in $maps sections, 
+                            // It means the template node value is correct.
+                            // We just need to add '$'.
+                            var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(map, field));
+                            var newValue = "$" + field;
+                            value = value.Replace(oldValue, newValue);
+                        }
+
+                        templates.Remove(map);
                     }
+                }
+
+                if (_usedQueryMaps.Any() && templates.Count == 1)
+                {
+                    // This case can happen no more than for one template when we use a top-level input expression parameter
+                    // in the scope of children expressions. Since the top-level expression input params are not
+                    // specified in any $map operator, then to handle this case we just need to remove $map prefix.
+                    // See: $$g.G.N - In case if this field are used outside of the expression scope where it was defined
+                    // and `g` the prefix is top-level, then we need to replace this field to $G.N.
+                    var notMappedTemplate = templates.First();
+                    foreach (var field in notMappedTemplate.Value)
+                    {
+                        var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(notMappedTemplate.Key, field.ToString()));
+                        var newValue = RemoveMapPrefixIfThere(field.ToString());
+                        value = value.Replace(oldValue, newValue);
+                    }
+
+                    templates.Remove(notMappedTemplate.Key);
                 }
 
                 if (value.Contains(MapTemplateStartDelimiter) || value.Contains(MapTemplateEndDelimiter))
@@ -1431,10 +1477,22 @@ namespace MongoDB.Driver.Linq.Translators
                     : BsonTypeMapper.MapToBsonValue(value, bsonValue.BsonType);
             }
 
-            public string CreateTemplate(string outOfScopePrefix, BsonValue inputValue)
+            public string CreateTemplateIfRequired(FieldExpression expression, string result)
             {
-                _outOfScopeDocumentsToFieldsMapping.Add(outOfScopePrefix, inputValue);
-                return AddDelimiterBrackets(outOfScopePrefix);
+                if (!string.IsNullOrWhiteSpace(expression.OutOfCurrentScopePrefix))
+                {
+                    return CreateTemplate(expression.OutOfCurrentScopePrefix, result);
+                }
+                else
+                {
+                    return result;
+                }
+            }
+
+            private string CreateTemplate(string outOfScopePrefix, string inputValue)
+            {
+                IsMappingRequired = true;
+                return AddTemplateDelimiterBrackets(CreateTemplateBody(outOfScopePrefix, inputValue));
             }
         }
     }

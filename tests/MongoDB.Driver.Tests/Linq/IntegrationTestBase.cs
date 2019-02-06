@@ -237,7 +237,6 @@ namespace MongoDB.Driver.Tests.Linq
         {
             public bool B { get; set; }
             public int N { get; set; }
-
             public string D { get; set; }
 
             public E E { get; set; }

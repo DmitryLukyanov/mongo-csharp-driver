@@ -607,8 +607,20 @@ namespace MongoDB.Driver.Linq.Translators
             {
                 // if inputValue is a BsonString and inValue is a BsonString, 
                 // then it is a simple field inclusion...
-                // inValue is prefixed with a $${node.ItemName}, so we remove the itemName and the 2 $s.
-                return inputValue.ToString() + inValue.ToString().Substring(node.ItemName.Length + 2);
+                var inValueStr = inValue.ToString();
+                var selectorExpressionInfo = node.Selector as IHasOutOfCurrentScopePrefix;
+                if (selectorExpressionInfo != null && !string.IsNullOrWhiteSpace(selectorExpressionInfo.OutOfCurrentScopePrefix))
+                {
+                    // if `Selector` has an out of scope prefix then the selector value has a template
+                    // which means we should not add an expression prefix from the current level to the result field.
+                    return inValueStr;
+                }
+                else
+                {
+                    // inValue is prefixed with a $${node.ItemName} or ${node.ItemName}, so we remove the itemName and all $s.
+                    // Assuming that '$' can be only in the beginning of the inValue.
+                    return inputValue.ToString() + inValueStr.Substring(node.ItemName.Length + inValueStr.LastIndexOf('$') + 1);
+                }
             }
 
             _templatesState.AddMapping(node.ItemName);
@@ -1308,7 +1320,7 @@ namespace MongoDB.Driver.Linq.Translators
             private readonly List<string> _usedQueryMaps = new List<string>();
 
             #region Static methods
-            private static bool TryParseTemplate(string value, ref int startIndex, out string template)
+            internal static bool TryParseTemplate(string value, ref int startIndex, out string template)
             {
                 template = null;
                 var startIndexOf = value.IndexOf(MapTemplateStartDelimiter, startIndex, StringComparison.Ordinal);
@@ -1328,7 +1340,7 @@ namespace MongoDB.Driver.Linq.Translators
                 return false;
             }
 
-            private static bool TryGetTemplateElement(string value, out BsonElement element)
+            internal static bool TryGetTemplateElement(string value, out BsonElement element)
             {
                 element = new BsonElement();
                 var firstLetterIndex = value.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
@@ -1372,7 +1384,7 @@ namespace MongoDB.Driver.Linq.Translators
                 return value;
             }
 
-            private static Dictionary<string, List<string>> CollectTemplates(string value)
+            internal static Dictionary<string, List<string>> CollectTemplates(string value)
             {
                 var templates = new Dictionary<string, List<string>>(); ;
                 int startIndex = 0;
@@ -1438,8 +1450,8 @@ namespace MongoDB.Driver.Linq.Translators
                         foreach (var field in fields)
                         {
                             // if we found a template parameter in $maps sections, 
-                            // It means the template node value is correct.
-                            // We just need to add '$'.
+                            // It means the template node value does not require mapping.
+                            // We just need to add the second '$'.
                             var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(map, field));
                             var newValue = "$" + field;
                             value = value.Replace(oldValue, newValue);
@@ -1459,8 +1471,8 @@ namespace MongoDB.Driver.Linq.Translators
                     var notMappedTemplate = templates.First();
                     foreach (var field in notMappedTemplate.Value)
                     {
-                        var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(notMappedTemplate.Key, field.ToString()));
-                        var newValue = RemoveMapPrefixIfThere(field.ToString());
+                        var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(notMappedTemplate.Key, field));
+                        var newValue = RemoveMapPrefixIfThere(field);
                         value = value.Replace(oldValue, newValue);
                     }
 

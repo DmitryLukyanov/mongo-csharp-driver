@@ -1140,8 +1140,7 @@ namespace Tests.MongoDB.Driver.Linq
         {
             RequireServer.Check().Supports(Feature.AggregateFilter);
 
-            var query = CreateQuery()
-                .Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Min(g2 => g2.N)) });
+            var query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Min(g2 => g2.N)) });
 
             var commonResult = Assert(
                 query,
@@ -1168,8 +1167,7 @@ namespace Tests.MongoDB.Driver.Linq
         {
             RequireServer.Check().Supports(Feature.AggregateFilter);
 
-            var query = CreateQuery()
-                .Select(g => new { Result = g.G.Where(g1 => g1.N > (g.G.Min(g2 => g2.N) + (g.C.N))) });
+            var query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > (g.G.Min(g2 => g2.N) + (g.C.N))) });
 
             var commonResult = Assert(
                 query,
@@ -1233,8 +1231,7 @@ namespace Tests.MongoDB.Driver.Linq
         {
             RequireServer.Check().Supports(Feature.AggregateFilter);
 
-            var query = CreateQuery()
-                .Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Select(g2 => g2.E).Min(g3 => g3.F)) });
+            var query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N > g.G.Select(g2 => g2.E).Min(g3 => g3.F)) });
 
             var commonResult = Assert(
                 query,
@@ -1251,8 +1248,7 @@ namespace Tests.MongoDB.Driver.Linq
             RequireServer.Check().Supports(Feature.AggregateFilter);
 
             var local = new[] { 1, 2, 3 };
-            var query = CreateQuery()
-                .Select(g => new { Result = local.Where(g1 => g1 == g.G.Min(g2 => g2.N)) });
+            var query = CreateQuery().Select(g => new { Result = local.Where(g1 => g1 == g.G.Min(g2 => g2.N)) });
 
             var commonResult = Assert(
                 query,
@@ -1265,26 +1261,66 @@ namespace Tests.MongoDB.Driver.Linq
             commonResult[1].Result.First().Should().Be(3);
         }
 
+        [SkippableFact]
+        public void Select_with_using_an_outside_expression_input_parameters_inside_select_predicate()
+        {
+            RequireServer.Check().Supports(Feature.AggregateFilter);
+
+            var query = CreateQuery().Select(g => new { Result = g.G.Where(g1 => g1.N < g1.S.Select(g2 => g1.E).Min(g3 => g3.F)) });
+
+            var commonResult = Assert(
+                query,
+                2,
+                "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.E.F' }] } } }, '_id' : 0 } }"
+                );
+            commonResult[0].Result.Count().Should().Be(2);
+            commonResult[0].Result.First().N.Should().Be(1);
+            commonResult[0].Result.Last().N.Should().Be(2);
+            commonResult[1].Result.Count().Should().Be(2);
+            commonResult[1].Result.First().N.Should().Be(3);
+            commonResult[1].Result.Last().N.Should().Be(4);
+        }
+
+
+        //this test requires having IHasOutOfCurrentScopePrefix in `DocumentExpression`
         //[SkippableFact]
-        //public void Select_with_using_top_level_expression_input_parameters_inside_children_levels_and_with_inner_select22()
+        //public void Select_with_using_a_variable_itself_in_predicate()
         //{
-        //this test doesn't return correct Select result, but it looks like it's minor problem.
-        //RequireServer.Check().Supports(Feature.AggregateArrayFilter);
+        //    RequireServer.Check().Supports(Feature.AggregateFilter);
 
-        //var query = CreateQuery()
-        //    .Select(g => new { Result = g.G.Where(g1 => g1.N < g1.S.Select(g2 => g1.E).Min(g3 => g3.F)) });
+        //    var local = new[] { 1, 2, 3 };
+        //    var query = CreateQuery().Select(g => new { Result = local.Where(g1 => g1 == g.G.Count(g2 => g2.N == g1)) });
 
-        //var commonResult = Assert(
-        //    query,
-        //    2,
-        // generated query:
-        //    //"{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.S.E.F' }] } } }, '_id' : 0 } }"
-        // expected query:
-        //    "{ '$project' : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$lt' : ['$$g1.N', { '$min' : '$$g1.E.F' }] } } }, '_id' : 0 } }"
-        //    );
-        //commonResult[0].Result.Count().Should().Be(2);
-        //commonResult[1].Result.Count().Should().Be(2);
+        //    var commonResult = Assert(
+        //        query,
+        //        2,
+        //        //Generated result
+        //        "{ $project : { 'Result' : { '$filter' : { 'input' : [1, 2, 3], 'as' : 'g1', 'cond' : { '$eq' : ['$$g1', { '$size' : { '$filter' : { 'input' : '$G', 'as' : 'g2', 'cond' : { '$eq' : ['$$g2.N', '$$g2'] } } } }] } } }, '_id' : 0 } }");
+        //        //Expected result:
+        //        "{ $project : { 'Result' : { '$filter' : { 'input' : [1, 2, 3], 'as' : 'g1', 'cond' : { '$eq' : ['$$g1', { '$size' : { '$filter' : { 'input' : '$G', 'as' : 'g2', 'cond' : { '$eq' : ['$$g2.N', '$$g1'] } } } }] } } }, '_id' : 0 } }");
+
+        //    commonResult[0].Result.Count().Should().Be(0);
+        //    commonResult[1].Result.Count().Should().Be(0);
         //}
+
+        [SkippableFact()]
+        public void Select_with_new_in_select_predicate_and_an_out_of_scope_expression_parameter()
+        {
+            RequireServer.Check().Supports(Feature.AggregateFilter);
+
+            var query = CreateQuery()
+                .Select(g => new { Result = g.G.Where(g1 => g1.S.Select(g2 => new { Result2 = g1.E }).Min(g3 => g3.Result2.F) == 33) });
+
+            var commonResult = Assert(
+                query,
+                2,
+                  "{ $project : { 'Result' : { '$filter' : { 'input' : '$G', 'as' : 'g1', 'cond' : { '$eq' : [{ '$min' : { '$map' : { 'input' : { '$map' : { 'input' : '$$g1.S', 'as' : 'g2', 'in' : { 'Result2' : '$$g1.E' } } }, 'as' : 'g3', 'in' : '$$g3.Result2.F' } } }, 33] } } }, '_id' : 0 } }"
+                );
+
+            commonResult[0].Result.Count().Should().Be(1);
+            commonResult[0].Result.First().N.Should().Be(1);
+            commonResult[1].Result.Count().Should().Be(0);
+        }
 
         [Fact]
         public void SelectMany_with_only_resultSelector()

@@ -33,29 +33,18 @@ namespace MongoDB.Driver.Linq.Translators
         public static BsonValue Translate(Expression node, ExpressionTranslationOptions translationOptions)
         {
             var builder = new AggregateLanguageTranslator(translationOptions);
-            var result = builder.Translate(node);
+            builder._topLevelParam = "g";
+            var result = builder.TranslateValue(node);
             return result;
         }
 
         private readonly AggregateStringTranslationMode _stringTranslationMode;
-        private TemplatesState _templatesState;
+        private string _topLevelParam;
 
         private AggregateLanguageTranslator(ExpressionTranslationOptions translationOptions)
         {
             translationOptions = translationOptions ?? ExpressionTranslationOptions.Default;
             _stringTranslationMode = translationOptions.StringTranslationMode.GetValueOrDefault(AggregateStringTranslationMode.Bytes);
-        }
-
-        private BsonValue Translate(Expression node)
-        {
-            _templatesState = TemplatesState.Create();
-            var result = TranslateValue(node);
-            if (_templatesState.IsMappingRequired)
-            {
-                result = _templatesState.ReplaceTemplates(result);
-            }
-
-            return result;
         }
 
         private BsonValue TranslateValue(Expression node)
@@ -296,12 +285,12 @@ namespace MongoDB.Driver.Linq.Translators
                 if (field != null)
                 {
                     currentName = field.FieldName + "." + currentName;
-                    currentName = _templatesState.CreateTemplateIfRequired((FieldExpression)field, currentName);
+                    currentName = ConvertFieldIfRequired((FieldExpression)field, currentName);
                     parent = field.Document;
                 }
                 else
                 {
-                    currentName = _templatesState.CreateTemplateIfRequired(expression, currentName);
+                    currentName = ConvertFieldIfRequired(expression, currentName);
                     var array = parent as ArrayIndexExpression;
                     if (array != null)
                     {
@@ -623,7 +612,6 @@ namespace MongoDB.Driver.Linq.Translators
                 }
             }
 
-            _templatesState.AddMapping(node.ItemName);
             return new BsonDocument("$map", new BsonDocument
             {
                 { "input", inputValue },
@@ -676,7 +664,6 @@ namespace MongoDB.Driver.Linq.Translators
             var inputValue = TranslateValue(node.Source);
             var condValue = TranslateValue(FieldNamePrefixer.Prefix(node.Predicate, "$" + node.ItemName));
 
-            _templatesState.AddMapping(node.ItemName);
             return new BsonDocument("$filter", new BsonDocument
             {
                 { "input", inputValue },
@@ -736,7 +723,6 @@ namespace MongoDB.Driver.Linq.Translators
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
 
                     var input = TranslateValue(whereExpression.Source);
-                    _templatesState.AddMapping(whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
                         { "input", input },
@@ -773,7 +759,6 @@ namespace MongoDB.Driver.Linq.Translators
                 {
                     var inValue = TranslateValue(FieldNamePrefixer.Prefix(whereExpression.Predicate, "$" + whereExpression.ItemName));
                     var input = TranslateValue(whereExpression.Source);
-                    _templatesState.AddMapping(whereExpression.ItemName);
                     result = new BsonDocument("$map", new BsonDocument
                     {
                         { "input", input },
@@ -811,7 +796,6 @@ namespace MongoDB.Driver.Linq.Translators
                 var source = TranslateValue(node.Source);
                 var value = TranslateValue(resultOperator.Value);
                 var @as = "x";
-                _templatesState.AddMapping(@as);
                 result = new BsonDocument("$anyElementTrue", new BsonDocument("$map", new BsonDocument
                 {
                     { "input", source },
@@ -1310,202 +1294,36 @@ namespace MongoDB.Driver.Linq.Translators
             return false;
         }
 
-        internal class TemplatesState
+        public string ConvertFieldIfRequired(FieldExpression expression, string result)
         {
-            #region Delimiters
-            private const string MapTemplateStartDelimiter = "#<";
-            private const string MapTemplateEndDelimiter = ">#";
-            #endregion
-
-            private readonly List<string> _usedQueryMaps = new List<string>();
-
-            #region Static methods
-            internal static bool TryParseTemplate(string value, ref int startIndex, out string template)
+            if (!string.IsNullOrWhiteSpace(expression.OutOfCurrentScopePrefix))
             {
-                template = null;
-                var startIndexOf = value.IndexOf(MapTemplateStartDelimiter, startIndex, StringComparison.Ordinal);
-                var endIndexOf = value.IndexOf(MapTemplateEndDelimiter, startIndex, StringComparison.Ordinal);
-                if (startIndexOf != -1 && endIndexOf != -1 && endIndexOf > startIndexOf)
+                if (expression.OutOfCurrentScopePrefix == _topLevelParam)
                 {
-                    endIndexOf = endIndexOf + MapTemplateEndDelimiter.Length;
-                    if (endIndexOf <= value.Length)
-                    {
-                        template = value.Substring(startIndexOf, endIndexOf - startIndexOf);
-                        startIndex = endIndexOf;
-                        return true;
-                    }
-                }
-
-                startIndex = -1;
-                return false;
-            }
-
-            internal static bool TryGetTemplateElement(string value, out BsonElement element)
-            {
-                element = new BsonElement();
-                var firstLetterIndex = value.IndexOf(MapTemplateStartDelimiter, StringComparison.Ordinal);
-                if (firstLetterIndex == -1)
-                {
-                    return false;
-                }
-
-                firstLetterIndex += MapTemplateStartDelimiter.Length;
-                var lastLetterIndex = value.IndexOf(MapTemplateEndDelimiter, StringComparison.Ordinal);
-                if (lastLetterIndex == -1)
-                {
-                    return false;
-                }
-
-                if (lastLetterIndex > firstLetterIndex)
-                {
-                    var elementValue = value.Substring(firstLetterIndex, lastLetterIndex - firstLetterIndex);
-                    element = BsonDocument.Parse(elementValue).GetElement(0);
-                    return true;
-                }
-
-                return false;
-            }
-
-            private static string AddTemplateDelimiterBrackets(string value)
-            {
-                return $"{MapTemplateStartDelimiter}{value}{MapTemplateEndDelimiter}";
-            }
-
-            private static string RemoveMapPrefixIfThere(string value)
-            {
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    var dotIndex = value.IndexOf('.');
-                    if (dotIndex != -1)
-                    {
-                        return $"{value.Substring(dotIndex + 1)}";
-                    }
-                }
-                return value;
-            }
-
-            internal static Dictionary<string, List<string>> CollectTemplates(string value)
-            {
-                var templates = new Dictionary<string, List<string>>(); ;
-                int startIndex = 0;
-                while (startIndex != -1)
-                {
-                    string template;
-                    if (TryParseTemplate(value, ref startIndex, out template))
-                    {
-                        BsonElement element;
-                        if (TryGetTemplateElement(template, out element))
-                        {
-                            if (templates.ContainsKey(element.Name))
-                            {
-                                templates[element.Name].Add(element.Value.ToString());
-                            }
-                            else
-                            {
-                                templates.Add(element.Name, new List<string> {element.Value.ToString()});
-                            }
-                        }
-                        else
-                        {
-                            throw new MongoException("The query transformation has not been finished: Incorrect template format.");
-                        }
-                    }
-                }
-
-                return templates;
-            }
-
-            private static string CreateTemplateBody(string key, string value)
-            {
-                return $"{{'{key}':'{value}'}}";
-            }
-
-            public static TemplatesState Create()
-            {
-                return new TemplatesState();
-            }
-            #endregion
-
-            public bool IsMappingRequired { get; private set; }
-
-            public void AddMapping(string value)
-            {
-                _usedQueryMaps.Add(value);
-            }
-
-            public BsonValue ReplaceTemplates(BsonValue bsonValue)
-            {
-                var value = bsonValue.ToString();
-                var templates = CollectTemplates(value);
-                if (!templates.Any())
-                {
-                    return bsonValue;
-                }
-
-                foreach (var map in _usedQueryMaps)
-                {
-                    List<string> fields;
-                    if (templates.TryGetValue(map, out fields))
-                    {
-                        foreach (var field in fields)
-                        {
-                            // if we found a template parameter in $maps sections, 
-                            // It means the template node value does not require mapping.
-                            // We just need to add the second '$'.
-                            var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(map, field));
-                            var newValue = "$" + field;
-                            value = value.Replace(oldValue, newValue);
-                        }
-
-                        templates.Remove(map);
-                    }
-                }
-
-                if (_usedQueryMaps.Any() && templates.Count == 1)
-                {
-                    // This case can happen no more than for one template when we use a top-level input expression parameter
-                    // in the scope of children expressions. Since the top-level expression input params are not
-                    // specified in any $map operator, then to handle this case we just need to remove $map prefix.
-                    // See: $$g.G.N - In case if this field are used outside of the expression scope where it was defined
-                    // and `g` the prefix is top-level, then we need to replace this field to $G.N.
-                    var notMappedTemplate = templates.First();
-                    foreach (var field in notMappedTemplate.Value)
-                    {
-                        var oldValue = AddTemplateDelimiterBrackets(CreateTemplateBody(notMappedTemplate.Key, field));
-                        var newValue = RemoveMapPrefixIfThere(field);
-                        value = value.Replace(oldValue, newValue);
-                    }
-
-                    templates.Remove(notMappedTemplate.Key);
-                }
-
-                if (value.Contains(MapTemplateStartDelimiter) || value.Contains(MapTemplateEndDelimiter))
-                {
-                    throw new MongoException("The query transformation has not been finished: Incorrect parameters mapping.");
-                }
-
-                return bsonValue.BsonType == BsonType.Document
-                    ? BsonDocument.Parse(value)
-                    : BsonTypeMapper.MapToBsonValue(value, bsonValue.BsonType);
-            }
-
-            public string CreateTemplateIfRequired(FieldExpression expression, string result)
-            {
-                if (!string.IsNullOrWhiteSpace(expression.OutOfCurrentScopePrefix))
-                {
-                    return CreateTemplate(expression.OutOfCurrentScopePrefix, result);
+                    return RemoveMapPrefixIfThere(result);
                 }
                 else
                 {
-                    return result;
+                    return "$" + result;
                 }
             }
-
-            private string CreateTemplate(string outOfScopePrefix, string inputValue)
+            else
             {
-                IsMappingRequired = true;
-                return AddTemplateDelimiterBrackets(CreateTemplateBody(outOfScopePrefix, inputValue));
+                return result;
             }
+        }
+
+        private static string RemoveMapPrefixIfThere(string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                var dotIndex = value.IndexOf('.');
+                if (dotIndex != -1)
+                {
+                    return $"{value.Substring(dotIndex + 1)}";
+                }
+            }
+            return value;
         }
     }
 }

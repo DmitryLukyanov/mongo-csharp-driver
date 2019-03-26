@@ -426,6 +426,7 @@ namespace MongoDB.Driver
         private bool AreSessionsSupportedAfterServerSelection(CancellationToken cancellationToken)
         {
             var selector = new AreSessionsSupportedServerSelector();
+            /*4*/
             var selectedServer = _cluster.SelectServer(selector, cancellationToken);
             return AreSessionsSupported(selector.ClusterDescription) ?? false;
         }

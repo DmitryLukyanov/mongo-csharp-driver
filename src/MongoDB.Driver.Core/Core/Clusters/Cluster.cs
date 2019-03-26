@@ -234,7 +234,7 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 try
                 {
-                    while (true)
+                    while (true) /*4.1*/
                     {
                         var server = helper.SelectServer();
                         if (server != null)
@@ -293,6 +293,7 @@ namespace MongoDB.Driver.Core.Clusters
 
         protected abstract bool TryGetServer(EndPoint endPoint, out IClusterableServer server);
 
+        /*2*/
         protected void UpdateClusterDescription(ClusterDescription newClusterDescription)
         {
             ClusterDescription oldClusterDescription = null;
@@ -426,6 +427,7 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 lock (_cluster._descriptionLock)
                 {
+                    /*1.1*/
                     _descriptionChangedTask = _cluster._descriptionChangedTaskCompletionSource.Task;
                     _description = _cluster._description;
                 }
@@ -565,6 +567,7 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 if (completedTask == _timeoutTask)
                 {
+                    /*1*/
                     _cluster.ThrowTimeoutException(_selector, _description);
                 }
                 _timeoutCancellationTokenSource.Cancel();

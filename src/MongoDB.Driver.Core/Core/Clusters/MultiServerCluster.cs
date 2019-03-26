@@ -132,6 +132,7 @@ namespace MongoDB.Driver.Core.Clusters
                 }
 
                 var stopwatch = Stopwatch.StartNew();
+                /*3.1.1*/
                 MonitorServersAsync().ConfigureAwait(false);
                 // We lock here even though AddServer locks. Monitors
                 // are re-entrant such that this won't cause problems,
@@ -143,12 +144,13 @@ namespace MongoDB.Driver.Core.Clusters
                 {
                     foreach (var endPoint in Settings.EndPoints)
                     {
+                        /*3.1.2*/
                         clusterDescription = EnsureServer(clusterDescription, endPoint, newServers);
                     }
                 }
 
                 stopwatch.Stop();
-
+                /*3.1*/
                 UpdateClusterDescription(clusterDescription);
 
                 foreach (var server in newServers)
@@ -224,6 +226,7 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 try
                 {
+                    /*3.2*/
                     var eventArgs = await _serverDescriptionChangedQueue.DequeueAsync(monitorServersCancellationToken).ConfigureAwait(false); // TODO: add timeout and cancellationToken to DequeueAsync
                     ProcessServerDescriptionChanged(eventArgs);
                 }
@@ -305,6 +308,7 @@ namespace MongoDB.Driver.Core.Clusters
                 }
             }
 
+            /*3.2*/
             UpdateClusterDescription(newClusterDescription);
 
             foreach (var server in newServers)

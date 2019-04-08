@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Core.Operations
     /// Represents an async cursor.
     /// </summary>
     /// <typeparam name="TDocument">The type of the documents.</typeparam>
-    public class AsyncCursor<TDocument> : IAsyncCursor<TDocument>
+    public class AsyncCursor<TDocument> : IAsyncCursor<TDocument>, IBatchInfo
     {
         #region static
         // private static fields
@@ -59,6 +59,7 @@ namespace MongoDB.Driver.Core.Operations
         private readonly TimeSpan? _maxTime;
         private readonly MessageEncoderSettings _messageEncoderSettings;
         private readonly long? _operationId;
+        private BsonDocument _postBatchResumeToken;
         private readonly BsonDocument _query;
         private readonly IBsonSerializer<TDocument> _serializer;
 
@@ -87,6 +88,32 @@ namespace MongoDB.Driver.Core.Operations
             IBsonSerializer<TDocument> serializer,
             MessageEncoderSettings messageEncoderSettings,
             TimeSpan? maxTime = null)
+        : this(
+            channelSource, 
+            collectionNamespace, 
+            query, 
+            firstBatch, 
+            cursorId, 
+            null, // postBatchResumeToken
+            batchSize, 
+            limit, 
+            serializer, 
+            messageEncoderSettings)
+        {
+        }
+
+        internal AsyncCursor(
+            IChannelSource channelSource,
+            CollectionNamespace collectionNamespace,
+            BsonDocument query,
+            IReadOnlyList<TDocument> firstBatch,
+            long cursorId,
+            BsonDocument postBatchResumeToken,
+            int? batchSize,
+            int? limit,
+            IBsonSerializer<TDocument> serializer,
+            MessageEncoderSettings messageEncoderSettings,
+            TimeSpan? maxTime = null)
         {
             _operationId = EventContext.OperationId;
             _channelSource = channelSource;
@@ -94,6 +121,7 @@ namespace MongoDB.Driver.Core.Operations
             _query = Ensure.IsNotNull(query, nameof(query));
             _firstBatch = Ensure.IsNotNull(firstBatch, nameof(firstBatch));
             _cursorId = cursorId;
+            _postBatchResumeToken = postBatchResumeToken;
             _batchSize = Ensure.IsNullOrGreaterThanOrEqualToZero(batchSize, nameof(batchSize));
             _limit = Ensure.IsNullOrGreaterThanOrEqualToZero(limit, nameof(limit));
             _serializer = Ensure.IsNotNull(serializer, nameof(serializer));
@@ -119,6 +147,19 @@ namespace MongoDB.Driver.Core.Operations
                 return _currentBatch;
             }
         }
+
+        /// <inheritdoc />
+        public bool IsEmpty
+        {
+            get
+            {
+                var batch = _currentBatch ?? _firstBatch;
+                return batch == null || !batch.Any();
+            }
+        }
+
+        /// <inheritdoc />
+        public BsonDocument PostBatchResumeToken => _postBatchResumeToken;
 
         // methods
         private int CalculateGetMoreProtocolNumberToReturn()
@@ -173,11 +214,12 @@ namespace MongoDB.Driver.Core.Operations
             var cursorDocument = result["cursor"].AsBsonDocument;
             var cursorId = cursorDocument["id"].ToInt64();
             var batch = (RawBsonArray)cursorDocument["nextBatch"];
+            var postBatchResumeToken = (BsonDocument)cursorDocument.GetValue("postBatchResumeToken", null);
 
             using (batch)
             {
                 var documents = CursorBatchDeserializationHelper.DeserializeBatch(batch, _serializer, _messageEncoderSettings);
-                return new CursorBatch<TDocument>(cursorId, documents);
+                return new CursorBatch<TDocument>(cursorId, postBatchResumeToken, documents);
             }
         }
 
@@ -533,6 +575,7 @@ namespace MongoDB.Driver.Core.Operations
 
             _currentBatch = documents;
             _cursorId = batch.CursorId;
+            _postBatchResumeToken = batch.PostBatchResumeToken;
 
             DisposeChannelSourceIfNoLongerNeeded();
         }

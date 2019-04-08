@@ -35,51 +35,6 @@ namespace MongoDB.Driver.Core.Operations
 {
     public class ChangeStreamOperationTests : OperationTestBase
     {
-        [Theory]
-        [InlineData("{ 'a' : '1' }", "{ 'b' : '2' }", 3L, "{ 'c' : '3' }", null, "{ 'c' : '3' }", null)]
-        [InlineData("{ 'a' : '1' }", "{ 'b' : '2' }", 3L, null, null, "{ 'b' : '2' }", null)]
-        [InlineData("{ 'a' : '1' }", null, 3L, null, null, "{ 'a' : '1' }", null)]
-        [InlineData(null, null, 3L, null, null, null, 3L)]
-        [InlineData(null, null, null, null, 4L, null, 4L)]
-        public void ChangeStreamOperation_should_have_expected_change_stream_operation_options_for_resume_process_after_resumable_error(
-            string resumeAfterJson,
-            string startAfterJson,
-            object startAtOperationTimeValue,
-            string documentResumeTokenJson,
-            object initialOperationTime,
-            string expectedResumeAfter,
-            object expectedStartAtOperationTimeValue)
-        {
-            var pipeline = new BsonDocument[0];
-            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
-            var messageEncoderSettings = new MessageEncoderSettings();
-
-            var resumeAfter = resumeAfterJson != null ? BsonDocument.Parse(resumeAfterJson) : null;
-            var startAfter = startAfterJson != null ? BsonDocument.Parse(startAfterJson) : null;
-            var startAtOperationTime = startAtOperationTimeValue != null ? BsonTimestamp.Create(startAtOperationTimeValue) : null;
-            var documentResumeToken = documentResumeTokenJson != null ? BsonDocument.Parse(documentResumeTokenJson) : null;
-
-            ChangeStreamOperation<ChangeStreamDocument<BsonDocument>> subject = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
-            {
-                ResumeAfter = resumeAfter,
-                StartAfter = startAfter,
-                StartAtOperationTime = startAtOperationTime,
-                DocumentResumeToken = documentResumeToken
-            };
-
-            if (initialOperationTime != null)
-            {
-                subject._initialOperationTime(BsonTimestamp.Create(initialOperationTime));
-            }
-
-            var result = subject.CreateChangeStreamStage(true);
-
-            var changeStream = result.GetValue("$changeStream").AsBsonDocument;
-            changeStream.GetValue("resumeAfter", null).Should().Be(expectedResumeAfter != null ? BsonDocument.Parse(expectedResumeAfter) : null);
-            changeStream.TryGetValue("startAfter", out _).Should().BeFalse();
-            changeStream.GetValue("startAtOperationTime", null).Should().Be(expectedStartAtOperationTimeValue != null ? BsonTimestamp.Create(expectedStartAtOperationTimeValue) : null);
-        }
-
         [Fact]
         public void ChangeStreamOperation_should_not_calculate_effective_options_for_non_resume_process()
         {
@@ -90,14 +45,12 @@ namespace MongoDB.Driver.Core.Operations
             var resumeAfter = new BsonDocument("a", 1);
             var startAfter = new BsonDocument("b", 2);
             var startAtOperationTime = BsonTimestamp.Create(3L);
-            var documentResumeToken = new BsonDocument("c", 3);
 
             ChangeStreamOperation<ChangeStreamDocument<BsonDocument>> subject = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
             {
                 ResumeAfter = resumeAfter,
                 StartAfter = startAfter,
-                StartAtOperationTime = startAtOperationTime,
-                DocumentResumeToken = documentResumeToken
+                StartAtOperationTime = startAtOperationTime
             };
 
             var result = subject.CreateChangeStreamStage(false);
@@ -331,6 +284,71 @@ namespace MongoDB.Driver.Core.Operations
             result.Should().Be(value);
         }
 
+        public static IEnumerable<object[]> GetEffectiveResumeStartValuesTestCases =>
+            new List<object[]>
+            {
+                // the batch is empty
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(isEmpty: true, postBatchResumeToken: "{ c : 3 }"), "{ c : 3 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(isEmpty: true, lastProcessedId: "{ d : 4 }"), "{ d : 4 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(isEmpty: true), "{ a : 1 }", null),
+                Case(new TestResumeOptions(resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(isEmpty: true), "{ b : 2 }", null),
+                Case(new TestResumeOptions(), new TestCursorBatchInfo(isEmpty: true), null, null),
+
+                // the batch has been iterated to the last document.
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.Completed, postBatchResumeToken: "{ c : 3 }"), "{ c : 3 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.Completed, lastProcessedId: "{ d : 4 }"), "{ d : 4 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.Completed), "{ a : 1 }", null),
+                Case(new TestResumeOptions(resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.Completed), "{ b : 2 }", null),
+                Case(new TestResumeOptions(), new TestCursorBatchInfo(iterationState:IterationState.Completed), null, null),
+
+                // the batch has been iterated up to but not including the last element.
+                Case(new TestResumeOptions(), new TestCursorBatchInfo(iterationState:IterationState.InProgress, lastProcessedId: "{ d : 4 }"), "{ d : 4 }", null),
+
+                // The batch is not empty, but hasn't been iterated at all.
+                Case(new TestResumeOptions(resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: false), "{ b : 2 }", null),
+                Case(new TestResumeOptions(), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: false), null, null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: true, postBatchResumeToken:"{ c : 3 }"), "{ c : 3 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: true, lastProcessedId: "{ d : 4 }"), "{ d : 4 }", null),
+                Case(new TestResumeOptions(startAfter: "{ a : 1 }", resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: true), "{ a : 1 }", null),
+                Case(new TestResumeOptions(resumeAfter: "{ b : 2 }"), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: true), "{ b : 2 }", null),
+                Case(new TestResumeOptions(), new TestCursorBatchInfo(iterationState:IterationState.NotStarted, hasGetMoreBeenCalled: true), null, null),
+
+                // operation time
+                Case(new TestResumeOptions(startAtOperationTime: 3L), new TestCursorBatchInfo(), null, 3L),
+                Case(new TestResumeOptions(initialOperationTime: 3L), new TestCursorBatchInfo(), null, 3L)
+            };
+
+        [Theory]
+        [MemberData(nameof(GetEffectiveResumeStartValuesTestCases))]
+        public void GetEffectiveResumeStartValues_should_have_expected_change_stream_operation_options_for_resume_process_after_resumable_error(
+            TestResumeOptions resumeOptions,
+            CursorBatchProcessingInfo batchInfo,
+            string expectedResumeAfter,
+            object expectedStartAtOperationTimeValue)
+        {
+            var pipeline = new BsonDocument[0];
+            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
+            var messageEncoderSettings = new MessageEncoderSettings();
+
+            ChangeStreamOperation<ChangeStreamDocument<BsonDocument>> subject = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(pipeline, resultSerializer, messageEncoderSettings, batchInfo)
+            {
+                ResumeAfter = resumeOptions.ResumeAfter,
+                StartAfter = resumeOptions.StartAfter,
+                StartAtOperationTime = resumeOptions.StartAtOperationTime
+            };
+
+            if (resumeOptions.InitialOperationTime != null)
+            {
+                subject._initialOperationTime(resumeOptions.InitialOperationTime);
+            }
+
+            var result = ChangeStreamResumeHelper.GetEffectiveResumeStartValues(subject, true);
+
+            result.StartAfter.Should().BeNull();
+            result.ResumeAfter.Should().Be(expectedResumeAfter != null ? BsonDocument.Parse(expectedResumeAfter) : null);
+            result.StartAtOperationTime.Should().Be(expectedStartAtOperationTimeValue != null ? BsonTimestamp.Create(expectedStartAtOperationTimeValue) : null);
+        }
+
         [Theory]
         [ParameterAttributeData]
         public void MaxAwaitTime_get_and_set_should_work(
@@ -443,6 +461,175 @@ namespace MongoDB.Driver.Core.Operations
             var result = subject.StartAtOperationTime;
 
             result.Should().Be(value);
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Execute_should_fill_batchProcessingInfo_according_to_iteration_steps_as_expected_after_resuming(
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ChangeStreamStage).ClusterTypes(ClusterType.ReplicaSet);
+            var pipeline = new BsonDocument[0];
+            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
+            var messageEncoderSettings = new MessageEncoderSettings();
+            var initialChangeStreamOperation = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2
+            };
+            EnsureDatabaseExists();
+            DropCollection();
+
+            BsonDocument resumeToken = null;
+            using (var cursor = ExecuteOperation(initialChangeStreamOperation, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                Insert("{ _id : 1, x : 'x1' }");
+                Insert("{ _id : 2, x : 'x2' }");
+                Insert("{ _id : 3, x : 'x3' }");
+                Insert("{ _id : 4, x : 'x4' }");
+                Insert("{ _id : 5, x : 'x5' }");
+                Insert("{ _id : 6, x : 'x6' }");
+
+                initialChangeStreamOperation.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+
+                AssertChangeStreamIteration(enumerator, initialChangeStreamOperation, "{ _id : 1, x: 'x1' }", IterationState.InProgress, false);
+                AssertChangeStreamIteration(enumerator, initialChangeStreamOperation, "{ _id : 2, x: 'x2' }", IterationState.Completed, false);
+                AssertChangeStreamIteration(enumerator, initialChangeStreamOperation, "{ _id : 3, x: 'x3' }", IterationState.InProgress, true);
+
+                resumeToken = enumerator.Current.ResumeToken;
+            }
+
+            var resumingChangeStreamOperation = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2,
+                ResumeAfter = resumeToken
+            };
+            using (var cursor = ExecuteOperation(resumingChangeStreamOperation, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                resumingChangeStreamOperation.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+                AssertChangeStreamIteration(enumerator, initialChangeStreamOperation, "{ _id : 4, x: 'x4' }", IterationState.InProgress, true);
+            }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Execute_should_fill_batchProcessingInfo_according_to_iteration_steps_as_expected_after_resuming_from_initial_aggregate(
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ChangeStreamStage).ClusterTypes(ClusterType.ReplicaSet);
+            var pipeline = new BsonDocument[0];
+            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
+            var messageEncoderSettings = new MessageEncoderSettings();
+            var initialChangeStreamOperation = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2
+            };
+            EnsureDatabaseExists();
+            DropCollection();
+
+            BsonDocument resumeToken = null;
+            using (var cursor = ExecuteOperation(initialChangeStreamOperation, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                Insert("{ _id : 1, x : 'x1' }");
+                Insert("{ _id : 2, x : 'x2' }");
+                Insert("{ _id : 3, x : 'x3' }");
+                Insert("{ _id : 4, x : 'x4' }");
+
+                initialChangeStreamOperation.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+
+                AssertChangeStreamIteration(enumerator, initialChangeStreamOperation, "{ _id : 1, x: 'x1' }", IterationState.InProgress, false);
+                resumeToken = enumerator.Current.ResumeToken;
+            }
+
+            resumeToken.Should().NotBeNull();
+            resumeToken.Should().Be(initialChangeStreamOperation.BatchProcessingInfo.LastIteratedDocumentId);
+
+            var resumingChangeStreamOperation = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2,
+                ResumeAfter = resumeToken
+            };
+            using (var cursor = ExecuteOperation(resumingChangeStreamOperation, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                resumingChangeStreamOperation.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+                AssertChangeStreamIteration(enumerator, resumingChangeStreamOperation, "{ _id : 2, x: 'x2' }", IterationState.InProgress, false);
+                AssertChangeStreamIteration(enumerator, resumingChangeStreamOperation, "{ _id : 3, x: 'x3' }", IterationState.Completed, false);
+                AssertChangeStreamIteration(enumerator, resumingChangeStreamOperation, "{ _id : 4, x: 'x4' }", IterationState.Completed, true);
+            }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Execute_should_fill_batchProcessingInfo_according_to_iteration_steps_as_expected_if_the_batch_iteration_is_over_a_server_batch(
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ChangeStreamStage).ClusterTypes(ClusterType.ReplicaSet);
+            var pipeline = new BsonDocument[0];
+            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
+            var messageEncoderSettings = new MessageEncoderSettings();
+            var subject = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2
+            };
+            EnsureDatabaseExists();
+            DropCollection();
+
+            using (var cursor = ExecuteOperation(subject, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                (cursor as INotifyBatchDocumentIterated)._iterateOverCachedBatch(false);
+                Insert("{ _id : 1, x : 'x1' }");
+                Insert("{ _id : 2, x : 'x2' }");
+                Insert("{ _id : 3, x : 'x3' }");
+                Insert("{ _id : 4, x : 'x4' }");
+                Insert("{ _id : 5, x : 'x5' }");
+
+                subject.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 1, x: 'x1' }", IterationState.Completed, false);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 2, x: 'x2' }", IterationState.Completed, false);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 3, x: 'x3' }", IterationState.Completed, true);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 4, x: 'x4' }", IterationState.Completed, true);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 5, x: 'x5' }", IterationState.Completed, true);
+            }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Execute_should_fill_batchProcessingInfo_according_to_iteration_steps_as_expected_if_the_batch_iteration_is_over_cached_documents(
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ChangeStreamStage).ClusterTypes(ClusterType.ReplicaSet);
+            var pipeline = new BsonDocument[0];
+            var resultSerializer = new ChangeStreamDocumentSerializer<BsonDocument>(BsonDocumentSerializer.Instance);
+            var messageEncoderSettings = new MessageEncoderSettings();
+            var subject = new ChangeStreamOperation<ChangeStreamDocument<BsonDocument>>(_collectionNamespace, pipeline, resultSerializer, messageEncoderSettings)
+            {
+                BatchSize = 2
+            };
+            EnsureDatabaseExists();
+            DropCollection();
+
+            using (var cursor = ExecuteOperation(subject, async))
+            using (var enumerator = new AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>>(cursor, CancellationToken.None))
+            {
+                Insert("{ _id : 1, x : 'x1' }");
+                Insert("{ _id : 2, x : 'x2' }");
+                Insert("{ _id : 3, x : 'x3' }");
+                Insert("{ _id : 4, x : 'x4' }");
+                Insert("{ _id : 5, x : 'x5' }");
+
+                subject.BatchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 1, x: 'x1' }", IterationState.InProgress, false);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 2, x: 'x2' }", IterationState.Completed, false);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 3, x: 'x3' }", IterationState.InProgress, true);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 4, x: 'x4' }", IterationState.Completed, true);
+                AssertChangeStreamIteration(enumerator, subject, "{ _id : 5, x: 'x5' }", IterationState.Completed, true);
+            }
         }
 
         [SkippableTheory]
@@ -698,6 +885,27 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
+        private void AssertChangeStreamIteration(AsyncCursorEnumerator<ChangeStreamDocument<BsonDocument>> enumerator, ChangeStreamOperation<ChangeStreamDocument<BsonDocument>> changeStreamOperation, string expectedDocument, IterationState expectedIterationState, bool expectedHasGetMoreBeenCalled)
+        {
+            enumerator.MoveNext().Should().BeTrue();
+            var value = enumerator.Current;
+            value.FullDocument.Should().Be(expectedDocument);
+
+            if (Feature.ChangeStreamPostBatchResumeToken.IsSupported(CoreTestConfiguration.ServerVersion))
+            {
+                changeStreamOperation.BatchProcessingInfo.PostBatchResumeToken.Should().NotBeNull();
+            }
+
+            changeStreamOperation.BatchProcessingInfo.IsEmpty.Should().BeFalse();
+            changeStreamOperation.BatchProcessingInfo.HasGetMoreBeenCalled.Should().Be(expectedHasGetMoreBeenCalled);
+            changeStreamOperation.BatchProcessingInfo.IterationState.Should().Be(expectedIterationState);
+        }
+
+        private static object[] Case(params object[] @params)
+        {
+            return @params;
+        }
+
         private ChangeStreamOperation<BsonDocument> CreateSubject(
             CollectionNamespace collectionNamespace = null,
             List<BsonDocument> pipeline = null,
@@ -709,6 +917,35 @@ namespace MongoDB.Driver.Core.Operations
             resultSerializer = resultSerializer ?? BsonDocumentSerializer.Instance;
             messageEncoderSettings = messageEncoderSettings ?? new MessageEncoderSettings();
             return new ChangeStreamOperation<BsonDocument>(collectionNamespace, pipeline, resultSerializer, messageEncoderSettings);
+        }
+
+        // nested types
+        public class TestResumeOptions
+        {
+            public TestResumeOptions(string startAfter = null, string resumeAfter = null, long? startAtOperationTime = null, long? initialOperationTime = null)
+            {
+                InitialOperationTime = initialOperationTime.HasValue ? BsonTimestamp.Create(initialOperationTime) : null;
+                ResumeAfter = resumeAfter != null ? BsonDocument.Parse(resumeAfter) : null;
+                StartAfter = startAfter != null ? BsonDocument.Parse(startAfter) : null;
+                StartAtOperationTime = startAtOperationTime.HasValue ? BsonTimestamp.Create(startAtOperationTime) : null;
+            }
+
+            public BsonTimestamp InitialOperationTime { get; set; }
+            public BsonDocument ResumeAfter { get; set; }
+            public BsonDocument StartAfter { get; set; }
+            public BsonTimestamp StartAtOperationTime { get; set; }
+        }
+
+        public class TestCursorBatchInfo : CursorBatchProcessingInfo
+        {
+            public TestCursorBatchInfo(bool hasGetMoreBeenCalled = false, bool isEmpty = false, IterationState iterationState = IterationState.NotStarted, string lastProcessedId = null, string postBatchResumeToken = null)
+            {
+                HasGetMoreBeenCalled = hasGetMoreBeenCalled;
+                IsEmpty = isEmpty;
+                IterationState = iterationState;
+                LastIteratedDocumentId = lastProcessedId != null ? BsonDocument.Parse(lastProcessedId) : null;
+                PostBatchResumeToken = postBatchResumeToken != null ? BsonDocument.Parse(postBatchResumeToken) : null;
+            }
         }
     }
 
@@ -727,6 +964,14 @@ namespace MongoDB.Driver.Core.Operations
         public static void _initialOperationTime(this ChangeStreamOperation<ChangeStreamDocument<BsonDocument>> subject, BsonTimestamp value)
         {
             Reflector.SetFieldValue(subject, nameof(_initialOperationTime), value);
+        }
+    }
+
+    internal static class INotifyBatchDocumentIteratedReflector
+    {
+        public static void _iterateOverCachedBatch(this INotifyBatchDocumentIterated subject, bool value)
+        {
+            Reflector.SetFieldValue(subject, nameof(_iterateOverCachedBatch), value);
         }
     }
 }

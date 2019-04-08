@@ -20,6 +20,7 @@ using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Misc;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,15 +31,18 @@ namespace MongoDB.Driver.Core.Operations
     /// </summary>
     /// <typeparam name="TDocument">The type of the output documents.</typeparam>
     /// <seealso cref="MongoDB.Driver.IAsyncCursor{TOutput}" />
-    internal sealed class ChangeStreamCursor<TDocument> : IAsyncCursor<TDocument>
+    internal sealed class ChangeStreamCursor<TDocument> : IAsyncCursor<TDocument>, INotifyBatchDocumentIterated
     {
         // private fields
+        private readonly Queue<BsonDocument> _batchIds;
         private readonly IReadBinding _binding;
         private readonly IChangeStreamOperation<TDocument> _changeStreamOperation;
         private IEnumerable<TDocument> _current;
         private IAsyncCursor<RawBsonDocument> _cursor;
         private bool _disposed;
         private IBsonSerializer<TDocument> _documentSerializer;
+        private bool _hasInitialAggregateBatchBeenIterated = false;
+        private bool _iterateOverCachedBatch = false;
 
         // public properties
         /// <inheritdoc />
@@ -62,9 +66,15 @@ namespace MongoDB.Driver.Core.Operations
             _documentSerializer = Ensure.IsNotNull(documentSerializer, nameof(documentSerializer));
             _binding = Ensure.IsNotNull(binding, nameof(binding));
             _changeStreamOperation = Ensure.IsNotNull(changeStreamOperation, nameof(changeStreamOperation));
+            _batchIds = new Queue<BsonDocument>();
         }
 
         // public methods
+        public void AllowIterationOverCachedBatch()
+        {
+            _iterateOverCachedBatch = true;
+        }
+
         /// <inheritdoc />
         public void Dispose()
         {
@@ -101,7 +111,7 @@ namespace MongoDB.Driver.Core.Operations
 
         /// <inheritdoc/>
         public async Task<bool> MoveNextAsync(CancellationToken cancellationToken = default(CancellationToken))
-        {          
+        {
             bool hasMore;
             while (true)
             {
@@ -122,6 +132,14 @@ namespace MongoDB.Driver.Core.Operations
             return hasMore;
         }
 
+        public void OnIteratedOverCachedDocument()
+        {
+            if (_iterateOverCachedBatch)
+            {
+                OnIterated();
+            }
+        }
+
         // private methods
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")]
         private TDocument DeserializeDocument(RawBsonDocument rawDocument)
@@ -137,9 +155,11 @@ namespace MongoDB.Driver.Core.Operations
         private IEnumerable<TDocument> DeserializeDocuments(IEnumerable<RawBsonDocument> rawDocuments)
         {
             var documents = new List<TDocument>();
-            RawBsonDocument lastRawDocument = null;
+            var rawDocumentsList = rawDocuments.ToList();
 
-            foreach (var rawDocument in rawDocuments)
+            SaveBatchInfoIfAvailable(rawDocumentsList);
+
+            foreach (var rawDocument in rawDocumentsList)
             {
                 if (!rawDocument.Contains("_id"))
                 {
@@ -149,15 +169,41 @@ namespace MongoDB.Driver.Core.Operations
                 var document = DeserializeDocument(rawDocument);
                 documents.Add(document);
 
-                lastRawDocument = rawDocument;
+                _batchIds.Enqueue(rawDocument["_id"].DeepClone().AsBsonDocument);
             }
 
-            if (lastRawDocument != null)
-            {
-                _changeStreamOperation.DocumentResumeToken = lastRawDocument["_id"].DeepClone().AsBsonDocument;
-            }
+            OnIteratedOverServerResponseIfAvailable();
 
             return documents;
+        }
+
+        private void OnIterated()
+        {
+            if (!_batchIds.Any())
+            {
+                throw new MongoClientException("The server batch has been fully iterated. There is no more document to iterate.");
+            }
+
+            var iteratedDocument = _batchIds.Dequeue();
+            _changeStreamOperation
+                .BatchProcessingInfo
+                .SaveIteratedDocumentId(iteratedDocument);
+
+            if (_hasInitialAggregateBatchBeenIterated)
+            {
+                // assuming that `getMore` has been called since we started processing of the second batch
+                _changeStreamOperation.BatchProcessingInfo.ConfirmGetMoreHasBeenCalled();
+            }
+
+            if (!_batchIds.Any()) // the current batch has been iterated
+            {
+                _changeStreamOperation.BatchProcessingInfo.ConfirmCurrentIteration();
+                if (!_hasInitialAggregateBatchBeenIterated)
+                {
+                    // initial `aggregate` command has been executed
+                    _hasInitialAggregateBatchBeenIterated = true;
+                }
+            }
         }
 
         private void ProcessBatch(bool hasMore)
@@ -179,6 +225,49 @@ namespace MongoDB.Driver.Core.Operations
             else
             {
                 _current = null;
+            }
+        }
+
+        private void OnIteratedOverServerResponseIfAvailable()
+        {
+            if (!_iterateOverCachedBatch)
+            {
+                // This is an emulation of a batch iteration behavior that was implemented for cursors
+                // that don't want to know whether a user started to enumerate cached documents from the SERVER response or not.
+                // So, as soon as SERVER batch has been pushed to enumerator, we think that the batch has been iterated
+                var batchLength = _batchIds.Count;
+                if (batchLength <= 0)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < batchLength - 1; i++)
+                {
+                    // remove all documents except the last
+                    _batchIds.Dequeue();
+                }
+
+                // processing of the last document in the batch
+                OnIterated();
+            }
+        }
+
+        private void SaveBatchInfoIfAvailable(IEnumerable<RawBsonDocument> documents)
+        {
+            if (_batchIds.Any())
+            {
+                throw new MongoClientException("Cannot process a new batch, since the previous has not been fully iterated.");
+            }
+
+            if (_cursor is IBatchInfo batchInfo)
+            {
+                _changeStreamOperation
+                    .BatchProcessingInfo
+                    .SaveCurrentBatchInfo(batchInfo.PostBatchResumeToken, !documents.Any());
+            }
+            else
+            {
+                throw new MongoClientException("ChangeStream operation doesn't support a cursor which doesn't implement IBatchInfo.");
             }
         }
     }

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 
@@ -401,5 +402,31 @@ namespace MongoDB.Driver
                 return Enumerable.Empty<TDocument>();
             }
         }
+    }
+
+    /// <summary>
+    /// Represents information about the last processed batch.
+    /// </summary>
+    internal interface IBatchInfo
+    {
+        /// <summary>
+        /// Determines whether the current batch is empty or not.
+        /// </summary>
+
+        bool IsEmpty { get; }
+
+        /// <summary>
+        /// Gets or sets the post batch resume token.
+        /// </summary>
+        BsonDocument PostBatchResumeToken { get; }
+    }
+
+    /// <summary>
+    /// Notifies that a document from the current batch has been iterated.
+    /// </summary>
+    internal interface INotifyBatchDocumentIterated
+    {
+        void OnIteratedOverCachedDocument();
+        void AllowIterationOverCachedBatch();
     }
 }

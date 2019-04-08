@@ -36,6 +36,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             _cursor = Ensure.IsNotNull(cursor, nameof(cursor));
             _cancellationToken = cancellationToken;
+            ConfigureIterationOverCachedBatchDocumentsIfNeeded();
         }
 
         // public properties
@@ -79,6 +80,7 @@ namespace MongoDB.Driver.Core.Operations
 
             if (_batchEnumerator != null && _batchEnumerator.MoveNext())
             {
+                NotifyAboutCachedDocumentIterationIfNeeded();
                 return true;
             }
 
@@ -90,6 +92,7 @@ namespace MongoDB.Driver.Core.Operations
                     _batchEnumerator = _cursor.Current.GetEnumerator();
                     if (_batchEnumerator.MoveNext())
                     {
+                        NotifyAboutCachedDocumentIterationIfNeeded();
                         return true;
                     }
                 }
@@ -109,6 +112,22 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
+        private void ConfigureIterationOverCachedBatchDocumentsIfNeeded()
+        {
+            if (_cursor is INotifyBatchDocumentIterated cursorWithIterationOverCachedDocuments)
+            {
+                cursorWithIterationOverCachedDocuments.AllowIterationOverCachedBatch();
+            }
+        }
+
+        private void NotifyAboutCachedDocumentIterationIfNeeded()
+        {
+            if (_cursor is INotifyBatchDocumentIterated cursorWithIterationOverCachedDocuments)
+            {
+                cursorWithIterationOverCachedDocuments.OnIteratedOverCachedDocument();
+            }
+        }
+
         private void ThrowIfDisposed()
         {
             if (_disposed)

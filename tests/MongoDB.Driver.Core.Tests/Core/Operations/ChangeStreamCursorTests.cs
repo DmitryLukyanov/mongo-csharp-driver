@@ -20,19 +20,15 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Connections;
-using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Driver.Core.Misc;
 using Xunit;
 
 namespace MongoDB.Driver.Core.Operations
@@ -196,6 +192,7 @@ namespace MongoDB.Driver.Core.Operations
             var mockCursor = new Mock<IAsyncCursor<RawBsonDocument>>();
             var mockBinding = new Mock<IReadBinding>();
             var mockOperation = new Mock<IChangeStreamOperation<BsonDocument>>();
+            mockOperation.Setup(c => c.BatchProcessingInfo).Returns(new CursorBatchProcessingInfo());
             var subject = CreateSubject(cursor: mockCursor.Object, binding: mockBinding.Object, changeStreamOperation: mockOperation.Object);
             var cancellationToken = new CancellationTokenSource().Token;
             var resumableException = CoreExceptionHelper.CreateException(resumableExceptionType);
@@ -308,7 +305,7 @@ namespace MongoDB.Driver.Core.Operations
 
         [Theory]
         [ParameterAttributeData]
-        void ProcessBatch_should_save_documentResumeToken(
+        void ProcessBatch_should_initialize_batchProcessingInfo(
             [Values(false, true)] bool async)
         {
             var mockCursor = new Mock<IAsyncCursor<RawBsonDocument>>();
@@ -335,7 +332,16 @@ namespace MongoDB.Driver.Core.Operations
                 result = subject.MoveNext(cancellationToken);
             }
 
-            subject._changeStreamOperation().DocumentResumeToken.Should().Be("{ resumeAfter : 1 }");
+            var batchProcessingInfo = subject._changeStreamOperation().BatchProcessingInfo;
+            batchProcessingInfo.LastIteratedDocumentId.Should().BeNull();
+            if (Feature.ChangeStreamPostBatchResumeToken.IsSupported(CoreTestConfiguration.ServerVersion))
+            {
+                batchProcessingInfo.PostBatchResumeToken.Should().NotBeNull();
+            }
+
+            batchProcessingInfo.HasGetMoreBeenCalled.Should().BeFalse();
+            batchProcessingInfo.IterationState.Should().Be(IterationState.NotStarted);
+            batchProcessingInfo.IsEmpty.Should().BeFalse();
         }
 
         [Theory]
@@ -395,7 +401,13 @@ namespace MongoDB.Driver.Core.Operations
             cursor = cursor ?? new Mock<IAsyncCursor<RawBsonDocument>>().Object;
             documentSerializer = documentSerializer ?? new Mock<IBsonSerializer<BsonDocument>>().Object;
             binding = binding ?? new Mock<IReadBinding>().Object;
-            changeStreamOperation = changeStreamOperation ?? Mock.Of<IChangeStreamOperation<BsonDocument>>();
+            if (changeStreamOperation == null)
+            {
+                var mock = new Mock<IChangeStreamOperation<BsonDocument>>();
+                mock.Setup(c => c.BatchProcessingInfo).Returns(new CursorBatchProcessingInfo());
+                changeStreamOperation = mock.Object;
+            }
+
             return new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, changeStreamOperation);
         }
 

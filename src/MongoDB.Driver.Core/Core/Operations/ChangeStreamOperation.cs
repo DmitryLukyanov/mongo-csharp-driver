@@ -33,15 +33,12 @@ namespace MongoDB.Driver.Core.Operations
     /// <typeparam name="TResult">The type of the result.</typeparam>
     public interface IChangeStreamOperation<TResult> : IReadOperation<IAsyncCursor<TResult>>
     {
-        // properties
         /// <summary>
-        /// Gets or sets the document resume token.
+        /// Provides the last batch processing info.
         /// </summary>
-        /// <value>
-        /// The document resume token.
-        /// </value>
-        BsonDocument DocumentResumeToken { get; set; }
+        CursorBatchProcessingInfo BatchProcessingInfo { get; }
 
+        //// properties
         /// <summary>
         /// Gets or sets the resume after value.
         /// </summary>
@@ -83,11 +80,11 @@ namespace MongoDB.Driver.Core.Operations
     public class ChangeStreamOperation<TResult> : IChangeStreamOperation<TResult>
     {
         // private fields
+        private readonly CursorBatchProcessingInfo _batchProcessingInfo;
         private int? _batchSize;
         private Collation _collation;
         private readonly CollectionNamespace _collectionNamespace;
         private readonly DatabaseNamespace _databaseNamespace;
-        private BsonDocument _documentResumeToken;
         private ChangeStreamFullDocumentOption _fullDocument = ChangeStreamFullDocumentOption.Default;
         private BsonTimestamp _initialOperationTime;
         private TimeSpan? _maxAwaitTime;
@@ -109,11 +106,9 @@ namespace MongoDB.Driver.Core.Operations
         public ChangeStreamOperation(
             IEnumerable<BsonDocument> pipeline,
             IBsonSerializer<TResult> resultSerializer,
-            MessageEncoderSettings messageEncoderSettings)
+            MessageEncoderSettings messageEncoderSettings) 
+            : this(pipeline, resultSerializer, messageEncoderSettings, new CursorBatchProcessingInfo())
         {
-            _pipeline = Ensure.IsNotNull(pipeline, nameof(pipeline)).ToList();
-            _resultSerializer = Ensure.IsNotNull(resultSerializer, nameof(resultSerializer));
-            _messageEncoderSettings = Ensure.IsNotNull(messageEncoderSettings, nameof(messageEncoderSettings));
         }
 
         /// <summary>
@@ -149,6 +144,20 @@ namespace MongoDB.Driver.Core.Operations
         {
             _collectionNamespace = Ensure.IsNotNull(collectionNamespace, nameof(collectionNamespace));
         }
+
+        internal ChangeStreamOperation(IEnumerable<BsonDocument> pipeline,
+            IBsonSerializer<TResult> resultSerializer,
+            MessageEncoderSettings messageEncoderSettings,
+            CursorBatchProcessingInfo batchProcessingInfo)
+        {
+            _pipeline = Ensure.IsNotNull(pipeline, nameof(pipeline)).ToList();
+            _resultSerializer = Ensure.IsNotNull(resultSerializer, nameof(resultSerializer));
+            _messageEncoderSettings = Ensure.IsNotNull(messageEncoderSettings, nameof(messageEncoderSettings));
+            _batchProcessingInfo = batchProcessingInfo;
+        }
+
+        /// <inheritdoc />
+        public CursorBatchProcessingInfo BatchProcessingInfo => _batchProcessingInfo;
 
         // public properties
         /// <summary>
@@ -191,13 +200,6 @@ namespace MongoDB.Driver.Core.Operations
         /// </value>
         public DatabaseNamespace DatabaseNamespace => _databaseNamespace;
 
-        /// <inheritdoc/>
-        public BsonDocument DocumentResumeToken
-        {
-            get { return _documentResumeToken; }
-            set { _documentResumeToken = value; }
-        }
-
         /// <summary>
         /// Gets or sets the full document option.
         /// </summary>
@@ -208,6 +210,18 @@ namespace MongoDB.Driver.Core.Operations
         {
             get { return _fullDocument; }
             set { _fullDocument = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the initial operation time.
+        /// </summary>
+        /// <value>
+        /// The initial operation time.
+        /// </value>
+        public BsonTimestamp InitialOperationTime
+        {
+            get { return _initialOperationTime; }
+            set { _initialOperationTime = value; }
         }
 
         /// <summary>
@@ -265,7 +279,12 @@ namespace MongoDB.Driver.Core.Operations
             set { _resumeAfter = value; }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets or sets the start after value.
+        /// </summary>
+        /// <value>
+        /// The start after value.
+        /// </value>
         public BsonDocument StartAfter
         {
             get { return _startAfter; }
@@ -295,6 +314,7 @@ namespace MongoDB.Driver.Core.Operations
             using (var channelBinding = new ChannelReadBinding(channelSource.Server, channel, binding.ReadPreference, binding.Session.Fork()))
             {
                 cursor = ExecuteAggregateOperation(channelBinding, resuming: false, cancellationToken);
+                SaveInitialBatchProcessingInfoIfRequired(cursor);
                 SaveInitialOperationTimeIfRequired(channel, channelBinding, cursor);
             }
 
@@ -316,6 +336,7 @@ namespace MongoDB.Driver.Core.Operations
             using (var channelBinding = new ChannelReadBinding(channelSource.Server, channel, binding.ReadPreference, binding.Session.Fork()))
             {
                 cursor = await ExecuteAggregateOperationAsync(channelBinding, resuming: false, cancellationToken).ConfigureAwait(false);
+                SaveInitialBatchProcessingInfoIfRequired(cursor);
                 SaveInitialOperationTimeIfRequired(channel, channelBinding, cursor);
             }
 
@@ -361,7 +382,7 @@ namespace MongoDB.Driver.Core.Operations
 
         private BsonDocument CreateChangeStreamStage(bool resuming)
         {
-            var resumeStartValues = GetEffectiveResumeStartValues(resuming);
+            var resumeStartValues = ChangeStreamResumeHelper.GetEffectiveResumeStartValues(this, resuming);
 
             var changeStreamOptions = new BsonDocument
             {
@@ -394,32 +415,18 @@ namespace MongoDB.Driver.Core.Operations
             return aggregateOperation.ExecuteAsync(binding, cancellationToken);
         }
 
-        private ResumeStartValue GetEffectiveResumeStartValues(bool resuming)
+        private void SaveInitialBatchProcessingInfoIfRequired(IAsyncCursor<RawBsonDocument> cursor)
         {
-            if (resuming)
+            if (cursor is IBatchInfo batchInfo)
             {
-                if (_documentResumeToken != null)
-                {
-                    return new ResumeStartValue { ResumeAfter = _documentResumeToken };
-                }
-
-                if (_startAfter != null)
-                {
-                    return new ResumeStartValue { ResumeAfter = _startAfter };
-                }
-
-                if (_resumeAfter != null)
-                {
-                    return new ResumeStartValue { ResumeAfter = _resumeAfter };
-                }
-
-                if (_startAtOperationTime != null || _initialOperationTime != null)
-                {
-                    return new ResumeStartValue { StartAtOperationTime = _startAtOperationTime ?? _initialOperationTime };
-                }
+                _batchProcessingInfo.SaveCurrentBatchInfo(
+                    batchInfo.PostBatchResumeToken,
+                    batchInfo.IsEmpty);
             }
-
-            return new ResumeStartValue { ResumeAfter = _resumeAfter, StartAfter = _startAfter, StartAtOperationTime = _startAtOperationTime };
+            else
+            {
+                throw new MongoClientException("ChangeStream operation doesn't support a cursor which doesn't implement IBatchInfo.");
+            }
         }
 
         private void SaveInitialOperationTimeIfRequired(IChannelHandle channel, IReadBinding binding, IAsyncCursor<RawBsonDocument> cursor)
@@ -429,7 +436,7 @@ namespace MongoDB.Driver.Core.Operations
                 var maxWireVersion = channel.ConnectionDescription.IsMasterResult.MaxWireVersion;
                 if (maxWireVersion >= 7)
                 {
-                    if (_documentResumeToken != null)
+                    if (_batchProcessingInfo.PostBatchResumeToken == null && _batchProcessingInfo.IsEmpty)
                     {
                         _initialOperationTime = binding.Session.OperationTime;
                     }
@@ -445,14 +452,6 @@ namespace MongoDB.Driver.Core.Operations
                 case ChangeStreamFullDocumentOption.UpdateLookup: return "updateLookup";
                 default: throw new ArgumentException($"Invalid FullDocument option: {fullDocument}.", nameof(fullDocument));
             }
-        }
-
-        // nested types
-        private struct ResumeStartValue
-        {
-            public BsonDocument ResumeAfter { get; set; }
-            public BsonDocument StartAfter { get; set; }
-            public BsonTimestamp StartAtOperationTime { get; set; }
         }
     }
 }

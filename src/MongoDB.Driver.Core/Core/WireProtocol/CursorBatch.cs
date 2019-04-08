@@ -13,11 +13,8 @@
 * limitations under the License.
 */
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.WireProtocol
@@ -31,6 +28,24 @@ namespace MongoDB.Driver.Core.WireProtocol
         // fields
         private readonly long _cursorId;
         private readonly IReadOnlyList<TDocument> _documents;
+        private readonly BsonDocument _postBatchResumeToken;
+
+        // constructors
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CursorBatch{TDocument}"/> struct.
+        /// </summary>
+        /// <param name="cursorId">The cursor identifier.</param>
+        /// <param name="postBatchResumeToken">The postBatch resume token.</param>
+        /// <param name="documents">The documents.</param>
+        public CursorBatch(
+            long cursorId,
+            BsonDocument postBatchResumeToken,
+            IReadOnlyList<TDocument> documents)
+        {
+            _cursorId = cursorId;
+            _documents = Ensure.IsNotNull(documents, nameof(documents));
+            _postBatchResumeToken = postBatchResumeToken;
+        }
 
         // constructors
         /// <summary>
@@ -38,12 +53,9 @@ namespace MongoDB.Driver.Core.WireProtocol
         /// </summary>
         /// <param name="cursorId">The cursor identifier.</param>
         /// <param name="documents">The documents.</param>
-        public CursorBatch(
-            long cursorId,
-            IReadOnlyList<TDocument> documents)
+        public CursorBatch(long cursorId, IReadOnlyList<TDocument> documents)
+            : this(cursorId, null, documents)
         {
-            _cursorId = cursorId;
-            _documents = Ensure.IsNotNull(documents, nameof(documents));
         }
 
         // properties
@@ -67,6 +79,17 @@ namespace MongoDB.Driver.Core.WireProtocol
         public IReadOnlyList<TDocument> Documents
         {
             get { return _documents; }
+        }
+
+        /// <summary>
+        /// Gets the post batch resume token.
+        /// </summary>
+        /// <value>
+        /// The post batch resume token.
+        /// </value>
+        public BsonDocument PostBatchResumeToken
+        {
+            get { return _postBatchResumeToken; }
         }
     }
 }

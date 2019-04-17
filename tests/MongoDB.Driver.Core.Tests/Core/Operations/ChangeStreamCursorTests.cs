@@ -60,8 +60,12 @@ namespace MongoDB.Driver.Core.Operations
             var startAtOperationTime = startAtOperationTimeValue != null ? BsonTimestamp.Create(startAtOperationTimeValue) : null;
             var documentResumeToken = documentResumeTokenJson != null ? BsonDocument.Parse(documentResumeTokenJson) : null;
             var initialOperationTime = initialOperationTimeObj != null ? BsonTimestamp.Create(initialOperationTimeObj) : null;
+            var documents = 
+                documentResumeToken != null
+                ? new List<RawBsonDocument>() {ToRawDocument(new BsonDocument("_id", documentResumeToken))}
+                : null;
 
-            var mockCursor = CreateMockCursor();
+            var mockCursor = CreateMockCursor(postBatchResumeToken, documents);
             var subject = CreateSubject(
                 cursor: mockCursor.Object,
                 startAfter: startAfter,
@@ -71,6 +75,7 @@ namespace MongoDB.Driver.Core.Operations
                 initialOperationTime: initialOperationTime);
 
             subject._documentResumeToken(documentResumeToken);
+            subject.ProcessBatch(true);
 
             var result = subject.GetResumeValues();
 
@@ -211,34 +216,6 @@ namespace MongoDB.Driver.Core.Operations
 
             mockCursor.Verify(s => s.Dispose(), Times.Once);
             mockBinding.Verify(s => s.Dispose(), Times.Once);
-        }
-
-        [Theory]
-        [InlineData("{ a : 1 }", "{ b : 2 }", "{ c : 3 }", "{ d : 4 }", "{ a : 1 }")]
-        [InlineData(null, "{ b : 2 }", "{ c : 3 }", "{ d : 4 }", "{ b : 2 }")]
-        [InlineData(null, null, "{ c : 3 }", "{ d : 4 }", "{ c : 3 }")]
-        [InlineData(null, null, null, "{ d : 4 }", "{ d : 4 }")]
-        [InlineData(null, null, null, null, null)]
-        public void GetResumeToken_should_return_expected_result(
-            string postBatchResumeTokenJson,
-            string documentResumeTokenJson,
-            string startAfterJson,
-            string resumeAfterJson,
-            string expectedResult)
-        {
-            var mockCursor = CreateMockCursor();
-            var postBatchResumeToken = postBatchResumeTokenJson != null ? BsonDocument.Parse(postBatchResumeTokenJson) : null;
-            var documentResumeToken = documentResumeTokenJson != null ? BsonDocument.Parse(documentResumeTokenJson) : null;
-            var startAfter = startAfterJson != null ? BsonDocument.Parse(startAfterJson) : null;
-            var resumeAfter = resumeAfterJson != null ? BsonDocument.Parse(resumeAfterJson) : null;
-
-            var subject = CreateSubject(
-                cursor: mockCursor.Object,
-                postBatchResumeToken: postBatchResumeToken,
-                startAfter: startAfter,
-                resumeAfter: resumeAfter);
-            subject._documentResumeToken(documentResumeToken);
-            subject.GetResumeToken().Should().Be(expectedResult);
         }
 
         [SkippableTheory]
@@ -591,11 +568,16 @@ namespace MongoDB.Driver.Core.Operations
             return completionSource.Task;
         }
 
-        private Mock<IAsyncCursor<RawBsonDocument>> CreateMockCursor(BsonDocument postBatchResumeToken = null)
+        private Mock<IAsyncCursor<RawBsonDocument>> CreateMockCursor(BsonDocument postBatchResumeToken = null, IEnumerable<RawBsonDocument> documents = null)
         {
             var mockBatchInfo = new Mock<ICursorBatchInfo>();
             mockBatchInfo.Setup(c => c.PostBatchResumeToken).Returns(postBatchResumeToken);
-            return mockBatchInfo.As<IAsyncCursor<RawBsonDocument>>();
+            var cursor = mockBatchInfo.As<IAsyncCursor<RawBsonDocument>>();
+            if (documents != null)
+            {
+                cursor.Setup(c => c.Current).Returns(documents);
+            }
+            return cursor;
         }
 
         private ChangeStreamCursor<BsonDocument> CreateSubject(
@@ -708,6 +690,11 @@ namespace MongoDB.Driver.Core.Operations
         public static BsonDocument _postBatchResumeToken<TDocument>(this IChangeStreamCursor<TDocument> cursor)
         {
             return (BsonDocument)Reflector.GetFieldValue(cursor, nameof(_postBatchResumeToken));
+        }
+
+        public static void ProcessBatch<TDocument>(this IChangeStreamCursor<TDocument> cursor, bool value)
+        {
+            Reflector.Invoke(cursor, nameof(ProcessBatch), value);
         }
 
         public static BsonDocument _initialResumeAfter<TDocument>(this IChangeStreamCursor<TDocument> cursor)

@@ -45,6 +45,7 @@ namespace MongoDB.Driver.Core.Operations
         private readonly BsonDocument _initialResumeAfter;
         private readonly BsonDocument _initialStartAfter;
         private readonly BsonTimestamp _initialStartAtOperationTime;
+        private BsonDocument _resumeToken;
 
         // public properties
         /// <inheritdoc />
@@ -84,6 +85,9 @@ namespace MongoDB.Driver.Core.Operations
             _initialStartAfter = initialStartAfter;
             _initialResumeAfter = initialResumeAfter;
             _initialStartAtOperationTime = initialStartAtOperationTime;
+
+            // save initial resume token
+            _resumeToken = aggregatePostBatchResumeToken ?? initialStartAfter ?? initialResumeAfter;
         }
 
         // public methods
@@ -101,11 +105,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <inheritdoc/>
         public BsonDocument GetResumeToken()
         {
-            return
-                _postBatchResumeToken ??
-                _documentResumeToken ??
-                _initialStartAfter ??
-                _initialResumeAfter;
+            return _resumeToken;
         }
 
         /// <inheritdoc/>
@@ -189,6 +189,15 @@ namespace MongoDB.Driver.Core.Operations
             if (lastRawDocument != null)
             {
                 _documentResumeToken = lastRawDocument["_id"].DeepClone().AsBsonDocument;
+                _resumeToken = _postBatchResumeToken ?? _documentResumeToken;
+            }
+            else
+            {
+                // empty batch
+                if (_postBatchResumeToken != null)
+                {
+                    _resumeToken = _postBatchResumeToken;
+                }
             }
 
             return documents;
@@ -196,24 +205,9 @@ namespace MongoDB.Driver.Core.Operations
 
         private ResumeValues GetResumeValues()
         {
-            if (_postBatchResumeToken != null)
+            if (_resumeToken != null)
             {
-                return new ResumeValues { ResumeAfter = _postBatchResumeToken };
-            }
-
-            if (_documentResumeToken != null)
-            {
-                return new ResumeValues { ResumeAfter = _documentResumeToken };
-            }
-
-            if (_initialStartAfter != null)
-            {
-                return new ResumeValues { ResumeAfter = _initialStartAfter };
-            }
-
-            if (_initialResumeAfter != null)
-            {
-                return new ResumeValues { ResumeAfter = _initialResumeAfter };
+                return new ResumeValues { ResumeAfter = _resumeToken };
             }
 
             if (_initialStartAtOperationTime != null || _initialOperationTime != null)

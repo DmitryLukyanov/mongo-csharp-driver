@@ -211,6 +211,57 @@ namespace MongoDB.Driver.Tests
                 }");
         }
 
+        [Fact]
+        public void Out_constructor_should_not_throw_exception_when_optional_input_parameter_is_empty()
+        {
+            var result = PipelineStageDefinitionBuilder.Out<BsonDocument>(new AggregateOutStageOptions("to"));
+        }
+
+        [Fact]
+        public void Out_constructor_should_throw_exception_when_required_input_parameter_is_empty()
+        {
+            var exception = Record.Exception(() =>
+            {
+                return PipelineStageDefinitionBuilder.Out((IMongoCollection<BsonDocument>)null);
+            });
+            exception.Should().BeOfType<ArgumentNullException>();
+            (exception as ArgumentNullException).ParamName.Should().Be("outputCollection");
+
+            exception = Record.Exception(() =>
+            {
+                return PipelineStageDefinitionBuilder.Out<BsonDocument>((AggregateOutStageOptions)null);
+            });
+            exception.Should().BeOfType<ArgumentNullException>();
+            (exception as ArgumentNullException).ParamName.Should().Be("options");
+
+            exception = Record.Exception(() =>
+            {
+                return PipelineStageDefinitionBuilder.Out<BsonDocument>(new AggregateOutStageOptions((string)null));
+            });
+            exception.Should().BeOfType<ArgumentNullException>();
+            (exception as ArgumentNullException).ParamName.Should().Be("to");
+        }
+
+        [Theory]
+        [InlineData("coll", null, null, null, "{ $out : 'coll' }")]
+        [InlineData("coll", "db", null, null, "{ $out : { 'mode' : 'replaceCollection', 'to' : 'coll', 'db' : 'db' } }")]
+        [InlineData("coll", "db", "{ '_id' : 1 }", null, "{ $out : { 'mode' : 'replaceCollection', 'to' : 'coll', 'db' : 'db', 'uniqueKey' : { '_id' : 1 } } }")]
+        [InlineData("coll", "db", "{ '_id' : 1 }", AggregateOutMode.ReplaceCollection, "{ $out : { 'mode' : 'replaceCollection', 'to' : 'coll', 'db' : 'db', 'uniqueKey' : { '_id' : 1 } } }")]
+        [InlineData("coll", "db", "{ '_id' : 1 }", AggregateOutMode.InsertDocuments, "{ $out : { 'mode' : 'insertDocuments', 'to' : 'coll', 'db' : 'db', 'uniqueKey' : { '_id' : 1 } } }")]
+        [InlineData("coll", "db", "{ '_id' : 1 }", AggregateOutMode.ReplaceDocuments, "{ $out : { 'mode' : 'replaceDocuments', 'to' : 'coll', 'db' : 'db', 'uniqueKey' : { '_id' : 1 } } }")]
+        public void Out_should_generate_expected_command(string collectionName, string databaseName, string keyJson, AggregateOutMode? aggregateOutMode, string expectedCommand)
+        {
+            AggregateOutStageOptions outOptions = new AggregateOutStageOptions(
+                    aggregateOutMode ?? AggregateOutMode.ReplaceCollection,
+                    collectionName,
+                    databaseName,
+                    keyJson != null ? BsonDocument.Parse(keyJson) : null);
+
+            var stage = PipelineStageDefinitionBuilder.Out<BsonDocument>(outOptions);
+            var result = RenderStage(stage).Document;
+            result.Should().Be(BsonDocument.Parse(expectedCommand));
+        }
+
         public class Order
         {
             [BsonElement("stockdata")]

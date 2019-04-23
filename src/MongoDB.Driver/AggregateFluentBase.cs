@@ -156,7 +156,16 @@ namespace MongoDB.Driver
         }
 
         /// <inheritdoc />
+        public virtual IAsyncCursor<TResult> Out(AggregateOutStageOptions options, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
         public abstract Task<IAsyncCursor<TResult>> OutAsync(string collectionName, CancellationToken cancellationToken);
+
+        /// <inheritdoc />
+        public abstract Task<IAsyncCursor<TResult>> OutAsync(AggregateOutStageOptions options, CancellationToken cancellationToken);
 
         /// <inheritdoc />
         public abstract IAggregateFluent<TNewResult> Project<TNewResult>(ProjectionDefinition<TResult, TNewResult> projection);

@@ -31,10 +31,8 @@ using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.TestHelpers;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Legacy.Tests;
-using MongoDB.Bson.TestHelpers;
 
 namespace MongoDB.Driver.Tests
 {
@@ -226,6 +224,66 @@ namespace MongoDB.Driver.Tests
                 Assert.Equal(1, dictionary[1]);
                 Assert.Equal(1, dictionary[2]);
                 Assert.Equal(2, dictionary[3]);
+            }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Test_aggregate_output_to_collection_with_extended_out(
+            [Values(AggregateOutMode.InsertDocuments, AggregateOutMode.ReplaceDocuments, AggregateOutMode.ReplaceCollection)] AggregateOutMode mode)
+        {
+            RequireServer.Check().Supports(Feature.AggregateExtendedOut);
+
+            _collection.Drop();
+            _collection.Insert(new BsonDocument("x", 1));
+            _collection.Insert(new BsonDocument("x", 2));
+            _collection.Insert(new BsonDocument("x", 3));
+            _collection.Insert(new BsonDocument("x", 3));
+
+            string tempCollectionName = "temp";
+            var tempCollection = _database.GetCollection<BsonDocument>(tempCollectionName);
+            tempCollection.Drop();
+            tempCollection.Insert(new BsonDocument("_id", 1));
+            tempCollection.Insert(new BsonDocument { { "_id", 0 }, { "count", 0 } });
+
+            string camelCaseMode = MongoUtils.ToCamelCase(mode.ToString());
+            var aggregateArgs = new AggregateArgs
+            {
+                BypassDocumentValidation = true,
+                Pipeline = new[]
+                {
+                    new BsonDocument("$group", new BsonDocument { { "_id", "$x" }, { "count", new BsonDocument("$sum", 1) } }),
+                    new BsonDocument("$out", new BsonDocument{ { "mode", camelCaseMode } , { "to", tempCollectionName }, { "uniqueKey", new BsonDocument("_id", 1) } })
+                }
+            };
+
+            if (mode == AggregateOutMode.InsertDocuments)
+            {
+                var exception = Record.Exception(() => { _collection.Aggregate(aggregateArgs); });
+                exception.Should().BeOfType<MongoCommandException>();
+                (exception as MongoCommandException).CodeName.Should().Be("DuplicateKey");
+            }
+            else
+            {
+                var results = _collection.Aggregate(aggregateArgs).ToList();
+
+                var dictionary = results.ToDictionary(
+                    document => document["_id"].AsInt32,
+                    document => document["count"].AsInt32);
+
+                var count = dictionary.Count;
+                if (mode == AggregateOutMode.ReplaceDocuments)
+                {
+                    dictionary[0].Should().Be(0);
+                    count.Should().Be(4);
+                }
+                else
+                {
+                    count.Should().Be(3);
+                }
+                dictionary[1].Should().Be(1);
+                dictionary[2].Should().Be(1);
+                dictionary[3].Should().Be(2);
             }
         }
 

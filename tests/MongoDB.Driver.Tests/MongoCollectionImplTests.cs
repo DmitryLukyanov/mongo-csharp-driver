@@ -28,8 +28,10 @@ using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Connections;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Tests;
 using Moq;
 using Xunit;
@@ -135,18 +137,43 @@ namespace MongoDB.Driver
             operation.UseCursor.Should().Be(options.UseCursor);
         }
 
-        [Theory]
+        [SkippableTheory]
         [ParameterAttributeData]
         public void Aggregate_should_execute_an_AggregateToCollectionOperation_and_a_FindOperation_when_out_is_specified(
             [Values(false, true)] bool usingSession,
+            [Values(false, true)] bool usingLegacyOutFormat,
             [Values(false, true)] bool async)
         {
+            if (!usingLegacyOutFormat)
+            {
+                RequireServer.Check().Supports(Feature.AggregateExtendedOut);
+            }
+
             var writeConcern = new WriteConcern(1);
             var subject = CreateSubject<BsonDocument>().WithWriteConcern(writeConcern);
             var session = CreateSession(usingSession);
-            var pipeline = new EmptyPipelineDefinition<BsonDocument>()
-                .Match("{ x : 2 }")
-                .Out(subject.Database.GetCollection<BsonDocument>("funny"));
+            var matchPipeline = new EmptyPipelineDefinition<BsonDocument>()
+                .Match("{ x : 2 }");
+            PipelineDefinition<BsonDocument, BsonDocument> pipeline;
+            var collection = subject.Database.GetCollection<BsonDocument>("funny");
+            if (usingLegacyOutFormat)
+            {
+                pipeline = matchPipeline.Out(collection);
+            }
+            else
+            {
+                pipeline = matchPipeline.Out
+                (
+                    new AggregateOutStageOptions
+                    (
+                        AggregateOutMode.ReplaceDocuments,
+                        collection.CollectionNamespace.CollectionName,
+                        collection.CollectionNamespace.DatabaseNamespace.DatabaseName,
+                        new BsonDocument("_id", 1)
+                    )
+                );
+            }
+
             var options = new AggregateOptions()
             {
                 AllowDiskUse = true,

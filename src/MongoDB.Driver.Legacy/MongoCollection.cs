@@ -29,7 +29,6 @@ using MongoDB.Driver.Builders;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
-using MongoDB.Driver.Operations;
 using MongoDB.Driver.Wrappers;
 using MongoDB.Shared;
 
@@ -145,7 +144,7 @@ namespace MongoDB.Driver
             var messageEncoderSettings = GetMessageEncoderSettings();
 
             var last = args.Pipeline.LastOrDefault();
-            if (last != null && last.GetElement(0).Name == "$out")
+            if (AggregateOutHelper.IsOutDocument(last))
             {
                 var aggregateOperation = new AggregateToCollectionOperation(_collectionNamespace, args.Pipeline, messageEncoderSettings)
                 {
@@ -157,7 +156,7 @@ namespace MongoDB.Driver
                 };
                 ExecuteWriteOperation(session, aggregateOperation);
 
-                var outputCollectionName = last[0].AsString;
+                string outputCollectionName = AggregateOutHelper.GetCollection(last);
                 var outputCollectionNamespace = new CollectionNamespace(_collectionNamespace.DatabaseNamespace, outputCollectionName);
                 var resultSerializer = BsonDocumentSerializer.Instance;
                 var findOperation = new FindOperation<BsonDocument>(outputCollectionNamespace, resultSerializer, messageEncoderSettings)

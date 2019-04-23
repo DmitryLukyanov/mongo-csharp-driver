@@ -176,11 +176,27 @@ namespace MongoDB.Driver
             return aggregate.ToCursor(cancellationToken);
         }
 
+        public override IAsyncCursor<TResult> Out(AggregateOutStageOptions options, CancellationToken cancellationToken)
+        {
+            Ensure.IsNotNull(options, nameof(options));
+            Ensure.IsNotNull(options.Collection, nameof(options.Collection));
+            var aggregate = WithPipeline(_pipeline.Out(options));
+            return aggregate.ToCursor(cancellationToken);
+        }
+
         public override Task<IAsyncCursor<TResult>> OutAsync(string collectionName, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(collectionName, nameof(collectionName));
             var outputCollection = Database.GetCollection<TResult>(collectionName);
             var aggregate = WithPipeline(_pipeline.Out(outputCollection));
+            return aggregate.ToCursorAsync(cancellationToken);
+        }
+
+        public override Task<IAsyncCursor<TResult>> OutAsync(AggregateOutStageOptions options, CancellationToken cancellationToken)
+        {
+            Ensure.IsNotNull(options, nameof(options));
+            Ensure.IsNotNull(options.Collection, nameof(options.Collection));
+            var aggregate = WithPipeline(_pipeline.Out(options));
             return aggregate.ToCursorAsync(cancellationToken);
         }
 

@@ -972,7 +972,37 @@ namespace MongoDB.Driver
             IMongoCollection<TInput> outputCollection)
         {
             Ensure.IsNotNull(outputCollection, nameof(outputCollection));
-            return new BsonDocumentPipelineStageDefinition<TInput, TInput>(new BsonDocument("$out", outputCollection.CollectionNamespace.CollectionName));
+            return Out<TInput>(new AggregateOutStageOptions(outputCollection.CollectionNamespace.CollectionName));
+        }
+
+        /// <summary>
+        /// Creates a $out stage.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <param name="options">The output options.</param>
+        /// <returns>The stage.</returns>
+        public static PipelineStageDefinition<TInput, TInput> Out<TInput>(AggregateOutStageOptions options)
+        {
+            Ensure.IsNotNull(options, nameof(options));
+            Ensure.IsNotNullOrEmpty(options.Collection, nameof(options.Collection));
+
+            BsonValue content;
+            if (AggregateOutHelper.CanUseLegacyOutSyntax(options))
+            {
+                content = BsonValue.Create(options.Collection);
+            }
+            else
+            {
+                content = new BsonDocument
+                {
+                    { "mode", MongoUtils.ToCamelCase(options.Mode.ToString()) },
+                    { "to", options.Collection },
+                    { "db", options.DataBase, !string.IsNullOrWhiteSpace(options.DataBase) },
+                    { "uniqueKey", options.UniqueKey, options.UniqueKey != null }
+                };
+            }
+
+            return new BsonDocumentPipelineStageDefinition<TInput, TInput>(new BsonDocument("$out", content));
         }
 
         /// <summary>

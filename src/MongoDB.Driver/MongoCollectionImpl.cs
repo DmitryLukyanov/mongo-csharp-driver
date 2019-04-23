@@ -26,7 +26,6 @@ using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
-using MongoDB.Driver.Linq;
 
 namespace MongoDB.Driver
 {
@@ -103,7 +102,7 @@ namespace MongoDB.Driver
             options = options ?? new AggregateOptions();
 
             var last = renderedPipeline.Documents.LastOrDefault();
-            if (last != null && last.GetElement(0).Name == "$out")
+            if (AggregateOutHelper.IsOutDocument(last))
             {
                 var aggregateOperation = CreateAggregateToCollectionOperation(renderedPipeline, options);
                 ExecuteWriteOperation(session, aggregateOperation, cancellationToken);
@@ -137,7 +136,7 @@ namespace MongoDB.Driver
             options = options ?? new AggregateOptions();
 
             var last = renderedPipeline.Documents.LastOrDefault();
-            if (last != null && last.GetElement(0).Name == "$out")
+            if (AggregateOutHelper.IsOutDocument(last))
             {
                 var aggregateOperation = CreateAggregateToCollectionOperation(renderedPipeline, options);
                 await ExecuteWriteOperationAsync(session, aggregateOperation, cancellationToken).ConfigureAwait(false);
@@ -714,7 +713,7 @@ namespace MongoDB.Driver
 
         private FindOperation<TResult> CreateAggregateToCollectionFindOperation<TResult>(BsonDocument outStage, IBsonSerializer<TResult> resultSerializer, AggregateOptions options)
         {
-            var outputCollectionName = outStage.GetElement(0).Value.AsString;
+            string outputCollectionName = AggregateOutHelper.GetCollection(outStage);
 
             return new FindOperation<TResult>(
                 new CollectionNamespace(_collectionNamespace.DatabaseNamespace, outputCollectionName),

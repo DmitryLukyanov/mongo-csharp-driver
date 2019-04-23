@@ -542,12 +542,18 @@ namespace MongoDB.Driver.Tests
         [Theory]
         [ParameterAttributeData]
         public void Out_should_add_the_expected_stage_and_call_Aggregate(
+            [Values(false, true)] bool useLegacyOutSyntax,
             [Values(false, true)] bool async)
         {
-            var subject = 
+            var subject =
                 CreateSubject()
                 .Match(Builders<C>.Filter.Eq(c => c.X, 1));
             var collectionName = "test";
+            AggregateOutStageOptions options = null;
+            if (!useLegacyOutSyntax)
+            {
+                options = new AggregateOutStageOptions(AggregateOutMode.ReplaceDocuments, collectionName, null, null);
+            }
 
             Predicate<PipelineDefinition<C, C>> isExpectedPipeline = pipeline =>
             {
@@ -555,14 +561,21 @@ namespace MongoDB.Driver.Tests
                 return
                     renderedPipeline.Documents.Count == 2 &&
                     renderedPipeline.Documents[0] == BsonDocument.Parse("{ $match : { X : 1 } }") &&
-                    renderedPipeline.Documents[1] == BsonDocument.Parse("{ $out : \"test\" }") &&
+                    renderedPipeline.Documents[1] ==
+                    (
+                        useLegacyOutSyntax
+                        ? BsonDocument.Parse("{ $out : 'test' }")
+                        : BsonDocument.Parse("{ $out : { mode : 'replaceDocuments', to : 'test' } }")
+                    ) &&
                     renderedPipeline.OutputSerializer.ValueType == typeof(C);
             };
 
             IAsyncCursor<C> cursor;
             if (async)
             {
-                cursor = subject.OutAsync(collectionName, CancellationToken.None).GetAwaiter().GetResult();
+                cursor = useLegacyOutSyntax
+                    ? subject.OutAsync(collectionName, CancellationToken.None).GetAwaiter().GetResult()
+                    : subject.OutAsync(options, CancellationToken.None).GetAwaiter().GetResult();
 
                 _mockCollection.Verify(
                     c => c.AggregateAsync<C>(
@@ -573,7 +586,9 @@ namespace MongoDB.Driver.Tests
             }
             else
             {
-                cursor = subject.Out(collectionName, CancellationToken.None);
+                cursor = useLegacyOutSyntax
+                    ? subject.Out(collectionName, CancellationToken.None)
+                    : subject.Out(options, CancellationToken.None);
 
                 _mockCollection.Verify(
                     c => c.Aggregate<C>(

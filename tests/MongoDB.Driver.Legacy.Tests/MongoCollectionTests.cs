@@ -21,7 +21,6 @@ using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Driver;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.GeoJsonObjectModel;
@@ -951,7 +950,7 @@ namespace MongoDB.Driver.Tests
         public void TestDropIndexWriteConcern()
         {
             RequireServer.Check().Supports(Feature.AggregateOut, Feature.CommandsThatWriteAcceptWriteConcern).ClusterType(ClusterType.ReplicaSet);
-            
+
             _collection.Drop();
             _collection.CreateIndex("x");
             var writeConcern = new WriteConcern(9, wTimeout: TimeSpan.FromMilliseconds(1));

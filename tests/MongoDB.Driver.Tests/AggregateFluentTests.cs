@@ -175,7 +175,7 @@ namespace MongoDB.Driver.Tests
             var client = DriverTestConfiguration.Client;
             var databaseNamespace = CoreTestConfiguration.DatabaseNamespace;
             var collectionNamespace = CoreTestConfiguration.GetCollectionNamespaceForTestMethod(
-                className: GetType().Name, 
+                className: GetType().Name,
                 methodName: nameof(Count_should_return_the_expected_result));
             var database = client.GetDatabase(databaseNamespace.DatabaseName);
             database.DropCollection(collectionNamespace.CollectionName);
@@ -788,8 +788,8 @@ namespace MongoDB.Driver.Tests
         }
 
         private List<IRenderedPipelineStageDefinition> RenderStages(
-            IList<IPipelineStageDefinition> stages, 
-            IBsonSerializer inputSerializer, 
+            IList<IPipelineStageDefinition> stages,
+            IBsonSerializer inputSerializer,
             IBsonSerializerRegistry serializerRegistry)
         {
             var renderedStages = new List<IRenderedPipelineStageDefinition>();

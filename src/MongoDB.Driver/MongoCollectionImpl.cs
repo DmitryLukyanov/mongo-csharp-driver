@@ -107,6 +107,9 @@ namespace MongoDB.Driver
                 var aggregateOperation = CreateAggregateToCollectionOperation(renderedPipeline, options);
                 ExecuteWriteOperation(session, aggregateOperation, cancellationToken);
 
+                // the cursor will iterate over the whole contents of the $out collection after the aggregate operation completes
+                // including records which could be in the $out collection before aggregation
+
                 // we want to delay execution of the find because the user may
                 // not want to iterate the results at all...
                 var findOperation = CreateAggregateToCollectionFindOperation(last, renderedPipeline.OutputSerializer, options);
@@ -140,6 +143,9 @@ namespace MongoDB.Driver
             {
                 var aggregateOperation = CreateAggregateToCollectionOperation(renderedPipeline, options);
                 await ExecuteWriteOperationAsync(session, aggregateOperation, cancellationToken).ConfigureAwait(false);
+
+                // the cursor will iterate over the whole contents of the $out collection after the aggregate operation completes
+                // including records which could be in the $out collection before aggregation
 
                 // we want to delay execution of the find because the user may
                 // not want to iterate the results at all...

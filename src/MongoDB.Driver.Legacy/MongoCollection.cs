@@ -156,6 +156,8 @@ namespace MongoDB.Driver
                 };
                 ExecuteWriteOperation(session, aggregateOperation);
 
+                // the cursor will iterate over the whole contents of the $out collection after the aggregate operation completes
+                // including records which could be in the $out collection before aggregation
                 string outputCollectionName = AggregateOutHelper.GetCollection(last);
                 var outputCollectionNamespace = new CollectionNamespace(_collectionNamespace.DatabaseNamespace, outputCollectionName);
                 var resultSerializer = BsonDocumentSerializer.Instance;

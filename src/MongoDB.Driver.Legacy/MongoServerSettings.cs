@@ -34,6 +34,7 @@ namespace MongoDB.Driver
         // private fields
         private string _applicationName;
         private Action<ClusterBuilder> _clusterConfigurator;
+        private IReadOnlyList<CompressorConfiguration> _compressors;
         private ConnectionMode _connectionMode;
         private TimeSpan _connectTimeout;
         private MongoCredentialStore _credentials;
@@ -77,6 +78,7 @@ namespace MongoDB.Driver
         public MongoServerSettings()
         {
             _applicationName = null;
+            _compressors = new CompressorConfiguration[0];
             _connectionMode = ConnectionMode.Automatic;
             _connectTimeout = MongoDefaults.ConnectTimeout;
             _credentials = new MongoCredentialStore(new MongoCredential[0]);
@@ -142,6 +144,19 @@ namespace MongoDB.Driver
             {
                 if (_isFrozen) { throw new InvalidOperationException("MongoServerSettings is frozen."); }
                 _clusterConfigurator = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the compressors.
+        /// </summary>
+        public IReadOnlyList<CompressorConfiguration> Compressors
+        {
+            get { return _compressors; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoServerSettings is frozen."); }
+                _compressors = value;
             }
         }
 
@@ -636,6 +651,7 @@ namespace MongoDB.Driver
             var serverSettings = new MongoServerSettings();
             serverSettings.ApplicationName = clientSettings.ApplicationName;
             serverSettings.ClusterConfigurator = clientSettings.ClusterConfigurator;
+            serverSettings.Compressors = clientSettings.Compressors;
             serverSettings.ConnectionMode = clientSettings.ConnectionMode;
             serverSettings.ConnectTimeout = clientSettings.ConnectTimeout;
 #pragma warning disable 618
@@ -681,6 +697,7 @@ namespace MongoDB.Driver
 
             var serverSettings = new MongoServerSettings();
             serverSettings.ApplicationName = url.ApplicationName;
+            serverSettings.Compressors = url.Compressors;
             serverSettings.ConnectionMode = url.ConnectionMode;
             serverSettings.ConnectTimeout = url.ConnectTimeout;
             if (credential != null)
@@ -737,6 +754,7 @@ namespace MongoDB.Driver
             var clone = new MongoServerSettings();
             clone._applicationName = _applicationName;
             clone._clusterConfigurator = _clusterConfigurator;
+            clone._compressors = _compressors;
             clone._connectionMode = _connectionMode;
             clone._connectTimeout = _connectTimeout;
             clone._credentials = _credentials;
@@ -796,6 +814,7 @@ namespace MongoDB.Driver
             return
                 _applicationName == rhs._applicationName &&
                 object.ReferenceEquals(_clusterConfigurator, rhs._clusterConfigurator) &&
+               _compressors.SequenceEqual(rhs._compressors) &&
                _connectionMode == rhs._connectionMode &&
                _connectTimeout == rhs._connectTimeout &&
                _credentials == rhs._credentials &&
@@ -873,6 +892,7 @@ namespace MongoDB.Driver
             return new Hasher()
                 .Hash(_applicationName)
                 .Hash(_clusterConfigurator)
+                .HashElements(_compressors)
                 .Hash(_connectionMode)
                 .Hash(_connectTimeout)
                 .Hash(_credentials)
@@ -922,6 +942,12 @@ namespace MongoDB.Driver
             {
                 parts.Add(string.Format("ApplicationName={0}", _applicationName));
             }
+
+            if (_compressors?.Any() ?? false)
+            {
+                parts.Add($"Compressors={string.Join(",", _compressors)}");
+            }
+
             parts.Add(string.Format("ConnectionMode={0}", _connectionMode));
             parts.Add(string.Format("ConnectTimeout={0}", _connectTimeout));
             parts.Add(string.Format("Credentials={{{0}}}", _credentials));
@@ -976,6 +1002,7 @@ namespace MongoDB.Driver
             return new ClusterKey(
                 _applicationName,
                 _clusterConfigurator,
+                _compressors,
                 _connectionMode,
                 _connectTimeout,
                 _credentials.ToList(),

@@ -25,6 +25,7 @@ using DnsClient;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Shared;
 
@@ -60,6 +61,7 @@ namespace MongoDB.Driver.Core.Configuration
         private readonly NameValueCollection _allOptions;
         private readonly NameValueCollection _unknownOptions;
         private readonly Dictionary<string, string> _authMechanismProperties;
+        private readonly CompressorsOptions _compressorsOptions;
 
         // these are all readonly, but since they are not assigned 
         // from the ctor, they cannot be marked as such.
@@ -113,6 +115,7 @@ namespace MongoDB.Driver.Core.Configuration
             _allOptions = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
             _unknownOptions = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
             _authMechanismProperties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _compressorsOptions = new CompressorsOptions();
             Parse();
 
             _isResolved = _scheme != ConnectionStringScheme.MongoDBPlusSrv;
@@ -181,6 +184,14 @@ namespace MongoDB.Driver.Core.Configuration
         public string AuthSource
         {
             get { return _authSource; }
+        }
+
+        /// <summary>
+        /// Gets the requested compressors.
+        /// </summary>
+        public IReadOnlyList<CompressorConfiguration> Compressors
+        {
+            get { return _compressorsOptions.Compressors; }
         }
 
         /// <summary>
@@ -776,6 +787,9 @@ namespace MongoDB.Driver.Core.Configuration
                 case "authsource":
                     _authSource = value;
                     break;
+                case "compressors":
+                    _compressorsOptions.SaveCompressors(value.Split(','));
+                    break;
                 case "connect":
                     _connect = ParseClusterConnectionMode(name, value);
                     break;
@@ -927,6 +941,9 @@ namespace MongoDB.Driver.Core.Configuration
                 case "waitqueuetimeout":
                 case "waitqueuetimeoutms":
                     _waitQueueTimeout = ParseTimeSpan(name, value);
+                    break;
+                case "zlibcompressionlevel":
+                    _compressorsOptions.SaveCompressionOption("Level", ParseInt32(name, value), CompressorType.Zlib);
                     break;
                 default:
                     _unknownOptions.Add(name, value);
@@ -1184,6 +1201,78 @@ namespace MongoDB.Driver.Core.Configuration
                 && !string.Equals(x, "replicaSet", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new MongoConfigurationException($"Only 'authSource' and 'replicaSet' are allowed in a TXT record.");
+            }
+        }
+
+        // nested types
+        private class CompressorsOptions
+        {
+            private readonly List<CompressorConfiguration> _compressors;
+            private readonly Dictionary<CompressorType, Dictionary<string, object>> _compressorsOptions;
+            private bool _hasBeenBuilt;
+
+            public CompressorsOptions()
+            {
+                _compressorsOptions = new Dictionary<CompressorType, Dictionary<string, object>>();
+                _compressors = new List<CompressorConfiguration>();
+            }
+
+            public IReadOnlyList<CompressorConfiguration> Compressors
+            {
+                get
+                {
+                    BuildIfNotBuilt();
+                    return _compressors;
+                }
+            }
+
+            public void SaveCompressionOption<TOptionType>(string option, TOptionType value, CompressorType compressorType)
+            {
+                if (!_compressorsOptions.TryGetValue(compressorType, out var properties))
+                {
+                    properties = new Dictionary<string, object>();
+                    _compressorsOptions.Add(compressorType, properties);
+                }
+
+                properties.Add(option, value);
+            }
+
+            public void SaveCompressors(string[] compressorNames)
+            {
+                foreach (var compressor in compressorNames)
+                {
+                    // NOTE: the 'noop' is also expected by the server
+                    if (!Enum.TryParse(compressor, true, out CompressorType compressorType) || !CompressorSource.IsCompressorSupported(compressorType))
+                    {
+                        // Keys that aren't supported by a driver MUST be ignored.
+                        continue;
+                    }
+                    _compressors.Add(new CompressorConfiguration(compressorType));
+                }
+            }
+
+            // private methods
+            private void BuildIfNotBuilt()
+            {
+                if (!_hasBeenBuilt)
+                {
+                    MapCompressorsAndProperties();
+                    _hasBeenBuilt = true;
+                }
+            }
+
+            private void MapCompressorsAndProperties()
+            {
+                foreach (var compressor in _compressors)
+                {
+                    if (_compressorsOptions.TryGetValue(compressor.Type, out var options))
+                    {
+                        foreach (var option in options)
+                        {
+                            compressor.Properties.Add(option);
+                        }
+                    }
+                }
             }
         }
     }

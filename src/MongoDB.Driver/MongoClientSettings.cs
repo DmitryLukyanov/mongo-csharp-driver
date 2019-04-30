@@ -18,7 +18,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
@@ -34,6 +33,7 @@ namespace MongoDB.Driver
         // private fields
         private string _applicationName;
         private Action<ClusterBuilder> _clusterConfigurator;
+        private IReadOnlyList<CompressorConfiguration> _compressors;
         private ConnectionMode _connectionMode;
         private TimeSpan _connectTimeout;
         private MongoCredentialStore _credentials;
@@ -76,6 +76,7 @@ namespace MongoDB.Driver
         public MongoClientSettings()
         {
             _applicationName = null;
+            _compressors = new CompressorConfiguration[0];
             _connectionMode = ConnectionMode.Automatic;
             _connectTimeout = MongoDefaults.ConnectTimeout;
             _credentials = new MongoCredentialStore(new MongoCredential[0]);
@@ -118,6 +119,19 @@ namespace MongoDB.Driver
             {
                 if (_isFrozen) { throw new InvalidOperationException("MongoClientSettings is frozen."); }
                 _applicationName = ApplicationNameHelper.EnsureApplicationNameIsValid(value, nameof(value));
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the compressors.
+        /// </summary>
+        public IReadOnlyList<CompressorConfiguration> Compressors
+        {
+            get { return _compressors; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoClientSettings is frozen."); }
+                _compressors = value;
             }
         }
 
@@ -631,6 +645,7 @@ namespace MongoDB.Driver
 
             var clientSettings = new MongoClientSettings();
             clientSettings.ApplicationName = url.ApplicationName;
+            clientSettings.Compressors = url.Compressors;
             clientSettings.ConnectionMode = url.ConnectionMode;
             clientSettings.ConnectTimeout = url.ConnectTimeout;
             if (credential != null)
@@ -685,6 +700,7 @@ namespace MongoDB.Driver
         {
             var clone = new MongoClientSettings();
             clone._applicationName = _applicationName;
+            clone._compressors = _compressors;
             clone._clusterConfigurator = _clusterConfigurator;
             clone._connectionMode = _connectionMode;
             clone._connectTimeout = _connectTimeout;
@@ -744,6 +760,7 @@ namespace MongoDB.Driver
             return
                 _applicationName == rhs._applicationName &&
                 object.ReferenceEquals(_clusterConfigurator, rhs._clusterConfigurator) &&
+                _compressors.SequenceEqual(rhs._compressors) &&
                 _connectionMode == rhs._connectionMode &&
                 _connectTimeout == rhs._connectTimeout &&
                 _credentials == rhs._credentials &&
@@ -820,6 +837,7 @@ namespace MongoDB.Driver
             return new Hasher()
                 .Hash(_applicationName)
                 .Hash(_clusterConfigurator)
+                .HashElements(_compressors)
                 .Hash(_connectionMode)
                 .Hash(_connectTimeout)
                 .Hash(_credentials)
@@ -867,6 +885,11 @@ namespace MongoDB.Driver
             if (_applicationName != null)
             {
                 sb.AppendFormat("ApplicationName={0};", _applicationName);
+            }
+
+            if (_compressors?.Any() ?? false)
+            {
+                sb.AppendFormat("Compressors=[{0}];", string.Join(",", _compressors));
             }
             sb.AppendFormat("ConnectionMode={0};", _connectionMode);
             sb.AppendFormat("ConnectTimeout={0};", _connectTimeout);
@@ -921,6 +944,7 @@ namespace MongoDB.Driver
             return new ClusterKey(
                 _applicationName,
                 _clusterConfigurator,
+                _compressors,
                 _connectionMode,
                 _connectTimeout,
                 _credentials.ToList(),

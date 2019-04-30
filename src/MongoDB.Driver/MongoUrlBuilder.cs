@@ -18,13 +18,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.Misc;
 using MongoDB.Shared;
 
 namespace MongoDB.Driver
@@ -42,6 +41,7 @@ namespace MongoDB.Driver
         private string _authenticationMechanism;
         private Dictionary<string, string> _authenticationMechanismProperties;
         private string _authenticationSource;
+        private IReadOnlyList<CompressorConfiguration> _compressors;
         private ConnectionMode _connectionMode;
         private TimeSpan _connectTimeout;
         private string _databaseName;
@@ -84,6 +84,7 @@ namespace MongoDB.Driver
             _authenticationMechanism = MongoDefaults.AuthenticationMechanism;
             _authenticationMechanismProperties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _authenticationSource = null;
+            _compressors = new CompressorConfiguration[0];
             _connectionMode = ConnectionMode.Automatic;
             _connectTimeout = MongoDefaults.ConnectTimeout;
             _databaseName = null;
@@ -170,6 +171,15 @@ namespace MongoDB.Driver
         {
             get { return _authenticationSource; }
             set { _authenticationSource = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the compressors.
+        /// </summary>
+        public IReadOnlyList<CompressorConfiguration> Compressors
+        {
+            get { return _compressors; }
+            set { _compressors = value; }
         }
 
         /// <summary>
@@ -624,6 +634,7 @@ namespace MongoDB.Driver
             _authenticationMechanism = connectionString.AuthMechanism;
             _authenticationMechanismProperties = connectionString.AuthMechanismProperties.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
             _authenticationSource = connectionString.AuthSource;
+            _compressors = connectionString.Compressors;
             switch (connectionString.Connect)
             {
                 case ClusterConnectionMode.Direct:
@@ -812,6 +823,15 @@ namespace MongoDB.Driver
             {
                 query.AppendFormat("sslVerifyCertificate=false;");
             }
+
+            if (_compressors?.Any() ?? false)
+            {
+                query.AppendFormat("compressors={0};", string.Join(",", _compressors.Select(x => x.Type.ToString().ToLowerInvariant())));
+                foreach (var compressor in _compressors)
+                {
+                    ParseAndAppendCompressorOptions(query, compressor);
+                }
+            }
             if (_connectionMode != ConnectionMode.Automatic)
             {
                 query.AppendFormat("connect={0};", MongoUtils.ToCamelCase(_connectionMode.ToString()));
@@ -960,6 +980,21 @@ namespace MongoDB.Driver
             else
             {
                 return value.ToString();
+            }
+        }
+
+        private static void ParseAndAppendCompressorOptions(StringBuilder builder, CompressorConfiguration compressorConfiguration)
+        {
+            switch (compressorConfiguration.Type)
+            {
+                case CompressorType.Zlib:
+                {
+                    if (compressorConfiguration.Properties.TryGetValue("Level", out var zlibCompressionLevel))
+                    {
+                        builder.AppendFormat("zlibCompressionLevel={0};", zlibCompressionLevel);
+                    }
+                }
+                break;
             }
         }
     }

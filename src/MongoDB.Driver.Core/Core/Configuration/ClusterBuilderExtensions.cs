@@ -14,16 +14,13 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Events.Diagnostics;
 using MongoDB.Driver.Core.Misc;
 
@@ -124,6 +121,11 @@ namespace MongoDB.Driver.Core.Configuration
             if (connectionString.MaxLifeTime != null)
             {
                 builder = builder.ConfigureConnection(s => s.With(maxLifeTime: connectionString.MaxLifeTime.Value));
+            }
+
+            if (connectionString.Compressors != null)
+            {
+                builder = builder.ConfigureConnection(s => s.With(compressors: connectionString.Compressors.ToArray()));
             }
 
             // Connection Pool

@@ -15,8 +15,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Authentication;
 using FluentAssertions;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
 using Xunit;
 
@@ -37,6 +39,7 @@ namespace MongoDB.Driver.Tests
         [Theory]
         [InlineData("ApplicationName", true)]
         [InlineData("ClusterConfigurator", true)]
+        [InlineData("Compressors", true)]
         [InlineData("ConnectionMode", true)]
         [InlineData("ConnectTimeout", true)]
         [InlineData("Credentials", false)]
@@ -74,6 +77,7 @@ namespace MongoDB.Driver.Tests
         {
             var applicationName = "app1";
             var clusterConfigurator = new Action<ClusterBuilder>(b => { });
+            var compressors = new CompressorConfiguration[0];
             var connectionMode = ConnectionMode.Direct;
             var connectTimeout = TimeSpan.FromSeconds(1);
 #pragma warning disable 618
@@ -111,6 +115,7 @@ namespace MongoDB.Driver.Tests
                 {
                     case "ApplicationName": applicationName = "app2"; break;
                     case "ClusterConfigurator": clusterConfigurator = new Action<ClusterBuilder>(b => { }); break;
+                    case "Compressors": compressors = new[] { new CompressorConfiguration(CompressorType.Zlib) }; break;
                     case "ConnectionMode": connectionMode = ConnectionMode.ReplicaSet; break;
                     case "ConnectTimeout": connectTimeout = TimeSpan.FromSeconds(99); break;
 #pragma warning disable 618
@@ -144,6 +149,7 @@ namespace MongoDB.Driver.Tests
             return new ClusterKey(
                 applicationName,
                 clusterConfigurator,
+                compressors,
                 connectionMode,
                 connectTimeout,
                 credentials,

@@ -14,12 +14,12 @@
 */
 
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Authentication;
+using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.WireProtocol;
 
@@ -31,10 +31,12 @@ namespace MongoDB.Driver.Core.Connections
     internal class ConnectionInitializer : IConnectionInitializer
     {
         private readonly BsonDocument _clientDocument;
+        private readonly IReadOnlyList<CompressorConfiguration> _compressors;
 
-        public ConnectionInitializer(string applicationName)
+        public ConnectionInitializer(string applicationName, IReadOnlyList<CompressorConfiguration> compressors)
         {
             _clientDocument = ClientDocumentHelper.CreateClientDocument(applicationName);
+            _compressors = Ensure.IsNotNull(compressors, nameof(compressors));
         }
 
         public ConnectionDescription InitializeConnection(IConnection connection, CancellationToken cancellationToken)
@@ -124,6 +126,7 @@ namespace MongoDB.Driver.Core.Connections
         {
             var command = IsMasterHelper.CreateCommand();
             IsMasterHelper.AddClientDocumentToCommand(command, _clientDocument);
+            IsMasterHelper.AddCompressorsToCommand(command, _compressors);
             return IsMasterHelper.CustomizeCommand(command, authenticators);
         }
 

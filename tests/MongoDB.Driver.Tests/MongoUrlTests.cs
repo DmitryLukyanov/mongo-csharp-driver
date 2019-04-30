@@ -15,11 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
-using MongoDB.Driver;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
 using Xunit;
 
@@ -57,7 +56,7 @@ namespace MongoDB.Driver.Tests
         {
             var exception = Record.Exception(() => new MongoUrl(url, false));
 
-            var e =exception.Should().BeOfType<ArgumentException>().Subject;
+            var e = exception.Should().BeOfType<ArgumentException>().Subject;
             e.ParamName.Should().Be("isResolved");
         }
 
@@ -114,12 +113,17 @@ namespace MongoDB.Driver.Tests
                 { "SERVICE_NAME", "other" },
                 { "CANONICALIZE_HOST_NAME", "true" }
             };
+
+            var zlibCompressor = new CompressorConfiguration(CompressorType.Zlib);
+            zlibCompressor.Properties.Add("Level", 4);
+
             var built = new MongoUrlBuilder()
             {
                 ApplicationName = "app",
                 AuthenticationMechanism = "GSSAPI",
                 AuthenticationMechanismProperties = authMechanismProperties,
                 AuthenticationSource = "db",
+                Compressors = new[] { zlibCompressor },
                 ConnectionMode = ConnectionMode.ReplicaSet,
                 ConnectTimeout = TimeSpan.FromSeconds(1),
                 DatabaseName = "database",
@@ -160,6 +164,8 @@ namespace MongoDB.Driver.Tests
                 "ipv6=true",
                 "ssl=true", // UseSsl
                 "sslVerifyCertificate=false", // VerifySslCertificate
+                "compressors=zlib",
+                "zlibCompressionLevel=4",
                 "connect=replicaSet",
                 "replicaSet=name",
                 "readConcernLevel=majority",
@@ -191,6 +197,7 @@ namespace MongoDB.Driver.Tests
                 Assert.Equal("GSSAPI", url.AuthenticationMechanism);
                 Assert.Equal(authMechanismProperties, url.AuthenticationMechanismProperties);
                 Assert.Equal("db", url.AuthenticationSource);
+                Assert.Contains(url.Compressors, x => x.Type == CompressorType.Zlib);
                 Assert.Equal(123, url.ComputedWaitQueueSize);
                 Assert.Equal(ConnectionMode.ReplicaSet, url.ConnectionMode);
                 Assert.Equal(TimeSpan.FromSeconds(1), url.ConnectTimeout);

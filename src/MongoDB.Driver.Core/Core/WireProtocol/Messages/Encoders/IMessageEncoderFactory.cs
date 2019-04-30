@@ -13,11 +13,6 @@
 * limitations under the License.
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders
@@ -44,6 +39,12 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders
         /// </summary>
         /// <returns>An encoder.</returns>
         IMessageEncoder GetCommandResponseMessageEncoder();
+
+        /// <summary>
+        /// Gets an encoder for a Compressed message.
+        /// </summary>
+        /// <returns>An encoder.</returns>
+        IMessageEncoder GetCompressedMessageEncoder(IMessageEncoderSelector originalEncoderSelector);
 
         /// <summary>
         /// Gets an encoder for a Delete message.

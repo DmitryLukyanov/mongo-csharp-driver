@@ -19,6 +19,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers;
 using Xunit;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
+using MongoDB.Driver.Core.Compression;
+using MongoDB.Driver.Core.Configuration;
 
 namespace MongoDB.Driver.Core.Connections
 {
@@ -36,12 +38,12 @@ namespace MongoDB.Driver.Core.Connections
 
             result.Should().Be($"{{ isMaster : 1, client : {clientDocumentString} }}");
         }
-        
+
         [Fact]
         public void AddClientDocumentToCommand_with_ConnectionInitializer_client_document_should_return_expected_result()
         {
             var command = IsMasterHelper.CreateCommand();
-            var connectionInitializer = new ConnectionInitializer("test");
+            var connectionInitializer = new ConnectionInitializer("test", new CompressorConfiguration[0]);
             var subjectClientDocument = (BsonDocument)Reflector.GetFieldValue(connectionInitializer, "_clientDocument");
             var result = IsMasterHelper.AddClientDocumentToCommand(command, subjectClientDocument);
 
@@ -60,6 +62,27 @@ namespace MongoDB.Driver.Core.Connections
             clientDocument["application"]["name"].AsString.Should().Be("test");
             clientDocument["driver"]["name"].AsString.Should().Be("mongo-csharp-driver");
             clientDocument["driver"]["version"].BsonType.Should().Be(BsonType.String);
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void AddCompressorsToCommand_with_compressors_should_return_expected_result(
+            [Values(
+                new CompressorType[] { },
+                new [] { CompressorType.Zlib },
+                new [] { CompressorType.Snappy},
+                new [] { CompressorType.Zlib, CompressorType.Snappy })]
+            CompressorType[] compressorsParameters)
+        {
+            var command = IsMasterHelper.CreateCommand();
+            var compressors =
+                compressorsParameters
+                    .Select(c => new CompressorConfiguration(c))
+                    .ToArray();
+            var result = IsMasterHelper.AddCompressorsToCommand(command, compressors);
+
+            var expectedCompressions = string.Join(",", compressorsParameters.Select(c => $"'{c.ToString().ToLowerInvariant()}'"));
+            result.Should().Be(BsonDocument.Parse($"{{ isMaster : 1, compression: [{expectedCompressions}] }}"));
         }
     }
 }

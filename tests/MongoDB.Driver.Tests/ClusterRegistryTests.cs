@@ -21,6 +21,7 @@ using System.Security.Authentication;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
 using Xunit;
@@ -54,6 +55,7 @@ namespace MongoDB.Driver.Tests
             var clusterKey = new ClusterKey(
                 applicationName: "app1",
                 clusterConfigurator: clusterConfigurator,
+                compressors: new[] { new CompressorConfiguration(CompressorType.Zlib) },
                 connectionMode: ConnectionMode.ReplicaSet,
                 connectTimeout: TimeSpan.FromSeconds(1),
                 credentials: credentials,

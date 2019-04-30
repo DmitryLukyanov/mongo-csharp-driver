@@ -21,6 +21,7 @@ using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
@@ -85,6 +86,21 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
+        public void TestCompressors()
+        {
+            var settings = new MongoClientSettings();
+            Assert.Equal(Enumerable.Empty<CompressorConfiguration>(), settings.Compressors);
+
+            var compressors = new[] { new CompressorConfiguration(CompressorType.Zlib) };
+            settings.Compressors = compressors;
+            Assert.Equal(compressors, settings.Compressors);
+
+            settings.Freeze();
+            Assert.Equal(compressors, settings.Compressors);
+            Assert.Throws<InvalidOperationException>(() => { settings.Compressors = compressors; });
+        }
+
+        [Fact]
         public void TestConnectionMode()
         {
             var settings = new MongoClientSettings();
@@ -128,6 +144,7 @@ namespace MongoDB.Driver.Tests
         {
             var settings = new MongoClientSettings();
             Assert.Equal(null, settings.ApplicationName);
+            Assert.Equal(Enumerable.Empty<CompressorConfiguration>(), settings.Compressors);
             Assert.Equal(ConnectionMode.Automatic, settings.ConnectionMode);
             Assert.Equal(MongoDefaults.ConnectTimeout, settings.ConnectTimeout);
 #pragma warning disable 618
@@ -170,6 +187,10 @@ namespace MongoDB.Driver.Tests
 
             clone = settings.Clone();
             clone.ApplicationName = "app2";
+            Assert.False(clone.Equals(settings));
+
+            clone = settings.Clone();
+            clone.Compressors = new[] { new CompressorConfiguration(CompressorType.Zlib) };
             Assert.False(clone.Equals(settings));
 
             clone = settings.Clone();
@@ -314,7 +335,7 @@ namespace MongoDB.Driver.Tests
             // set everything to non default values to test that all settings are converted
             var connectionString =
                 "mongodb://user1:password1@somehost/?appname=app1;authSource=db;authMechanismProperties=CANONICALIZE_HOST_NAME:true;" +
-                "connect=direct;connectTimeout=123;uuidRepresentation=pythonLegacy;ipv6=true;heartbeatInterval=1m;heartbeatTimeout=2m;localThreshold=128;" +
+                "compressors=zlib,snappy;zlibCompressionLevel=9;connect=direct;connectTimeout=123;uuidRepresentation=pythonLegacy;ipv6=true;heartbeatInterval=1m;heartbeatTimeout=2m;localThreshold=128;" +
                 "maxIdleTime=124;maxLifeTime=125;maxPoolSize=126;minPoolSize=127;readConcernLevel=majority;" +
                 "readPreference=secondary;readPreferenceTags=a:1,b:2;readPreferenceTags=c:3,d:4;retryReads=false;retryWrites=true;socketTimeout=129;" +
                 "serverSelectionTimeout=20s;ssl=true;sslVerifyCertificate=false;waitqueuesize=130;waitQueueTimeout=131;" +
@@ -324,6 +345,7 @@ namespace MongoDB.Driver.Tests
 
             var settings = MongoClientSettings.FromUrl(url);
             Assert.Equal(url.ApplicationName, settings.ApplicationName);
+            Assert.Equal(url.Compressors, settings.Compressors);
             Assert.Equal(url.ConnectionMode, settings.ConnectionMode);
             Assert.Equal(url.ConnectTimeout, settings.ConnectTimeout);
 #pragma warning disable 618

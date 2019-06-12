@@ -178,5 +178,64 @@ namespace MongoDB.Driver.Examples
                 cancelationTokenSource.Cancel();
             }
         }
+
+        private BsonDocument LocalResumeTokenStorage = null;
+
+        [Fact]
+        public void ChangeStream_resume_POC()
+        {
+            var client = DriverTestConfiguration.Client;
+            var database = client.GetDatabase("ChangeStreamExamples");
+            var inventoryCollection = database.GetCollection<BsonDocument>("inventory");
+
+
+            var resumeToken = getResumeTokenFromLocalStorage(inventoryCollection);
+
+            using (var change_stream = inventoryCollection.Watch(new ChangeStreamOptions() { ResumeAfter = resumeToken }))
+            {
+                var enumerator = change_stream.ToEnumerable().GetEnumerator();
+                while (true)
+                {
+                    enumerator.MoveNext();
+                    var change = enumerator.Current;
+                    persistResumeTokenToLocalStorage(change_stream.GetResumeToken());
+                    //persistChangeToLocalStorage(change)
+                    processChange(change);
+                }
+            }
+        }
+
+        private void persistResumeTokenToLocalStorage(BsonDocument resumeToken)
+        {
+            LocalResumeTokenStorage = resumeToken;
+        }
+
+        private BsonDocument getResumeTokenFromLocalStorage(IMongoCollection<BsonDocument> inventoryCollection)
+        {
+            if (LocalResumeTokenStorage == null)
+            {
+                // emulate getting the previous `resumeToken` from local storage if LocalResumeTokenStorage is empty
+                using (var watch1 = inventoryCollection.Watch().ToEnumerable()
+                    .GetEnumerator())
+                {
+                    inventoryCollection.InsertMany(new BsonDocument[]
+                    {
+                        new BsonDocument("x", 1),
+                        new BsonDocument("x", 2),
+                        new BsonDocument("x", 3),
+                    });
+                    watch1.MoveNext();
+                    // resumeToken = getResumeTokenFromLocalStorage()
+                    LocalResumeTokenStorage = watch1.Current.ResumeToken;
+                }
+            }
+
+            return LocalResumeTokenStorage;
+        }
+
+        private void processChange(ChangeStreamDocument<BsonDocument> document)
+        {
+            Console.WriteLine(document.ToString());
+        }
     }
 }

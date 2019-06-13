@@ -57,7 +57,7 @@ namespace MongoDB.Driver
     /// Represents an asynchronous cursor for change stream.
     /// </summary>
     /// <typeparam name="TDocument">The type of the document.</typeparam>
-    public interface IChangeStreamCursor<out TDocument> : IAsyncCursor<TDocument>
+    public interface IChangeStreamCursor<TDocument> : IAsyncCursor<TDocument>, INotifyCursorIterated<TDocument>
     {
         /// <summary>
         /// Gets the resume token.
@@ -66,6 +66,18 @@ namespace MongoDB.Driver
         /// The resume token.
         /// </returns>
         BsonDocument GetResumeToken();
+    }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public interface INotifyCursorIterated<TDocument>
+    {
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        void OnDocumentIterated(TDocument document);
     }
 
     internal interface ICursorBatchInfo

@@ -79,6 +79,11 @@ namespace MongoDB.Driver.Core.Operations
 
             if (_batchEnumerator != null && _batchEnumerator.MoveNext())
             {
+                if (_cursor is INotifyCursorIterated<TDocument> changeStream)
+                {
+                    changeStream.OnDocumentIterated(_batchEnumerator.Current);
+                }
+
                 return true;
             }
 

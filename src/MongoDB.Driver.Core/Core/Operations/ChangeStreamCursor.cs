@@ -224,6 +224,18 @@ namespace MongoDB.Driver.Core.Operations
             return new ResumeValues { ResumeAfter = _initialResumeAfter, StartAfter = _initialStartAfter, StartAtOperationTime = _initialStartAtOperationTime };
         }
 
+        public void OnDocumentIterated(TDocument document)
+        {
+            if (document is ChangeStreamDocument<BsonDocument> changeStreamDocument)
+            {
+                _documentResumeToken = changeStreamDocument.ResumeToken;
+            }
+            else
+            {
+                throw new ArgumentException("TODO");
+            }
+        }
+
         private void ProcessBatch(bool hasMore)
         {
             if (hasMore)

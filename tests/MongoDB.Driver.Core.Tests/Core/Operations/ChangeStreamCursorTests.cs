@@ -91,8 +91,9 @@ namespace MongoDB.Driver.Core.Operations
             var startAfter = new BsonDocument("a", 1);
             var resumeAfter = new BsonDocument("b", 2);
             var startAtOperationTime = BsonTimestamp.Create(3L);
+            var maxWireVersion = 0;
 
-            var subject = new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, startAfter, resumeAfter, startAtOperationTime);
+            var subject = new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, startAfter, resumeAfter, startAtOperationTime, maxWireVersion);
 
             subject._binding().Should().BeSameAs(binding);
             subject._changeStreamOperation().Should().BeSameAs(changeStreamOperation);
@@ -116,7 +117,7 @@ namespace MongoDB.Driver.Core.Operations
             var postBatchResumeToken = Mock.Of<BsonDocument>();
             var changeStreamOperation = CreateChangeStreamOperation();
 
-            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(null, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null));
+            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(null, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null, 0));
 
             var argumnetNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumnetNullException.ParamName.Should().Be("cursor");
@@ -131,7 +132,7 @@ namespace MongoDB.Driver.Core.Operations
             var postBatchResumeToken = Mock.Of<BsonDocument>();
             var changeStreamOperation = CreateChangeStreamOperation();
 
-            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, null, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null));
+            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, null, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null, 0));
 
             var argumnetNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumnetNullException.ParamName.Should().Be("documentSerializer");
@@ -146,7 +147,7 @@ namespace MongoDB.Driver.Core.Operations
             var postBatchResumeToken = Mock.Of<BsonDocument>();
             var changeStreamOperation = CreateChangeStreamOperation();
 
-            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, null, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null));
+            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, null, changeStreamOperation, postBatchResumeToken, initialOperationTime, null, null, null, 0));
 
             var argumnetNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumnetNullException.ParamName.Should().Be("binding");
@@ -161,7 +162,7 @@ namespace MongoDB.Driver.Core.Operations
             var postBatchResumeToken = Mock.Of<BsonDocument>();
             var binding = new Mock<IReadBinding>().Object;
 
-            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, null, postBatchResumeToken, initialOperationTime, null, null, null));
+            var exception = Record.Exception(() => new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, null, postBatchResumeToken, initialOperationTime, null, null, null, 0));
 
             var argumnetNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumnetNullException.ParamName.Should().Be("changeStreamOperation");
@@ -549,7 +550,9 @@ namespace MongoDB.Driver.Core.Operations
             [Values(false, true)] bool async)
         {
             var mockCursor = CreateMockCursor();
-            var subject = CreateSubject(cursor: mockCursor.Object);
+            int maxWireVersion = 7;
+
+            var subject = CreateSubject(cursor: mockCursor.Object, maxWireVersion: maxWireVersion);
             var document = BsonDocument.Parse("{ operationType : \"insert\", ns : { db : \"db\", coll : \"coll\" }, documentKey : { _id : 1 }, fullDocument : { _id : 1 } }");
             var rawDocuments = new[] { ToRawDocument(document) };
             var cancellationToken = new CancellationTokenSource().Token;
@@ -607,13 +610,14 @@ namespace MongoDB.Driver.Core.Operations
             BsonDocument startAfter = null,
             BsonDocument resumeAfter = null,
             BsonTimestamp startAtOperationTime = null,
-            BsonTimestamp initialOperationTime = null)
+            BsonTimestamp initialOperationTime = null,
+            int maxWireVersion = 0)
         {
             cursor = cursor ?? new Mock<IAsyncCursor<RawBsonDocument>>().Object;
             documentSerializer = documentSerializer ?? new Mock<IBsonSerializer<BsonDocument>>().Object;
             binding = binding ?? new Mock<IReadBinding>().Object;
             changeStreamOperation = changeStreamOperation ?? Mock.Of<IChangeStreamOperation<BsonDocument>>();
-            return new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, startAfter, resumeAfter, startAtOperationTime);
+            return new ChangeStreamCursor<BsonDocument>(cursor, documentSerializer, binding, changeStreamOperation, postBatchResumeToken, initialOperationTime, startAfter, resumeAfter, startAtOperationTime, maxWireVersion);
         }
 
         private BsonDocument GenerateResumeAfterToken(bool async, bool shouldBeEmpty = false)

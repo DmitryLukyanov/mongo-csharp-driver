@@ -295,11 +295,13 @@ namespace MongoDB.Driver.Core.Operations
             IAsyncCursor<RawBsonDocument> cursor;
             ICursorBatchInfo cursorBatchInfo;
             BsonTimestamp initialOperationTime;
+            int maxWireVersion;
             using (var context = RetryableReadContext.Create(binding, _retryRequested, cancellationToken))
             {
                 cursor = ExecuteAggregateOperation(context, cancellationToken);
                 cursorBatchInfo = (ICursorBatchInfo)cursor;
                 initialOperationTime = GetInitialOperationTimeIfRequired(context, cursorBatchInfo);
+                maxWireVersion = context.Channel.ConnectionDescription.IsMasterResult.MaxWireVersion;
             }
 
             var postBatchResumeToken = GetInitialPostBatchResumeTokenIfRequired(cursorBatchInfo);
@@ -313,7 +315,8 @@ namespace MongoDB.Driver.Core.Operations
                 initialOperationTime,
                 _startAfter,
                 _resumeAfter,
-                _startAtOperationTime);
+                _startAtOperationTime,
+                maxWireVersion);
         }
 
         /// <inheritdoc />
@@ -329,11 +332,13 @@ namespace MongoDB.Driver.Core.Operations
             IAsyncCursor<RawBsonDocument> cursor;
             ICursorBatchInfo cursorBatchInfo;
             BsonTimestamp initialOperationTime;
+            int maxWireVersion;
             using (var context = await RetryableReadContext.CreateAsync(binding, _retryRequested, cancellationToken).ConfigureAwait(false))
             {
                 cursor = await ExecuteAggregateOperationAsync(context, cancellationToken).ConfigureAwait(false);
                 cursorBatchInfo = (ICursorBatchInfo)cursor;
                 initialOperationTime = GetInitialOperationTimeIfRequired(context, cursorBatchInfo);
+                maxWireVersion = context.Channel.ConnectionDescription.IsMasterResult.MaxWireVersion;
             }
 
             var postBatchResumeToken = GetInitialPostBatchResumeTokenIfRequired(cursorBatchInfo);
@@ -347,7 +352,8 @@ namespace MongoDB.Driver.Core.Operations
                 initialOperationTime,
                 _startAfter,
                 _resumeAfter,
-                _startAtOperationTime);
+                _startAtOperationTime,
+                maxWireVersion);
         }
 
         /// <inheritdoc />

@@ -45,6 +45,7 @@ namespace MongoDB.Driver.Core.Operations
         private readonly BsonDocument _initialResumeAfter;
         private readonly BsonDocument _initialStartAfter;
         private readonly BsonTimestamp _initialStartAtOperationTime;
+        private readonly int _maxWireVersion;
 
         // public properties
         /// <inheritdoc />
@@ -63,6 +64,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <param name="initialStartAfter">The start after value.</param>
         /// <param name="initialResumeAfter">The resume after value.</param>
         /// <param name="initialStartAtOperationTime">The start at operation time value.</param>
+        /// <param name="maxWireVersion">The max wire version.</param>
         public ChangeStreamCursor(
             IAsyncCursor<RawBsonDocument> cursor,
             IBsonSerializer<TDocument> documentSerializer,
@@ -72,7 +74,8 @@ namespace MongoDB.Driver.Core.Operations
             BsonTimestamp initialOperationTime,
             BsonDocument initialStartAfter,
             BsonDocument initialResumeAfter,
-            BsonTimestamp initialStartAtOperationTime)
+            BsonTimestamp initialStartAtOperationTime,
+            int maxWireVersion)
         {
             _cursor = Ensure.IsNotNull(cursor, nameof(cursor));
             _documentSerializer = Ensure.IsNotNull(documentSerializer, nameof(documentSerializer));
@@ -84,6 +87,8 @@ namespace MongoDB.Driver.Core.Operations
             _initialStartAfter = initialStartAfter;
             _initialResumeAfter = initialResumeAfter;
             _initialStartAtOperationTime = initialStartAtOperationTime;
+
+            _maxWireVersion = maxWireVersion;
         }
 
         // public methods
@@ -175,7 +180,7 @@ namespace MongoDB.Driver.Core.Operations
 
             foreach (var rawDocument in rawDocuments)
             {
-                if (!rawDocument.Contains("_id"))
+                if (!rawDocument.Contains("_id") && _maxWireVersion < 8)
                 {
                     throw new MongoClientException("Cannot provide resume functionality when the resume token is missing.");
                 }

@@ -65,9 +65,10 @@ namespace MongoDB.Driver
 
         private static bool IsServerIncompatible(ServerDescription description)
         {
-            return description.Type != ServerType.Unknown &&
-                   description.WireVersionRange != null &&
-                   !description.WireVersionRange.Overlaps(Cluster.SupportedWireVersionRange);
+            return
+                description.Type != ServerType.Unknown &&
+                description.WireVersionRange != null &&
+                !description.WireVersionRange.Overlaps(Cluster.SupportedWireVersionRange);
         }
         #endregion
 

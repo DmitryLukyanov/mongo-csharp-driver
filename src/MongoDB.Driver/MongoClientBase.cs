@@ -17,8 +17,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Crypt;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Operations;
+using MongoDB.Driver.LibMongoCrypt;
 
 namespace MongoDB.Driver
 {
@@ -29,6 +30,12 @@ namespace MongoDB.Driver
     {
         /// <inheritdoc />
         public abstract ICluster Cluster { get; }
+
+        /// <inheritdoc />
+        public abstract IMongoClient CryptClientD { get; }
+
+        ///// <inheritdoc />
+        //public abstract EncryptionSource EncryptionSource { get; }
 
         /// <inheritdoc />
         public abstract MongoClientSettings Settings { get; }
@@ -56,6 +63,12 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public abstract IMongoDatabase GetDatabase(string name, MongoDatabaseSettings settings = null);
+
+        /// <inheritdoc />
+        public virtual ClientEncryption GetClientEncryption(ClientEncryptionOptions options)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <inheritdoc />
         public virtual IAsyncCursor<string> ListDatabaseNames(
@@ -95,7 +108,7 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public virtual IAsyncCursor<BsonDocument> ListDatabases(
-            ListDatabasesOptions options,                                                
+            ListDatabasesOptions options,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new NotImplementedException();
@@ -111,7 +124,7 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public virtual IAsyncCursor<BsonDocument> ListDatabases(
-            IClientSessionHandle session, 
+            IClientSessionHandle session,
             ListDatabasesOptions options,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -137,7 +150,7 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public virtual Task<IAsyncCursor<BsonDocument>> ListDatabasesAsync(
-            IClientSessionHandle session, 
+            IClientSessionHandle session,
             ListDatabasesOptions options,
             CancellationToken cancellationToken = default(CancellationToken))
         {

@@ -14,7 +14,10 @@
 */
 
 using System;
+using System.Linq;
+using System.Threading;
 using MongoDB.Bson;
+using MongoDB.Crypt;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.LibMongoCrypt;
 
@@ -26,29 +29,29 @@ namespace MongoDB.Driver
     public class ClientEncryption
     {
         // private fields
-        //private readonly LibMongoCryptController _libMongoCryptController;
+        private readonly LibMongoCryptController _libMongoCryptController;
         private readonly ClientEncryptionOptions _options;
 
-        // constructors        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ClientEncryption"/> class.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        public ClientEncryption(ClientEncryptionOptions options)
+        // constructors
+        internal ClientEncryption(
+            LibMongoCryptController libMongoCryptController,
+            ClientEncryptionOptions options)
         {
+            _libMongoCryptController = Ensure.IsNotNull(libMongoCryptController, nameof(libMongoCryptController));
             _options = Ensure.IsNotNull(options, nameof(options));
         }
 
-        // public methods        
+        // public methods
         /// <summary>
         /// Creates a data key.
         /// </summary>
-        /// <param name="kmsProvider">The KMS provider.</param>
         /// <param name="dataKeyOptions">The data key options.</param>
+        /// <param name="cancellationToken">TODO</param>
         /// <returns>A data key.</returns>
-        public BsonValue CreateDataKey(string kmsProvider, DataKeyOptions dataKeyOptions)
+        public BsonValue CreateDataKey(DataKeyOptions dataKeyOptions, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var key = ParseKmsKeyId(dataKeyOptions.MasterKey);
+            return _libMongoCryptController.GenerateKey(key, cancellationToken);
         }
 
         /// <summary>
@@ -58,7 +61,7 @@ namespace MongoDB.Driver
         /// <returns>The decrypted value.</returns>
         public BsonValue Decrypt(BsonBinaryData value)
         {
-            throw new NotImplementedException();
+            return _libMongoCryptController.DecryptFields(value.Bytes, CancellationToken.None);
         }
 
         /// <summary>
@@ -69,7 +72,24 @@ namespace MongoDB.Driver
         /// <returns>The encrypted value.</returns>
         public BsonBinaryData Encrypt(BsonValue value, EncryptOptions encryptOptions)
         {
-            throw new NotImplementedException();
+            return _libMongoCryptController.EncryptFields(null, null, CancellationToken.None);
+        }
+
+        private IKmsKeyId ParseKmsKeyId(BsonDocument masterKey)
+        {
+            if (!masterKey.TryGetValue("key", out var customerMasterKey))
+            {
+                // todo: or local?
+                throw new ArgumentException("TODO");
+            }
+
+            if (!masterKey.TryGetValue("region", out var region))
+            {
+                // todo: or local
+                throw new ArgumentException("TODO");
+            }
+
+            return new AwsKeyId(customerMasterKey.ToString(), region.ToString());
         }
     }
 }

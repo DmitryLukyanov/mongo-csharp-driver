@@ -28,9 +28,9 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         protected override string[] ExpectedTestColumns => new[] { "description", "clientOptions", "useMultipleMongoses", "failPoint", "sessionOptions", "operations", "expectations", "outcome", "async" };
 
         // protected methods`
-        protected override void TestInitialize()
+        protected override void TestInitialize(MongoClient client, BsonDocument test, BsonDocument shared)
         {
-            base.TestInitialize();
+            base.TestInitialize(client, test, shared);
             KillAllSessions();
         }
 

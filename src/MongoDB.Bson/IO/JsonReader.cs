@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using MongoDB.Shared;
 
@@ -1195,7 +1196,8 @@ namespace MongoDB.Bson.IO
             }
             else if (valueToken.Type == JsonTokenType.BeginObject)
             {
-                VerifyToken("$numberLong");
+                // todo:
+                VerifyToken("$numberLong", @"""$numberLong""");
                 VerifyToken(":");
                 var millisecondsSinceEpochToken = PopToken();
                 if (millisecondsSinceEpochToken.Type == JsonTokenType.String)
@@ -2112,6 +2114,17 @@ namespace MongoDB.Bson.IO
             if (token.Lexeme != expectedLexeme)
             {
                 var message = string.Format("JSON reader expected '{0}' but found '{1}'.", expectedLexeme, token.Lexeme);
+                throw new FormatException(message);
+            }
+        }
+
+        // todo: fix
+        private void VerifyToken(params string[] expectedLexemes)
+        {
+            var token = PopToken();
+            if (!expectedLexemes.Contains(token.Lexeme))
+            {
+                var message = string.Format("JSON reader expected any of ['{0}'] but found '{1}'.", string.Join(",", expectedLexemes), token.Lexeme);
                 throw new FormatException(message);
             }
         }

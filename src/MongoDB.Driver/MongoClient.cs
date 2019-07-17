@@ -29,6 +29,7 @@ using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
+using MongoDB.Driver.LibMongoCrypt;
 
 namespace MongoDB.Driver
 {
@@ -53,6 +54,10 @@ namespace MongoDB.Driver
 
         // private fields
         private readonly ICluster _cluster;
+
+        // todo: think about cluster
+        private readonly IMongoClient _cryptClient;
+        private readonly EncryptionSource _encryptionSource;
         private readonly IOperationExecutor _operationExecutor;
         private readonly MongoClientSettings _settings;
 
@@ -77,6 +82,8 @@ namespace MongoDB.Driver
         {
             _settings = Ensure.IsNotNull(settings, nameof(settings)).FrozenCopy();
             _cluster = ClusterRegistry.Instance.GetOrCreateCluster(_settings.ToClusterKey());
+            _cryptClient = CreateCryptClientIfNeeded(settings);
+            _encryptionSource = new EncryptionSource();
             _operationExecutor = new OperationExecutor(this);
         }
 
@@ -120,6 +127,12 @@ namespace MongoDB.Driver
         {
             get { return _cluster; }
         }
+
+        /// <inheritdoc/>
+        public override IMongoClient CryptClientD => _cryptClient;
+
+        /// <inheritdoc/>
+        internal IEncryptionSource EncryptionSource => _encryptionSource;
 
         /// <inheritdoc/>
         public sealed override MongoClientSettings Settings
@@ -179,6 +192,15 @@ namespace MongoDB.Driver
             settings.ApplyDefaultValues(_settings);
 
             return new MongoDatabaseImpl(this, new DatabaseNamespace(name), settings, _cluster, _operationExecutor);
+        }
+
+        /// <inheritdoc/>
+        public override ClientEncryption GetClientEncryption(ClientEncryptionOptions options)
+        {
+            // todo: review
+            var autoEncryptionOptions = AutoEncryptionOptions.FromClientEncryptionOptions(options);
+            var encryptionController = new LibMongoCryptController(this, autoEncryptionOptions);
+            return new ClientEncryption(encryptionController, options);
         }
 
         /// <inheritdoc />
@@ -594,6 +616,21 @@ namespace MongoDB.Driver
             using (var session = await StartImplicitSessionAsync(cancellationToken).ConfigureAwait(false))
             {
                 return await funcAsync(session).ConfigureAwait(false);
+            }
+        }
+
+        // todo: move from here
+        private IMongoClient CreateCryptClientIfNeeded(MongoClientSettings settings)
+        {
+            if (settings.AutoEncryptionOptions != null)
+            {
+                // 1. todo: move from here. controller?
+                // 2. add work with extra options
+                return new MongoClient("mongodb://localhost:27020");
+            }
+            else
+            {
+                return null;
             }
         }
 

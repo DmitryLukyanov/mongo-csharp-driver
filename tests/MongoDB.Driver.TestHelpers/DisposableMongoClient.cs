@@ -18,7 +18,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Operations;
 
 namespace MongoDB.Driver.TestHelpers
 {
@@ -32,6 +31,7 @@ namespace MongoDB.Driver.TestHelpers
         }
 
         public ICluster Cluster => wrapped.Cluster;
+        public IMongoClient CryptClientD => wrapped.CryptClientD;
 
         public MongoClientSettings Settings => wrapped.Settings;
 
@@ -60,6 +60,11 @@ namespace MongoDB.Driver.TestHelpers
         public IMongoDatabase GetDatabase(string name, MongoDatabaseSettings settings = null)
         {
             return wrapped.GetDatabase(name, settings);
+        }
+
+        public ClientEncryption GetClientEncryption(ClientEncryptionOptions options)
+        {
+            throw new NotImplementedException();
         }
 
         public IAsyncCursor<string> ListDatabaseNames(

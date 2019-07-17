@@ -15,6 +15,7 @@
 
 using System;
 using System.IO;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events.Diagnostics;
 
@@ -24,14 +25,34 @@ namespace MongoDB.Driver.TestConsoleApplication
     {
         static void Main(string[] args)
         {
-            //FilterMeasuring.TestAsync().GetAwaiter().GetResult();
-            int numConcurrentWorkers = 50;
-            //new CoreApi().Run(numConcurrentWorkers, ConfigureCluster);
-            new CoreApiSync().Run(numConcurrentWorkers, ConfigureCluster);
+            BsonDefaults.GuidRepresentation = GuidRepresentation.Standard;
+            var t = @"{
+	encrypted_string: {
+		'encrypt': {
+			'keyId': [{
+					'$binary': {
+						'base64': 'AAAAAAAAAAAAAAAAAAAAAA==',
+						'subType': '04'
+					}
+				}
+			],
+			'bsonType': 'string',
+			'algorithm': 'AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic'
+		}
+	}
+}
+";
+            var bytes = Convert.FromBase64String("AAAAAAAAAAAAAAAAAAAAAA==");
+            var res = BsonDocument.Parse(t);
 
-            new Api().Run(numConcurrentWorkers, ConfigureCluster);
+            ////FilterMeasuring.TestAsync().GetAwaiter().GetResult();
+            //int numConcurrentWorkers = 50;
+            ////new CoreApi().Run(numConcurrentWorkers, ConfigureCluster);
+            //new CoreApiSync().Run(numConcurrentWorkers, ConfigureCluster);
 
-            //new LegacyApi().Run(numConcurrentWorkers, ConfigureCluster);
+            //new Api().Run(numConcurrentWorkers, ConfigureCluster);
+
+            ////new LegacyApi().Run(numConcurrentWorkers, ConfigureCluster);
         }
 
         private static void ConfigureCluster(ClusterBuilder cb)

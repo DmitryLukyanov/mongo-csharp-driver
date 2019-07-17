@@ -17,7 +17,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using MongoDB.Driver.LibMongoCrypt;
 
@@ -121,6 +120,7 @@ namespace MongoDB.Driver
                 var cryptor = new NoopBinaryDocumentFieldCryptor();
 #else
                 var cryptor = new LibMongoCryptController(client, autoEncryptionOptions);
+                //var cryptor = LibMongoCryptControllerFactory.CreateOrGet(client, autoEncryptionOptions);
 #endif
 
                 if (!autoEncryptionOptions.BypassAutoEncryption)

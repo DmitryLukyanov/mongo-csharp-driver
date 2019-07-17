@@ -132,6 +132,7 @@ namespace MongoDB.Driver.Tests
 
         public static MongoClientSettings GetClientSettings()
         {
+            BsonDefaults.GuidRepresentation = GuidRepresentation.Standard;
             var connectionString = CoreTestConfiguration.ConnectionString.ToString();
             var clientSettings = MongoClientSettings.FromUrl(new MongoUrl(connectionString));
 

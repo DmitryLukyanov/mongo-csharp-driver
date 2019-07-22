@@ -97,6 +97,9 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 case "upsert":
                     _options.IsUpsert = value.ToBoolean();
                     return;
+                case "arrayFilters":
+                    _options.ArrayFilters = ParseArrayFilters(value.AsBsonArray);
+                    return;
             }
 
             base.SetArgument(name, value);
@@ -127,6 +130,17 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 default:
                     throw new FormatException($"Invalid UpdateOne result aspect: {name}.");
             }
+        }
+
+        private IEnumerable<ArrayFilterDefinition<BsonDocument>> ParseArrayFilters(BsonArray arrayFilters)
+        {
+            var arrayFilter = new List<ArrayFilterDefinition<BsonDocument>>();
+            foreach (var item in arrayFilters)
+            {
+                arrayFilter.Add(item.AsBsonDocument);
+            }
+
+            return arrayFilter;
         }
     }
 }

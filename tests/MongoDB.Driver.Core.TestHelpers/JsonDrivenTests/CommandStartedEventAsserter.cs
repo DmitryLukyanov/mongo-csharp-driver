@@ -119,6 +119,8 @@ namespace MongoDB.Driver.Core.TestHelpers.JsonDrivenTests
                             return;
                         }
                         break;
+                    case "cursor" when commandName == "listCollections":
+                        return;
                 }
 
                 throw new AssertionFailedException($"Expected field '{name}' in command: {actualCommand.ToJson()}.");

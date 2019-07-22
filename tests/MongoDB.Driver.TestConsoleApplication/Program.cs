@@ -42,7 +42,6 @@ namespace MongoDB.Driver.TestConsoleApplication
 	}
 }
 ";
-            var bytes = Convert.FromBase64String("AAAAAAAAAAAAAAAAAAAAAA==");
             var res = BsonDocument.Parse(t);
 
             ////FilterMeasuring.TestAsync().GetAwaiter().GetResult();

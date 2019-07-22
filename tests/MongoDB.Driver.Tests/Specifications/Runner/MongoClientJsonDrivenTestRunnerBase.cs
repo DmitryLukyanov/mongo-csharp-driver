@@ -93,12 +93,24 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         protected IDictionary<string, object> ObjectMap => _objectMap;
 
         // Virtual methods
+        protected virtual void AssertEvent(object actualEvent, BsonDocument expectedEvent)
+        {
+            if (expectedEvent.ElementCount != 1)
+            {
+                throw new FormatException("Expected event must be a document with a single element with a name the specifies the type of the event.");
+            }
+
+            var eventType = expectedEvent.GetElement(0).Name;
+            var eventAsserter = EventAsserterFactory.CreateAsserter(eventType);
+            eventAsserter.AssertAspects(actualEvent, expectedEvent[0].AsBsonDocument);
+        }
+
         protected virtual void AssertEvents(EventCapturer actualEvents, BsonDocument test)
         {
             AssertEvents(actualEvents, test, null);
         }
 
-        protected virtual void AssertEvents(EventCapturer eventCapturer, BsonDocument test, Action<BsonDocument> prepareEventResult)
+        protected virtual void AssertEvents(EventCapturer eventCapturer, BsonDocument test, Action<CommandStartedEvent, BsonDocument> prepareEventResult)
         {
             if (test.Contains(ExpectationsKey))
             {
@@ -111,7 +123,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     var actualEvent = actualEvents[index];
 
                     var expectedEvent = expectedEvents[index];
-                    prepareEventResult?.Invoke(expectedEvent);
+                    prepareEventResult?.Invoke(actualEvent, expectedEvent);
                     AssertEvent(actualEvent, expectedEvent);
                 }
                 if (actualEvents.Count < expectedEvents.Count)
@@ -335,27 +347,31 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             SetupAndRunTest(testCase.Shared, testCase.Test);
         }
 
-        protected void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments)
+        protected virtual void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments)
+        {
+            VerifyCollectionData(expectedDocuments, null);
+        }
+
+        protected void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments, Action<BsonDocument, BsonDocument> prepareExpectedResult)
         {
             var database = DriverTestConfiguration.Client.GetDatabase(DatabaseName).WithReadConcern(ReadConcern.Local);
             var collection = database.GetCollection<BsonDocument>(CollectionName);
             var actualDocuments = collection.Find("{}").ToList();
+            if (prepareExpectedResult != null)
+            {
+                var n = Math.Min(actualDocuments.Count, expectedDocuments.Count());
+                for (var index = 0; index < n; index++)
+                {
+                    var actualEvent = actualDocuments.ElementAt(index);
+
+                    var expectedEvent = expectedDocuments.ElementAt(index);
+                    prepareExpectedResult(actualEvent, expectedEvent);
+                }
+            }
             actualDocuments.Should().BeEquivalentTo(expectedDocuments);
         }
 
         // private methods
-        private void AssertEvent(object actualEvent, BsonDocument expectedEvent)
-        {
-            if (expectedEvent.ElementCount != 1)
-            {
-                throw new FormatException("Expected event must be a document with a single element with a name the specifies the type of the event.");
-            }
-
-            var eventType = expectedEvent.GetElement(0).Name;
-            var eventAsserter = EventAsserterFactory.CreateAsserter(eventType);
-            eventAsserter.AssertAspects(actualEvent, expectedEvent[0].AsBsonDocument);
-        }
-
         private List<CommandStartedEvent> GetEvents(EventCapturer eventCapturer)
         {
             var events = new List<CommandStartedEvent>();

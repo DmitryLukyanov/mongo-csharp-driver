@@ -168,6 +168,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     // ignore these exceptions
                 }
+                //todo: for tests reasons. Remove.
                 break;
             }
         }

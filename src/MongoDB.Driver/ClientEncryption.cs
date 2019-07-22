@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Linq;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Crypt;

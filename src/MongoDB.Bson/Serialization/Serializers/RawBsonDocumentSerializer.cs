@@ -69,6 +69,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         {
             var bsonWriter = context.Writer;
             bsonWriter.WriteRawBsonDocument(value.Slice);
+            if (context.Writer.SerializationDepth == 0)
+            {
+                //write elements
+            }
         }
     }
 }

@@ -89,6 +89,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "listCollections": return new JsonDrivenListCollectionsTest(database, _objectMap);
                         case "runCommand": return new JsonDrivenRunCommandTest(database, _objectMap);
                         case "watch": return new JsonDrivenDatabaseWatchTest(database, _objectMap);
+                        case "aggregate": return new JsonDrivenDatabaseAggregateTest(database, _objectMap);
                         default: throw new FormatException($"Invalid method name: \"{name}\".");
                     }
 

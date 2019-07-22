@@ -199,7 +199,7 @@ namespace MongoDB.Driver
         {
             // todo: review
             var autoEncryptionOptions = AutoEncryptionOptions.FromClientEncryptionOptions(options);
-            var encryptionController = new LibMongoCryptController(this, autoEncryptionOptions);
+            var encryptionController = LibMongoCryptController.GetInstance(this, autoEncryptionOptions);
             return new ClientEncryption(encryptionController, options);
         }
 

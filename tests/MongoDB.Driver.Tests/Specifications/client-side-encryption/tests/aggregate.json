@@ -15,15 +15,6 @@
                     "subType": "06"
                 }
             }
-        },
-        {
-            "_id": 2,
-            "encrypted_string": {
-                "$binary": {
-                    "base64": "AQAAAAAAAAAAAAAAAAAAAAACtsdOjHK3CkpNjAAMznkYbeR6Z+yLzCRv4zOb7VfKnJdmU0W5MD8GVODx8K+KuBoCbE1SfGfPgX6NhS/RKpQ12w==",
-                    "subType": "06"
-                }
-            }
         }
     ],
     "json_schema": {
@@ -118,7 +109,7 @@
     ],
     "tests": [
         {
-            "description": "Count with deterministic encryption",
+            "description": "Database aggregate should fail",
             "clientOptions": {
                 "autoEncryptOpts": {
                     "kmsProviders": {
@@ -128,110 +119,38 @@
             },
             "operations": [
                 {
-                    "name": "count",
+                    "name": "aggregate",
+                    "object": "database",
                     "arguments": {
-                        "filter": {
-                            "encrypted_string": "string0"
-                        }
-                    },
-                    "result": 2
-                }
-            ],
-            "expectations": [
-                {
-                    "command_started_event": {
-                        "command": {
-                            "listCollections": 1,
-                            "cursor": {},
-                            "filter": {
-                                "name": "default"
-                            }
-                        },
-                        "command_name": "listCollections"
-                    }
-                },
-                {
-                    "command_started_event": {
-                        "command": {
-                            "listCollections": 1,
-                            "cursor": {},
-                            "filter": {
-                                "name": "datakeys"
+                        "pipeline": [
+                            {
+                                "$currentOp": {
+                                    "allUsers": false,
+                                    "idleConnections": false,
+                                    "localOps": true
+                                }
                             },
-                            "$db": "admin"
-                        },
-                        "command_name": "listCollections"
-                    }
-                },
-                {
-                    "command_started_event": {
-                        "command": {
-                            "find": "datakeys",
-                            "filter": {
-                                "$or": [
-                                    {
-                                        "_id": {
-                                            "$in": [
-                                                {
-                                                    "$binary": {
-                                                        "base64": "AAAAAAAAAAAAAAAAAAAAAA==",
-                                                        "subType": "04"
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    {
-                                        "keyAltNames": {
-                                            "$in": []
-                                        }
-                                    }
-                                ]
-                            },
-                            "$db": "admin"
-                        },
-                        "command_name": "find"
-                    }
-                },
-                {
-                    "command_started_event": {
-                        "command": {
-                            "count": "default",
-                            "query": {
-                                "encrypted_string": {
-                                    "$eq": {
-                                        "$binary": {
-                                            "base64": "AQAAAAAAAAAAAAAAAAAAAAACtsdOjHK3CkpNjAAMznkYbeR6Z+yLzCRv4zOb7VfKnJdmU0W5MD8GVODx8K+KuBoCbE1SfGfPgX6NhS/RKpQ12w==",
-                                            "subType": "06"
-                                        }
+                            {
+                                "$match": {
+                                    "command.aggregate": {
+                                        "$eq": 1
                                     }
                                 }
+                            },
+                            {
+                                "$project": {
+                                    "command": 1
+                                }
+                            },
+                            {
+                                "$project": {
+                                    "command.lsid": 0
+                                }
                             }
-                        },
-                        "command_name": "count"
-                    }
-                }
-            ]
-        },
-        {
-            "description": "Count fails when filtering on a random encrypted field",
-            "clientOptions": {
-                "autoEncryptOpts": {
-                    "kmsProviders": {
-                        "aws": {}
-                    }
-                }
-            },
-            "operations": [
-                {
-                    "name": "count",
-                    "arguments": {
-                        "filter": {
-                            "random": "abc"
-                        }
+                        ]
                     },
                     "result": {
-                        "errorContains": "Cannot query on fields encrypted with the randomized encryption"
+                        "errorContains": "non-collection command not supported for auto encryption: aggregate"
                     }
                 }
             ]

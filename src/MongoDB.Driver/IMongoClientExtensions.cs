@@ -119,7 +119,7 @@ namespace MongoDB.Driver
                 // use to test the driver with a dummy cryptor
                 var cryptor = new NoopBinaryDocumentFieldCryptor();
 #else
-                var cryptor = new LibMongoCryptController(client, autoEncryptionOptions);
+                var cryptor = LibMongoCryptController.GetInstance(client, autoEncryptionOptions);
                 //var cryptor = LibMongoCryptControllerFactory.CreateOrGet(client, autoEncryptionOptions);
 #endif
 

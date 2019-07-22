@@ -19,6 +19,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
@@ -32,7 +33,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
         {
             SetupAndRunTest(testCase);
         }
-        protected override string[] ExpectedTestColumns => new[] { "description", "clientOptions", "operations", "expectations", "async" };
+        protected override string[] ExpectedTestColumns => new[] { "description", "clientOptions", "operations", "expectations", "skipReason", "async", "outcome" };
 
         protected override string[] ExpectedSharedColumns
         {
@@ -43,6 +44,23 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                 expectedSharedColumns.AddRange(new[] { "json_schema", "key_vault_data" });
                 return expectedSharedColumns.ToArray();
             }
+        }
+
+        protected override void AssertEvents(EventCapturer eventCapturer, BsonDocument expectedEvent)
+        {
+            base.AssertEvents(
+                eventCapturer,
+                expectedEvent,
+                (actual, expected) =>
+                {
+                    var expectedCommand = expected.GetValue("command_started_event", null)?.AsBsonDocument?.GetValue("command", null)?.AsBsonDocument;
+                    if (expectedCommand == null)
+                    {
+                        return;
+                    }
+
+                    ReplaceTypeAssertionWithActual(expectedCommand, actual.Command);
+                });
         }
 
         protected override MongoClient CreateClientForTestSetup()
@@ -91,12 +109,15 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
 
             if (shared.TryGetValue("key_vault_data", out var keyVaultData))
             {
-                var adminDatabase = DriverTestConfiguration.Client.GetDatabase("admin");
-                var keyVaultCollection = adminDatabase.GetCollection<BsonDocument>("datakeys");
+                var adminDatabase = client.GetDatabase("admin");
+                var keyVaultCollection = adminDatabase.GetCollection<BsonDocument>(
+                    "datakeys",
+                    new MongoCollectionSettings()
+                    {
+                        AssignIdOnInsert = false
+                    });
                 var keyVaultDocuments = keyVaultData.AsBsonArray?.Select(c => c.AsBsonDocument);
                 keyVaultCollection.InsertMany(keyVaultDocuments);
-
-                var t = keyVaultCollection.Find("{}").ToList();
             }
         }
 
@@ -123,20 +144,28 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
             return true;
         }
 
+        protected override void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments)
+        {
+            base.VerifyCollectionData(
+                expectedDocuments, 
+                (actual, expected) => 
+                {
+                    ReplaceTypeAssertionWithActual(expected, actual);
+                });
+        }
+
         // private methods
         private AutoEncryptionOptions ConfigureAutoEncryptionOptions(BsonDocument autoEncryptOpts)
         {
             var keyVaultCollectionNamespace = new CollectionNamespace("admin", "datakeys");
-            var keyVaultClient = DriverTestConfiguration.Client; //new MongoClient("mongodb://localhost:27017");
-            var t =keyVaultClient.GetDatabase(keyVaultCollectionNamespace.DatabaseNamespace.DatabaseName)
-                .GetCollection<BsonDocument>(keyVaultCollectionNamespace.CollectionName).Find("{}").ToList();
-
 
             IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> kmsProviders = new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(new Dictionary<string, IReadOnlyDictionary<string, object>>());
             var autoEncryptionOptions = new AutoEncryptionOptions(
                 keyVaultCollectionNamespace,
-                kmsProviders,
-                keyVaultClient: keyVaultClient);
+                kmsProviders
+                //,
+                //keyVaultClient: keyVaultClient
+                );
 
             foreach (var option in autoEncryptOpts.Elements)
             {
@@ -148,6 +177,17 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                                 kmsProviders: new Optional<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>>(
                                     ParseKmsProviders(option.Value.AsBsonDocument)));
                         break;
+                    case "schemaMap":
+                        var schemaMaps = new Dictionary<string, BsonDocument>();
+                        var schemaMapsDocument = option.Value.AsBsonDocument;
+                        foreach (var schemaMapElement in schemaMapsDocument.Elements)
+                        {
+                            schemaMaps.Add(schemaMapElement.Name, schemaMapElement.Value.AsBsonDocument);
+                        }
+                        autoEncryptionOptions = autoEncryptionOptions.With(schemaMap: schemaMaps);
+                        break;
+                    default:
+                        throw new Exception($"TODO: Unexpected auto encryption option {option.Name}.");
                 }
             }
 
@@ -184,6 +224,68 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
             }
 
             return new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(providers);
+        }
+
+        public void ReplaceTypeAssertionWithActual(BsonDocument expected, BsonDocument actual)
+        {
+            for (int i = 0; i < expected.ElementCount; i++)
+            {
+                var expectedElement = expected.ElementAt(i);
+                BsonValue value = expectedElement.Value;
+                if (value.IsBsonDocument)
+                {
+                    BsonDocument valueDocument = value.AsBsonDocument;
+                    BsonValue actualValue = actual.GetValue(expectedElement.Name, null);
+                    if (valueDocument.ElementCount == 1 && valueDocument.Select(c => c.Name).Single().Equals("$$type"))
+                    {
+                        var type = valueDocument["$$type"].AsString;
+                        if (type.Equals("binData"))
+                        {
+                            // todo: 
+                            // 1. check on bsonType?
+                            // 2. One level higher?
+                            expected[expectedElement.Name] = actualValue;
+                        }
+                        else if (type.Equals("long"))
+                        {
+                            expected[expectedElement.Name] = actualValue;
+                        }
+                        else
+                        {
+                            throw new NotSupportedException("Unsupported type: " + type);
+                        }
+                    }
+                    else if (actualValue != null && actualValue.IsBsonDocument)
+                    {
+                        ReplaceTypeAssertionWithActual(valueDocument, actualValue.AsBsonDocument);
+                    }
+                    else
+                    {
+                        //throw new RuntimeException(String.format("Expecting '%s' as actual value but found '%s' ", valueDocument, actualValue));
+                        // do nothing
+                    }
+                }
+                else if (value.IsBsonArray)
+                {
+                    ReplaceTypeAssertionWithActual(value.AsBsonArray, actual[expectedElement.Name].AsBsonArray);
+                }
+            }
+        }
+
+        private void ReplaceTypeAssertionWithActual(BsonArray expected, BsonArray actual)
+        {
+            for (int i = 0; i < expected.Count(); i++)
+            {
+                BsonValue value = expected.ElementAt(i);
+                if (value.IsBsonDocument)
+                {
+                    ReplaceTypeAssertionWithActual(value.AsBsonDocument, actual.ElementAt(i).AsBsonDocument);
+                }
+                else if (value.IsBsonArray)
+                {
+                    ReplaceTypeAssertionWithActual(value.AsBsonArray, actual.ElementAt(i).AsBsonArray);
+                }
+            }
         }
 
         // nested types

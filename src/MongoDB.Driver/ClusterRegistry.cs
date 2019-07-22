@@ -22,6 +22,7 @@ using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.LibMongoCrypt;
 
 namespace MongoDB.Driver
 {
@@ -213,6 +214,7 @@ namespace MongoDB.Driver
             }
 
             cluster.Dispose();
+            LibMongoCryptController.DestroyInstance();
         }
     }
 }

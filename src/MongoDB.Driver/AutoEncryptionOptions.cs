@@ -29,7 +29,7 @@ namespace MongoDB.Driver
         private readonly bool _bypassAutoEncryption;
         private readonly IReadOnlyDictionary<string, object> _extraOptions;
         private readonly IMongoClient _keyVaultClient;
-        private readonly Lazy<IMongoCollection<BsonDocument>> _keyVaultCollection;
+        //private readonly Lazy<IMongoCollection<BsonDocument>> _keyVaultCollection;
         private readonly CollectionNamespace _keyVaultNamespace;
         private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> _kmsProviders;
         private readonly IReadOnlyDictionary<string, BsonDocument> _schemaMap;
@@ -57,14 +57,14 @@ namespace MongoDB.Driver
             _bypassAutoEncryption = bypassAutoEncryption.WithDefault(false);
             _extraOptions = extraOptions.WithDefault(null);
             _keyVaultClient = keyVaultClient.WithDefault(null);
-            _keyVaultCollection = new Lazy<IMongoCollection<BsonDocument>>(
-                () =>
-                {
-                    // todo: doesn't work!!! Needs to be moved to controller
-                    var keyVaultDatabase = _keyVaultClient.GetDatabase(_keyVaultNamespace.DatabaseNamespace.DatabaseName);
-                    var collection = keyVaultDatabase.GetCollection<BsonDocument>(_keyVaultNamespace.CollectionName);
-                    return collection;
-                });
+            //_keyVaultCollection = new Lazy<IMongoCollection<BsonDocument>>(
+            //    () =>
+            //    {
+            //        // todo: doesn't work!!! Needs to be moved to controller
+            //        var keyVaultDatabase = _keyVaultClient.GetDatabase(_keyVaultNamespace.DatabaseNamespace.DatabaseName);
+            //        var collection = keyVaultDatabase.GetCollection<BsonDocument>(_keyVaultNamespace.CollectionName);
+            //        return collection;
+            //    });
             _schemaMap = schemaMap.WithDefault(null);
         }
 
@@ -93,13 +93,13 @@ namespace MongoDB.Driver
         /// </value>
         public IMongoClient KeyVaultClient => _keyVaultClient;
 
-        /// <summary>
-        /// TODO
-        /// </summary>
-        /// <value>
-        /// TODO
-        /// </value>
-        public IMongoCollection<BsonDocument> KeyVaultCollection => _keyVaultCollection.Value;
+        ///// <summary>
+        ///// TODO
+        ///// </summary>
+        ///// <value>
+        ///// TODO
+        ///// </value>
+        //public IMongoCollection<BsonDocument> KeyVaultCollection => _keyVaultCollection.Value;
 
         /// <summary>
         /// Gets the key vault namespace.

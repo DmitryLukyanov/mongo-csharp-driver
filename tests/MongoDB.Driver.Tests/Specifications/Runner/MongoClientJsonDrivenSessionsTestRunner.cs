@@ -39,10 +39,10 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             base.AssertEvents(
                 actualEvents,
                 test,
-                document =>
+                (actual, expected) =>
                 {
                     RecursiveFieldSetter.SetAll(
-                        document, 
+                        expected, 
                         "lsid",
                         value =>
                         {

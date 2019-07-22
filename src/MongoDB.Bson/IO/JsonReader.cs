@@ -1196,7 +1196,7 @@ namespace MongoDB.Bson.IO
             }
             else if (valueToken.Type == JsonTokenType.BeginObject)
             {
-                // todo:
+                // todo: is it a bug?
                 VerifyToken("$numberLong", @"""$numberLong""");
                 VerifyToken(":");
                 var millisecondsSinceEpochToken = PopToken();

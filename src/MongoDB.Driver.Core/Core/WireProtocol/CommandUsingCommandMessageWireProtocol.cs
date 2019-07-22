@@ -92,8 +92,30 @@ namespace MongoDB.Driver.Core.WireProtocol
         {
             try
             {
-                var message = CreateCommandMessage(connection.Description);
-                message = AutoEncryptFieldsIfNecessary(message, cancellationToken);
+                var message1 = CreateCommandMessage(connection.Description);
+                if (message1.WrappedMessage.Sections.Any(c => 
+                {
+                    var doc = (c as Type0CommandMessageSection)?.Document?.ToString();
+                    return true;
+                }))
+                {
+
+                }
+
+                var message = AutoEncryptFieldsIfNecessary(message1, cancellationToken);
+                // todo: workaround
+                var sectionDoc = (message.WrappedMessage?.Sections?.FirstOrDefault() as Type0CommandMessageSection)?.Document?.ToBsonDocument();
+                //if (sectionDoc != null && !sectionDoc.Contains("$db") && sectionDoc.Contains("count"))
+                //{
+                //    if (sectionDoc is RawBsonDocument raw)
+                //    {
+                //        var str = raw.ToString();
+                //        var doc = BsonDocument.Parse(str);
+                //        doc.Add(new BsonElement("$db", "default"));
+                //        sectionDoc = new RawBsonDocument(doc.ToBson());
+                //    }
+                //}
+                // todo: workaround
 
                 try
                 {

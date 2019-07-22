@@ -592,7 +592,10 @@ namespace MongoDB.Driver.Core.Connections
             catch (Exception ex)
             {
                 helper.FailedSendingMessages(ex);
-                throw;
+                if (!(ex.InnerException is MongoAuthenticationException))
+                {
+                    throw;
+                }
             }
         }
 

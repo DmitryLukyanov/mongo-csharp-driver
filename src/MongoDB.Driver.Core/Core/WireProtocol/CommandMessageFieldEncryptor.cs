@@ -14,7 +14,9 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -45,14 +47,14 @@ namespace MongoDB.Driver.Core.WireProtocol
         {
             var unencryptedDocumentBytes = GetUnencryptedDocumentBytes(unencryptedRequestMessage);
             var encryptedDocumentBytes = _documentFieldEncryptor.EncryptFields(databaseName, unencryptedDocumentBytes, cancellationToken);
-            return CreateEncryptedRequestMessage(unencryptedRequestMessage, encryptedDocumentBytes);
+            return CreateEncryptedRequestMessage(unencryptedRequestMessage, encryptedDocumentBytes, databaseName);
         }
 
         public async Task<CommandRequestMessage> EncryptFieldsAsync(string databaseName, CommandRequestMessage unencryptedRequestMessage, CancellationToken cancellationToken)
         {
             var unencryptedDocumentBytes = GetUnencryptedDocumentBytes(unencryptedRequestMessage);
             var encryptedDocumentBytes = await _documentFieldEncryptor.EncryptFieldsAsync(databaseName, unencryptedDocumentBytes, cancellationToken).ConfigureAwait(false);
-            return CreateEncryptedRequestMessage(unencryptedRequestMessage, encryptedDocumentBytes);
+            return CreateEncryptedRequestMessage(unencryptedRequestMessage, encryptedDocumentBytes, databaseName);
         }
 
         // private static methods
@@ -144,17 +146,59 @@ namespace MongoDB.Driver.Core.WireProtocol
             outputStream.BackpatchSize(arrayStartPosition);
         }
 
-        private CommandRequestMessage CreateEncryptedRequestMessage(CommandRequestMessage unencryptedRequestMessage, byte[] encryptedDocumentBytes)
+        private CommandRequestMessage CreateEncryptedRequestMessage(CommandRequestMessage unencryptedRequestMessage, byte[] encryptedDocumentBytes, string database)
         {
-            var encryptedDocument = new RawBsonDocument(encryptedDocumentBytes);
-            var encryptedSections = new[] { new Type0CommandMessageSection<RawBsonDocument>(encryptedDocument, RawBsonDocumentSerializer.Instance) };
-            var unencryptedCommandMessage = unencryptedRequestMessage.WrappedMessage;
-            var encryptedCommandMessage = new CommandMessage(
-                unencryptedCommandMessage.RequestId,
-                unencryptedCommandMessage.ResponseTo,
-                encryptedSections,
-                unencryptedCommandMessage.MoreToCome);
-            return new CommandRequestMessage(encryptedCommandMessage, unencryptedRequestMessage.ShouldBeSent);
+            //var serializer = (unencryptedRequestMessage.WrappedMessage.Sections[0] as Type0CommandMessageSection).DocumentSerializer as ElementAppendingSerializer<RawBsonDocument>;
+
+            //var encryptedDocument = new RawBsonDocument(encryptedDocumentBytes);
+            ////var list = encryptedSections.ToList();
+
+            //var lis1t = new List<BsonElement>();
+            //lis1t.Add(new BsonElement("$db", "default"));
+            //Action<BsonWriterSettings> writerSettingsConfigurator = s => s.GuidRepresentation = GuidRepresentation.Unspecified;
+            //var elementAppendingSerializer = new ElementAppendingSerializer<RawBsonDocument>(RawBsonDocumentSerializer.Instance, lis1t, writerSettingsConfigurator);
+            //var encryptedSections = new[] { new Type0CommandMessageSection<RawBsonDocument>(encryptedDocument, elementAppendingSerializer) };
+
+
+            //var unencryptedCommandMessage = unencryptedRequestMessage.WrappedMessage;
+            //var encryptedCommandMessage = new CommandMessage(
+            //    unencryptedCommandMessage.RequestId,
+            //    unencryptedCommandMessage.ResponseTo,
+            //    encryptedSections,
+            //    unencryptedCommandMessage.MoreToCome);
+            //return new CommandRequestMessage(encryptedCommandMessage, unencryptedRequestMessage.ShouldBeSent);
+            {
+                var str = new RawBsonDocument(encryptedDocumentBytes).ToString();
+                if (str.ToLower().Contains("listcollections"))
+                {
+                    //todo: do nothing
+                }
+                //var encryptedDocument = new RawBsonDocument(encryptedDocumentBytes);
+                // todo: workaround, probably it's better to update serializer
+                //var doc = encryptedDocument.ToString();
+                var encryptedDocument = BsonDocument.Parse(str);
+                // todo: workaround, probably it's better to update serializer
+
+                var extraElements = new List<BsonElement>();
+
+                if (!string.IsNullOrWhiteSpace(database) && !str.Contains("$db"))
+                {
+                    var dbElement = new BsonElement("$db", database);
+                    extraElements.Add(dbElement);
+                }
+                Action<BsonWriterSettings> writerSettingsConfigurator = s => s.GuidRepresentation = GuidRepresentation.Unspecified;
+                var elementAppendingSerializer = new ElementAppendingSerializer<BsonDocument>(BsonDocumentSerializer.Instance, extraElements, writerSettingsConfigurator);
+
+
+                var encryptedSections = new[] { new Type0CommandMessageSection<BsonDocument>(encryptedDocument, elementAppendingSerializer) };
+                var unencryptedCommandMessage = unencryptedRequestMessage.WrappedMessage;
+                var encryptedCommandMessage = new CommandMessage(
+                    unencryptedCommandMessage.RequestId,
+                    unencryptedCommandMessage.ResponseTo,
+                    encryptedSections,
+                    unencryptedCommandMessage.MoreToCome);
+                return new CommandRequestMessage(encryptedCommandMessage, unencryptedRequestMessage.ShouldBeSent);
+            }
         }
 
         private byte[] GetUnencryptedDocumentBytes(CommandRequestMessage unencryptedRequestMessage)

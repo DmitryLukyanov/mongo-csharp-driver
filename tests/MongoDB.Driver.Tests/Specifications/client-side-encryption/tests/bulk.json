@@ -98,9 +98,8 @@
         }
     ],
     "tests": [
-       
         {
-            "description": "Insert with randomized encryption, then find it",
+            "description": "Bulk write with encryption",
             "clientOptions": {
                 "autoEncryptOpts": {
                     "kmsProviders": {
@@ -110,27 +109,55 @@
             },
             "operations": [
                 {
-                    "name": "insertOne",
+                    "name": "bulkWrite",
                     "arguments": {
-                        "document": {
-                            "_id": 1,
-                            "random": "123"
+                        "requests": [
+                            {
+                                "name": "insertOne",
+                                "arguments": {
+                                    "document": {
+                                        "_id": 1,
+                                        "encrypted_string": "string0",
+                                        "random": "abc"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "insertOne",
+                                "arguments": {
+                                    "document": {
+                                        "_id": 2,
+                                        "encrypted_string": "string1"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "updateOne",
+                                "arguments": {
+                                    "filter": {
+                                        "encrypted_string": "string0"
+                                    },
+                                    "update": {
+                                        "$set": {
+                                            "encrypted_string": "string1"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "name": "deleteOne",
+                                "arguments": {
+                                    "filter": {
+                                        "encrypted_string": "string1",
+                                        "_id": 2
+                                    }
+                                }
+                            }
+                        ],
+                        "options": {
+                            "ordered": true
                         }
                     }
-                },
-                {
-                    "name": "find",
-                    "arguments": {
-                        "filter": {
-                            "_id": 1
-                        }
-                    },
-                    "result": [
-                        {
-                            "_id": 1,
-                            "random": "123"
-                        }
-                    ]
                 }
             ],
             "expectations": [
@@ -196,8 +223,23 @@
                             "documents": [
                                 {
                                     "_id": 1,
+                                    "encrypted_string": {
+                                        "$binary": {
+                                            "base64": "AQAAAAAAAAAAAAAAAAAAAAACtsdOjHK3CkpNjAAMznkYbeR6Z+yLzCRv4zOb7VfKnJdmU0W5MD8GVODx8K+KuBoCbE1SfGfPgX6NhS/RKpQ12w==",
+                                            "subType": "06"
+                                        }
+                                    },
                                     "random": {
                                         "$$type": "binData"
+                                    }
+                                },
+                                {
+                                    "_id": 2,
+                                    "encrypted_string": {
+                                        "$binary": {
+                                            "base64": "AQAAAAAAAAAAAAAAAAAAAAAC1ijPpI+oG1mNiFChFAz7heo3R150yDhxZ7nOnPUwDM+aEvPRBuU6rXtgkVt7mgLd2H9rq9iChCAV46YKcpNrFw==",
+                                            "subType": "06"
+                                        }
                                     }
                                 }
                             ],
@@ -209,12 +251,67 @@
                 {
                     "command_started_event": {
                         "command": {
-                            "find": "default",
-                            "filter": {
-                                "_id": 1
-                            }
+                            "update": "default",
+                            "updates": [
+                                {
+                                    "q": {
+                                        "encrypted_string": {
+                                            "$eq": {
+                                                "$binary": {
+                                                    "base64": "AQAAAAAAAAAAAAAAAAAAAAACtsdOjHK3CkpNjAAMznkYbeR6Z+yLzCRv4zOb7VfKnJdmU0W5MD8GVODx8K+KuBoCbE1SfGfPgX6NhS/RKpQ12w==",
+                                                    "subType": "06"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "u": {
+                                        "$set": {
+                                            "encrypted_string": {
+                                                "$binary": {
+                                                    "base64": "AQAAAAAAAAAAAAAAAAAAAAAC1ijPpI+oG1mNiFChFAz7heo3R150yDhxZ7nOnPUwDM+aEvPRBuU6rXtgkVt7mgLd2H9rq9iChCAV46YKcpNrFw==",
+                                                    "subType": "06"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "ordered": true
                         },
-                        "command_name": "find"
+                        "command_name": "update"
+                    }
+                },
+                {
+                    "command_started_event": {
+                        "command": {
+                            "delete": "default",
+                            "deletes": [
+                                {
+                                    "q": {
+                                        "$and": [
+                                            {
+                                                "encrypted_string": {
+                                                    "$eq": {
+                                                        "$binary": {
+                                                            "base64": "AQAAAAAAAAAAAAAAAAAAAAAC1ijPpI+oG1mNiFChFAz7heo3R150yDhxZ7nOnPUwDM+aEvPRBuU6rXtgkVt7mgLd2H9rq9iChCAV46YKcpNrFw==",
+                                                            "subType": "06"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "_id": {
+                                                    "$eq": 2
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "limit": 1
+                                }
+                            ],
+                            "ordered": true
+                        },
+                        "command_name": "delete"
                     }
                 }
             ],
@@ -223,6 +320,12 @@
                     "data": [
                         {
                             "_id": 1,
+                            "encrypted_string": {
+                                "$binary": {
+                                    "base64": "AQAAAAAAAAAAAAAAAAAAAAAC1ijPpI+oG1mNiFChFAz7heo3R150yDhxZ7nOnPUwDM+aEvPRBuU6rXtgkVt7mgLd2H9rq9iChCAV46YKcpNrFw==",
+                                    "subType": "06"
+                                }
+                            },
                             "random": {
                                 "$$type": "binData"
                             }

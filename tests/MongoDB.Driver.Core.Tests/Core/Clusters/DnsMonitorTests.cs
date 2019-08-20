@@ -332,16 +332,21 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        public void Monitor_should_return_when_ShouldDnsMonitorStop_returns_true(bool firstValue, bool secondValue)
+        [InlineData(true, false, true)]
+        [InlineData(false, true, true)]
+        [InlineData(true, null, false)]
+        public void Monitor_should_return_when_ShouldDnsMonitorStop_returns_true(bool firstValue, bool? secondValue, bool processDnsResultHasEverBeenCalled)
         {
             var mockCluster = new Mock<IDnsMonitoringCluster>();
-            mockCluster
+            var setup = mockCluster
                 .SetupSequence(m => m.ShouldDnsMonitorStop())
-                .Returns(firstValue)
-                .Returns(secondValue);
+                .Returns(firstValue);
+            if (secondValue.HasValue)
+            {
+                setup.Returns(secondValue.Value);
+            }
             var subject = CreateSubject(cluster: mockCluster.Object);
+            subject._processDnsResultHasEverBeenCalled(processDnsResultHasEverBeenCalled);
 
             subject.Monitor();
         }
@@ -354,7 +359,6 @@ namespace MongoDB.Driver.Core.Clusters
             var exception = new Exception();
             mockCluster
                 .SetupSequence(m => m.ShouldDnsMonitorStop())
-                .Returns(false)
                 .Returns(true);
             mockDnsResolver
                 .Setup(m => m.ResolveSrvRecords(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -374,7 +378,6 @@ namespace MongoDB.Driver.Core.Clusters
             var mockCluster = new Mock<IDnsMonitoringCluster>();
             mockCluster
                 .SetupSequence(x => x.ShouldDnsMonitorStop())
-                .Returns(false)
                 .Returns(true);
             List<DnsEndPoint> actualEndPoints = null;
             var cts = new CancellationTokenSource();
@@ -405,7 +408,6 @@ namespace MongoDB.Driver.Core.Clusters
             var mockCluster = new Mock<IDnsMonitoringCluster>();
             mockCluster
                 .SetupSequence(x => x.ShouldDnsMonitorStop())
-                .Returns(false)
                 .Returns(true);
             var cts = new CancellationTokenSource();
             var mockDnsResolver = new Mock<IDnsResolver>();
@@ -442,11 +444,9 @@ namespace MongoDB.Driver.Core.Clusters
             var mockCluster = new Mock<IDnsMonitoringCluster>();
             mockCluster
                 .SetupSequence(x => x.ShouldDnsMonitorStop())
-                .Returns(false)
                 .Returns(() => { cts.Cancel(); return false; });
             var lookupDomainName = "a.b.com";
             var subject = CreateSubject(cluster: mockCluster.Object, lookupDomainName: lookupDomainName, cancellationToken: cts.Token);
-
             var exception = Record.Exception(() => subject.Monitor());
 
             exception.Should().BeOfType<OperationCanceledException>();
@@ -514,6 +514,7 @@ namespace MongoDB.Driver.Core.Clusters
         public static IDnsResolver _dnsResolver(this DnsMonitor obj) => (IDnsResolver)Reflector.GetFieldValue(obj, nameof(_dnsResolver));
         public static string _lookupDomainName(this DnsMonitor obj) => (string)Reflector.GetFieldValue(obj, nameof(_lookupDomainName));
         public static bool _processDnsResultHasEverBeenCalled(this DnsMonitor obj) => (bool)Reflector.GetFieldValue(obj, nameof(_processDnsResultHasEverBeenCalled));
+        public static void _processDnsResultHasEverBeenCalled(this DnsMonitor obj, bool value) => Reflector.SetFieldValue(obj, nameof(_processDnsResultHasEverBeenCalled), value);
         public static Action<SdamInformationEvent> _sdamInformationEventHandler(this DnsMonitor obj) => (Action<SdamInformationEvent>)Reflector.GetFieldValue(obj, nameof(_sdamInformationEventHandler));
         public static string _service(this DnsMonitor obj) => (string)Reflector.GetFieldValue(obj, nameof(_service));
         public static Exception _unhandledException(this DnsMonitor obj) => (Exception)Reflector.GetFieldValue(obj, nameof(_unhandledException));

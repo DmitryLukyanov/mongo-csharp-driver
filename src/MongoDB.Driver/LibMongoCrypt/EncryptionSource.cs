@@ -87,7 +87,14 @@ namespace MongoDB.Driver.LibMongoCrypt
         // private methods
         private CryptClient CreateCryptClient(CryptOptions options)
         {
-            return CryptClientFactory.Create(options);
+            return CryptClientFactory.Create(options, s =>
+            {
+                File.WriteAllLines(@"c:\logs\libmongocrypt.txt",
+                new[]
+                {
+                    s
+                });
+            });
         }
 
         private CryptOptions CreateCryptOptions()

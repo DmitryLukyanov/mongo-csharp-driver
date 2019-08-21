@@ -60,6 +60,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
 
         public ClientEncryptionProseTests()
         {
+            BsonDefaults.GuidRepresentation = GuidRepresentation.Standard;
             _cluster = CoreTestConfiguration.Cluster;
             _session = CoreTestConfiguration.StartSession(_cluster);
         }
@@ -166,7 +167,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
         [SkippableTheory()]
         [ParameterAttributeData]
         public void CorpusTest(
-            [Values(false)] bool useLocalSchema,
+            [Values(false, true)] bool useLocalSchema,
             [Values(false)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);

@@ -163,7 +163,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
             }
         }
 
-        [SkippableTheory(Skip = "Not finished.")]
+        [SkippableTheory()]
         [ParameterAttributeData]
         public void CorpusTest(
             [Values(false)] bool useLocalSchema,

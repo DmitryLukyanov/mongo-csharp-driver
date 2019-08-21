@@ -104,14 +104,14 @@ namespace MongoDB.Driver.LibMongoCrypt
             if (kmsProviders != null)
             {
                 kmsProvidersMap = new Dictionary<KmsType, IKmsCredentials>();
-                if (kmsProviders.TryGetValue("aws", out var awsProvider))
-                {
-                    if (awsProvider.TryGetValue("accessKeyId", out var accessKeyId) &&
-                        awsProvider.TryGetValue("secretAccessKey", out var secretAccessKey))
-                    {
-                        kmsProvidersMap.Add(KmsType.Aws, new AwsKmsCredentials((string)secretAccessKey, (string)accessKeyId));
-                    }
-                }
+                //if (kmsProviders.TryGetValue("aws", out var awsProvider))
+                //{
+                //    if (awsProvider.TryGetValue("accessKeyId", out var accessKeyId) &&
+                //        awsProvider.TryGetValue("secretAccessKey", out var secretAccessKey))
+                //    {
+                //        kmsProvidersMap.Add(KmsType.Aws, new AwsKmsCredentials((string)secretAccessKey, (string)accessKeyId));
+                //    }
+                //}
                 if (kmsProviders.TryGetValue("local", out var localProvider))
                 {
                     if (localProvider.TryGetValue("key", out var keyObject) && keyObject is byte[] key)

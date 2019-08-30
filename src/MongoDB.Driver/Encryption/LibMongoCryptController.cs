@@ -45,14 +45,14 @@ namespace MongoDB.Driver
         }
 
         // public methods
-        public Guid GenerateKey(IKmsKeyId kmsKeyId, CancellationToken cancellationToken)
+        public Guid CreateDataKey(IKmsKeyId kmsKeyId, CancellationToken cancellationToken)
         {
-            byte[] keyBytes;
+            byte[] keyDocumentBytes;
             try
             {
                 using (var context = GetCryptClient().StartCreateDataKeyContext(kmsKeyId))
                 {
-                    keyBytes = ProcessStates(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken);
+                    keyDocumentBytes = ProcessStates(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -60,21 +60,21 @@ namespace MongoDB.Driver
                 throw new MongoClientException(ex.Message, ex);
             }
 
-            var rawBsonDocument = new RawBsonDocument(keyBytes);
-            _keyVaultCollection.InsertOne(rawBsonDocument, cancellationToken: cancellationToken);
-            var guid = rawBsonDocument.GetValue("_id").AsGuid;
+            var keyDocument = new RawBsonDocument(keyDocumentBytes);
+            _keyVaultCollection.InsertOne(keyDocument, cancellationToken: cancellationToken);
+            var guid = keyDocument["_id"].AsGuid;
             return guid;
         }
 
-        public async Task<Guid> GenerateKeyAsync(IKmsKeyId kmsKeyId, CancellationToken cancellationToken)
+        public async Task<Guid> CreateDataKeyAsync(IKmsKeyId kmsKeyId, CancellationToken cancellationToken)
         {
-            byte[] keyBytes;
+            byte[] keyDocumentBytes;
 
             try
             {
                 using (var context = GetCryptClient().StartCreateDataKeyContext(kmsKeyId))
                 {
-                    keyBytes = await ProcessStatesAsync(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken).ConfigureAwait(false);
+                    keyDocumentBytes = await ProcessStatesAsync(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -82,17 +82,17 @@ namespace MongoDB.Driver
                 throw new MongoClientException(ex.Message, ex);
             }
 
-            var rawBsonDocument = new RawBsonDocument(keyBytes);
-            await _keyVaultCollection.InsertOneAsync(rawBsonDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
-            var guid = rawBsonDocument.GetValue("_id").AsGuid;
+            var keyDocument = new RawBsonDocument(keyDocumentBytes);
+            await _keyVaultCollection.InsertOneAsync(keyDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var guid = keyDocument["_id"].AsGuid;
             return guid;
         }
 
-        public byte[] DecryptField(byte[] encryptedDocument, CancellationToken cancellationToken)
+        public byte[] DecryptField(byte[] wrappedValueBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartExplicitDecryptionContext(encryptedDocument))
+                using (var context = GetCryptClient().StartExplicitDecryptionContext(wrappedValueBytes))
                 {
                     return ProcessStates(context, databaseName: null, cancellationToken);
                 }
@@ -103,11 +103,11 @@ namespace MongoDB.Driver
             }
         }
 
-        public async Task<byte[]> DecryptFieldAsync(byte[] encryptedDocument, CancellationToken cancellationToken)
+        public async Task<byte[]> DecryptFieldAsync(byte[] wrappedValueBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartExplicitDecryptionContext(encryptedDocument))
+                using (var context = GetCryptClient().StartExplicitDecryptionContext(wrappedValueBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName: null, cancellationToken).ConfigureAwait(false);
                 }
@@ -118,11 +118,11 @@ namespace MongoDB.Driver
             }
         }
 
-        public byte[] DecryptFields(byte[] encryptedDocument, CancellationToken cancellationToken)
+        public byte[] DecryptFields(byte[] encryptedDocumentBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocument))
+                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocumentBytes))
                 {
                     return ProcessStates(context, databaseName: null, cancellationToken);
                 }
@@ -133,11 +133,11 @@ namespace MongoDB.Driver
             }
         }
 
-        public async Task<byte[]> DecryptFieldsAsync(byte[] encryptedDocument, CancellationToken cancellationToken)
+        public async Task<byte[]> DecryptFieldsAsync(byte[] encryptedDocumentBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocument))
+                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocumentBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName: null, cancellationToken).ConfigureAwait(false);
                 }
@@ -148,7 +148,7 @@ namespace MongoDB.Driver
             }
         }
 
-        public byte[] EncryptField(byte[] unencryptedField, Guid? keyId, byte[] keyAltName, EncryptionAlgorithm encryptionAlgorithm, CancellationToken cancellationToken)
+        public byte[] EncryptField(byte[] wrappedValueBytes, Guid? keyId, byte[] keyAltName, EncryptionAlgorithm encryptionAlgorithm, CancellationToken cancellationToken)
         {
             try
             {
@@ -156,15 +156,15 @@ namespace MongoDB.Driver
                 CryptContext context;
                 if (keyId.HasValue)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, unencryptedField);
+                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else if (keyAltName != null)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, unencryptedField);
+                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else
                 {
-                    throw new Exception("Key Id and Alt name cannot be filled at the same time.");
+                    throw new Exception("Key Id and Alt name cannot both be set.");
                 }
 
                 using (context)
@@ -178,7 +178,7 @@ namespace MongoDB.Driver
             }
         }
 
-        public async Task<byte[]> EncryptFieldAsync(byte[] unencryptedField, Guid? keyId, byte[] keyAltName, EncryptionAlgorithm encryptionAlgorithm, CancellationToken cancellationToken)
+        public async Task<byte[]> EncryptFieldAsync(byte[] wrappedValueBytes, Guid? keyId, byte[] keyAltName, EncryptionAlgorithm encryptionAlgorithm, CancellationToken cancellationToken)
         {
             try
             {
@@ -186,15 +186,15 @@ namespace MongoDB.Driver
                 CryptContext context;
                 if (keyId.HasValue)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, unencryptedField);
+                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else if (keyAltName != null)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, unencryptedField);
+                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else
                 {
-                    throw new Exception("Key Id and Alt name cannot be filled at the same time.");
+                    throw new Exception("Key Id and Alt name cannot both be set.");
                 }
 
                 using (context)
@@ -208,11 +208,11 @@ namespace MongoDB.Driver
             }
         }
 
-        public byte[] EncryptFields(string databaseName, byte[] unencryptedDocument, CancellationToken cancellationToken)
+        public byte[] EncryptFields(string databaseName, byte[] unencryptedCommandBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedDocument))
+                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedCommandBytes))
                 {
                     return ProcessStates(context, databaseName, cancellationToken);
                 }
@@ -223,11 +223,11 @@ namespace MongoDB.Driver
             }
         }
 
-        public async Task<byte[]> EncryptFieldsAsync(string databaseName, byte[] unencryptedDocument, CancellationToken cancellationToken)
+        public async Task<byte[]> EncryptFieldsAsync(string databaseName, byte[] unencryptedCommandBytes, CancellationToken cancellationToken)
         {
             try
             {
-                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedDocument))
+                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedCommandBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName, cancellationToken).ConfigureAwait(false);
                 }

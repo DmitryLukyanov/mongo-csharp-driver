@@ -375,7 +375,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
                     encryptOptions,
                     $"hello {kmsProvider}",
                     async);
-                encryptedValue.SubType.Should().Be(BsonBinarySubType.Encryption);
+                encryptedValue.SubType.Should().Be(BsonBinarySubType.Encrypted);
 
                 var coll = GetCollection(clientEncrypted, __collCollectionNamespace);
                 Insert(
@@ -398,7 +398,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
                     encryptOptions,
                     $"hello {kmsProvider}",
                     async);
-                encryptedValueWithKeyAltName.SubType.Should().Be(BsonBinarySubType.Encryption);
+                encryptedValueWithKeyAltName.SubType.Should().Be(BsonBinarySubType.Encrypted);
                 encryptedValueWithKeyAltName.Should().Be(encryptedValue);
 
                 if (kmsProvider == "local") // the test description expects this assert only once for a local kms provider
@@ -576,10 +576,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
             BsonBinaryData value,
             bool async)
         {
-            BsonBinaryData encryptedValue;
+            BsonBinaryData decryptedValue;
             if (async)
             {
-                encryptedValue = clientEncryption
+                decryptedValue = clientEncryption
                     .DecryptAsync(
                         value,
                         CancellationToken.None)
@@ -588,12 +588,12 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
             }
             else
             {
-                encryptedValue = clientEncryption.Decrypt(
+                decryptedValue = clientEncryption.Decrypt(
                     value,
                     CancellationToken.None);
             }
 
-            return encryptedValue;
+            return decryptedValue;
         }
 
         private BsonBinaryData ExplicitEncrypt(

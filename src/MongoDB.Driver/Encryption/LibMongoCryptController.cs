@@ -32,7 +32,9 @@ namespace MongoDB.Driver
     {
         // private fields
         private readonly MongoClient _client;
+        private readonly CryptClient _cryptClient;
         private readonly IMongoCollection<BsonDocument> _keyVaultCollection;
+        private readonly IMongoClient _mongocryptdClient;
 
         // constructors
         public LibMongoCryptController(
@@ -41,6 +43,8 @@ namespace MongoDB.Driver
         {
             _client = Ensure.IsNotNull(client, nameof(client)) as MongoClient;
             Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
+            _cryptClient = null;
+            _mongocryptdClient = null;
             _keyVaultCollection = GetKeyVaultCollection(autoEncryptionOptions, client);
         }
 

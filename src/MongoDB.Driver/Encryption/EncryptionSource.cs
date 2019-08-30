@@ -26,12 +26,7 @@ using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver
 {
-    internal interface IEncryptionClientsSource
-    {
-        IEncryptionClients EncryptionClients { get; }
-    }
-
-    internal interface IEncryptionClients
+    internal interface ICryptClient
     {
 #pragma warning disable 3003
         /// <summary>
@@ -42,7 +37,10 @@ namespace MongoDB.Driver
         /// </value>
         CryptClient CryptClient { get; }
 #pragma warning restore
+    }
 
+    internal interface IMongoCryptDClient
+    { 
         /// <summary>
         /// Gets the mongocryptd client.
         /// </summary>
@@ -52,53 +50,18 @@ namespace MongoDB.Driver
         IMongoClient MongoCryptDClient { get; }
     }
 
-    internal class EncryptionClients : IEncryptionClients
+    internal class CryptClientWrapper : ICryptClient
     {
         private readonly AutoEncryptionOptions _autoEncryptionOptions;
-        private readonly Lazy<CryptClient> _cryptClient;
-        private readonly Lazy<IMongoClient> _mongoCryptDClient;
+        private readonly CryptClient _cryptClient;
 
-        private EncryptionClients(MongoClientSettings mongoClientSettings)
+        public CryptClientWrapper(AutoEncryptionOptions autoEncryptionOptions)
         {
-            Ensure.IsNotNull(mongoClientSettings, nameof(mongoClientSettings));
-            _autoEncryptionOptions = Ensure.IsNotNull(mongoClientSettings.AutoEncryptionOptions, nameof(mongoClientSettings.AutoEncryptionOptions));
-            _cryptClient = new Lazy<CryptClient>(() => CreateCryptClient(CreateCryptOptions()));
-            _mongoCryptDClient = new Lazy<IMongoClient>(() => CreateMongoCryptDClient(_autoEncryptionOptions.ExtraOptions));
+            _autoEncryptionOptions = Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
+            _cryptClient = CreateCryptClient(CreateCryptOptions());
         }
 
-#pragma warning disable 3003
-        public CryptClient CryptClient => _cryptClient.Value;
-#pragma warning restore
-
-        public IMongoClient MongoCryptDClient => _mongoCryptDClient.Value;
-
-        public static IEncryptionClients CreateEncryptionClientsIfNecessary(MongoClientSettings mongoClientSettings)
-        {
-            if (mongoClientSettings.AutoEncryptionOptions != null)
-            {
-                return new EncryptionClients(mongoClientSettings);
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        // private methods
-        private string CreateMongoCryptDConnectionString(IReadOnlyDictionary<string, object> extraOptions)
-        {
-            if (extraOptions == null)
-            {
-                extraOptions = new Dictionary<string, object>();
-            }
-
-            if (!extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
-            {
-                connectionString = "mongodb://localhost:27020";
-            }
-
-            return connectionString.ToString();
-        }
+        public CryptClient CryptClient => _cryptClient;
 
         private CryptClient CreateCryptClient(CryptOptions options)
         {
@@ -140,6 +103,49 @@ namespace MongoDB.Driver
             }
 
             return new CryptOptions(kmsProvidersMap, schemaBytes);
+        }
+    }
+
+    internal class MongoCryptDClientWrapper : IMongoCryptDClient
+    {
+        private readonly AutoEncryptionOptions _autoEncryptionOptions;
+        private readonly IMongoClient _mongoCryptDClient;
+
+        private MongoCryptDClientWrapper(MongoClientSettings mongoClientSettings)
+        {
+            Ensure.IsNotNull(mongoClientSettings, nameof(mongoClientSettings));
+            _autoEncryptionOptions = Ensure.IsNotNull(mongoClientSettings.AutoEncryptionOptions, nameof(mongoClientSettings.AutoEncryptionOptions));
+            _mongoCryptDClient = CreateMongoCryptDClient(_autoEncryptionOptions.ExtraOptions);
+        }
+
+        public IMongoClient MongoCryptDClient => _mongoCryptDClient;
+
+        public static IMongoCryptDClient CreateEncryptionClientsIfNecessary(MongoClientSettings mongoClientSettings)
+        {
+            if (mongoClientSettings.AutoEncryptionOptions != null)
+            {
+                return new MongoCryptDClientWrapper(mongoClientSettings);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        // private methods
+        private string CreateMongoCryptDConnectionString(IReadOnlyDictionary<string, object> extraOptions)
+        {
+            if (extraOptions == null)
+            {
+                extraOptions = new Dictionary<string, object>();
+            }
+
+            if (!extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
+            {
+                connectionString = "mongodb://localhost:27020";
+            }
+
+            return connectionString.ToString();
         }
 
         private IMongoClient CreateMongoCryptDClient(IReadOnlyDictionary<string, object> extraOptions)

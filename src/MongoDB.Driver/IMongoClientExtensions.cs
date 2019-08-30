@@ -124,16 +124,16 @@ namespace MongoDB.Driver
             }
         }
 
-        internal static IEncryptionClients GetEncryptionClients(this IMongoClient client)
-        {
-            if (client is IEncryptionClientsSource encryptionClientsSourceProvider)
-            {
-                return encryptionClientsSourceProvider.EncryptionClients;
-            }
-            else
-            {
-                throw new NotSupportedException("The mongo client doesn't support encryption.");
-            }
-        }
+        //internal static IEncryptionClients GetEncryptionClients(this IMongoClient client)
+        //{
+        //    if (client is IEncryptionClientsSource encryptionClientsSourceProvider)
+        //    {
+        //        return encryptionClientsSourceProvider.EncryptionClients;
+        //    }
+        //    else
+        //    {
+        //        throw new NotSupportedException("The mongo client doesn't support encryption.");
+        //    }
+        //}
     }
 }

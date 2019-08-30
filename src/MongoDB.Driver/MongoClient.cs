@@ -29,11 +29,15 @@ using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
+using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver
 {
     /// <inheritdoc/>
-    public class MongoClient : MongoClientBase, IEncryptionClientsSource
+    // todo:
+    #pragma warning disable
+    public class MongoClient : MongoClientBase, ICryptClient, IMongoCryptDClient
+    #pragma warning restore
     {
         #region static
         // private static methods
@@ -52,8 +56,11 @@ namespace MongoDB.Driver
         #endregion
 
         // private fields
+        //todo: ordering?
         private readonly ICluster _cluster;
-        private readonly IEncryptionClients _encryptionClients;
+        private readonly CryptClient _cryptClient;
+        private readonly IMongoClient _mongoGryptD;
+        private readonly LibMongoCryptController _libMongoCryptController;
         private readonly IOperationExecutor _operationExecutor;
         private readonly MongoClientSettings _settings;
 
@@ -78,7 +85,11 @@ namespace MongoDB.Driver
         {
             _settings = Ensure.IsNotNull(settings, nameof(settings)).FrozenCopy();
             _cluster = ClusterRegistry.Instance.GetOrCreateCluster(_settings.ToClusterKey());
-            _encryptionClients = EncryptionClients.CreateEncryptionClientsIfNecessary(_settings);
+            if (settings.AutoEncryptionOptions != null)
+            {
+                _cryptClient = new CryptClientWrapper(settings.AutoEncryptionOptions);
+
+            }
             _operationExecutor = new OperationExecutor(this);
         }
 
@@ -133,7 +144,8 @@ namespace MongoDB.Driver
         internal IOperationExecutor OperationExecutor => _operationExecutor;
 
         // internal explicit properties
-        IEncryptionClients IEncryptionClientsSource.EncryptionClients => _encryptionClients;
+        CryptClient ICryptClient.CryptClient => _cryptClient;
+        IMongoClient IMongoCryptDClient.MongoCryptDClient => _mongoGryptD;
 
         // private static methods
 

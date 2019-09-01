@@ -15,6 +15,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using MongoDB.Driver.Core.Misc;
 #if NET452 || NETSTANDARD2_0
 using System.IO.Compression;
@@ -29,14 +30,22 @@ namespace MongoDB.Driver.Core.Compression
 
         public void Compress(Stream input, Stream output)
         {
-#if NET452 || NETSTANDARD2_0
-            using (var snappyStream = new SnappyStream(output, CompressionMode.Compress, true))
+            using (var temp = new MemoryStream())
             {
-                input.EfficientCopyTo(snappyStream);
-            }
+#if NET452 || NETSTANDARD2_0
+                using (var snappyStream = new SnappyStream(temp, CompressionMode.Compress, true))
+                {
+                    input.EfficientCopyTo(snappyStream);
+                }
+                var newBytes = temp.ToArray().Skip(18).ToArray();
+                using (var arr = new MemoryStream(newBytes))
+                {
+                    arr.EfficientCopyTo(output);
+                }
 #else
-            throw new NotSupportedException();
+                throw new NotSupportedException();
 #endif
+            }
         }
 
         public void Decompress(Stream input, Stream output)

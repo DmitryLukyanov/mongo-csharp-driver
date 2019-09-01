@@ -483,12 +483,12 @@ buildvariants:
   tasks:
      - name: "test"
 
-#- matrix_name: "tests-snappy-compression"
-#  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", version: ["3.4", "3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "*" }
-#  display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${os} "
-#  tags: ["tests-variant"]
-#  tasks:
-#     - name: "test"
+- matrix_name: "tests-snappy-compression"
+  matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", version: ["3.4", "3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "*" }
+  display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${os} "
+  tags: ["tests-variant"]
+  tasks:
+     - name: "test"
 
 - name: atlas-connectivity-tests
   display_name: "Atlas Connectivity Tests"

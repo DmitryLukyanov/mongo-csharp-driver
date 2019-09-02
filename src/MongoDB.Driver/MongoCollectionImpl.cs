@@ -1042,8 +1042,10 @@ namespace MongoDB.Driver
                 { MessageEncoderSettingsName.WriteEncoding, _settings.WriteEncoding ?? Utf8Encodings.Strict }
             };
 
-            var client = _database.Client;
-            client.ConfigureAutoEncryptionMessageEncoderSettings(messageEncoderSettings);
+            if (_database.Client is MongoClient mongoClient)
+            {
+                mongoClient.ConfigureAutoEncryptionMessageEncoderSettings(messageEncoderSettings);
+            }
 
             return messageEncoderSettings;
         }

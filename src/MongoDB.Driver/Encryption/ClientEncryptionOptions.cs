@@ -14,7 +14,9 @@
 */
 
 using System.Collections.Generic;
+using System.Linq;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Shared;
 
 namespace MongoDB.Driver
 {
@@ -23,6 +25,21 @@ namespace MongoDB.Driver
     /// </summary>
     public class ClientEncryptionOptions
     {
+        #region static
+        /// <summary>
+        /// Gets a new instance of the <see cref="ClientEncryptionOptions"/> initialized with values from a <see cref="AutoEncryptionOptions"/>.
+        /// </summary>
+        /// <param name="autoEncryptionOptions">The auto encryption options.</param>
+        /// <returns>A new instance of <see cref="ClientEncryptionOptions"/>.</returns>
+        public static ClientEncryptionOptions FromAutoEncryptionOptions(AutoEncryptionOptions autoEncryptionOptions)
+        {
+            return new ClientEncryptionOptions(
+                keyVaultNamespace: autoEncryptionOptions.KeyVaultNamespace,
+                kmsProviders: autoEncryptionOptions.KmsProviders,
+                keyVaultClient: autoEncryptionOptions.KeyVaultClient); //todo:
+        }
+        #endregion
+
         // private fields
         private readonly IMongoClient _keyVaultClient;
         private readonly CollectionNamespace _keyVaultNamespace;
@@ -69,5 +86,31 @@ namespace MongoDB.Driver
         /// The KMS providers.
         /// </value>
         public IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> KmsProviders => _kmsProviders;
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            if (obj is ClientEncryptionOptions clientEncryptionOptions)
+            {
+                return
+                    clientEncryptionOptions.KeyVaultNamespace == _keyVaultNamespace &&
+                    clientEncryptionOptions.KmsProviders.SequenceEqual(_kmsProviders) &&
+                    object.ReferenceEquals(clientEncryptionOptions.KeyVaultClient, _keyVaultClient);
+            }
+            else
+            {
+                return base.Equals(obj);
+            }
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            return new Hasher()
+                .Hash(_keyVaultNamespace)
+                .HashElements(_kmsProviders)
+                .Hash(_keyVaultClient)
+                .GetHashCode();
+        }
     }
 }

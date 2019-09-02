@@ -78,11 +78,11 @@ namespace MongoDB.Driver
         {
             _settings = Ensure.IsNotNull(settings, nameof(settings)).FrozenCopy();
             _cluster = ClusterRegistry.Instance.GetOrCreateCluster(_settings.ToClusterKey());
+            _operationExecutor = new OperationExecutor(this);
             if (settings.AutoEncryptionOptions != null)
             {
                 _libMongoCryptController = new LibMongoCryptController(this, settings.AutoEncryptionOptions);
             }
-            _operationExecutor = new OperationExecutor(this);
         }
 
         /// <summary>
@@ -178,22 +178,16 @@ namespace MongoDB.Driver
         /// <inheritdoc/>
         public override ClientEncryption GetClientEncryption(ClientEncryptionOptions options)
         {
-            LibMongoCryptController explicitController = null;
-            if (_settings.AutoEncryptionOptions != null)
-            {
-                var clientOptions = ClientEncryptionOptions.FromAutoEncryptionOptions(_settings.AutoEncryptionOptions);
-                if (options.Equals(clientOptions))
-                {
-                    explicitController = _libMongoCryptController;
-                }
-            }
+            var autoEncryptionOptions = AutoEncryptionOptions.FromClientEncryptionOptions(options);
 
-            if (explicitController == null)
-            {
-                var autoEncryptionOptions = AutoEncryptionOptions.FromClientEncryptionOptions(options);
-                explicitController = new LibMongoCryptController(this, autoEncryptionOptions);
-            }
-            
+            Func<AutoEncryptionOptions, AutoEncryptionOptions, bool> canBeConsideredAsTheSame =
+                (fromClient, fromParameter) => object.ReferenceEquals(fromClient.KeyVaultClient, fromParameter.KeyVaultClient) &&
+                                               fromClient.KeyVaultNamespace.Equals(fromParameter.KeyVaultNamespace) &&
+                                               fromClient.KmsProviders.SequenceEqual(fromParameter.KmsProviders);
+
+            var explicitController = _settings.AutoEncryptionOptions != null && canBeConsideredAsTheSame(_settings.AutoEncryptionOptions, autoEncryptionOptions)
+                    ? _libMongoCryptController
+                    : new LibMongoCryptController(this, autoEncryptionOptions);
             return new ClientEncryption(explicitController);
         }
 

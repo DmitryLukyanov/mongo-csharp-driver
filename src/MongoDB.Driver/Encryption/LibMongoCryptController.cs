@@ -49,7 +49,10 @@ namespace MongoDB.Driver
             Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
             _cryptClient = CryptClientHelper.CreateCryptClient(autoEncryptionOptions);
             _keyVaultCollection = GetKeyVaultCollection(autoEncryptionOptions, client);
-            _mongocryptdClient = MongoCryptDHelper.CreateClient(autoEncryptionOptions);
+            if (autoEncryptionOptions.SpawnMongoCryptD)
+            {
+                _mongocryptdClient = MongoCryptDHelper.CreateClient(autoEncryptionOptions);
+            }
         }
 
         // public methods

@@ -36,6 +36,7 @@ namespace MongoDB.Driver
             return new AutoEncryptionOptions(
                 keyVaultNamespace: clientEncryptionOptions.KeyVaultNamespace,
                 kmsProviders: clientEncryptionOptions.KmsProviders,
+                spawnMongoCryptD: false,
                 keyVaultClient: Optional.Create(clientEncryptionOptions.KeyVaultClient));
         }
         #endregion
@@ -47,6 +48,7 @@ namespace MongoDB.Driver
         private readonly CollectionNamespace _keyVaultNamespace;
         private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> _kmsProviders;
         private readonly IReadOnlyDictionary<string, BsonDocument> _schemaMap;
+        private readonly bool _spawnMongoCryptD;
 
         // constructors
         /// <summary>
@@ -64,10 +66,30 @@ namespace MongoDB.Driver
             Optional<bool> bypassAutoEncryption = default,
             Optional<IReadOnlyDictionary<string, object>> extraOptions = default,
             Optional<IMongoClient> keyVaultClient = default,
+            Optional<IReadOnlyDictionary<string, BsonDocument>> schemaMap = default) 
+            : this(
+                keyVaultNamespace,
+                kmsProviders,
+                spawnMongoCryptD: true,
+                bypassAutoEncryption,
+                extraOptions,
+                keyVaultClient,
+                schemaMap) 
+        {
+        }
+
+        private AutoEncryptionOptions(
+            CollectionNamespace keyVaultNamespace,
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> kmsProviders,
+            bool spawnMongoCryptD,
+            Optional<bool> bypassAutoEncryption = default,
+            Optional<IReadOnlyDictionary<string, object>> extraOptions = default,
+            Optional<IMongoClient> keyVaultClient = default,
             Optional<IReadOnlyDictionary<string, BsonDocument>> schemaMap = default)
         {
             _keyVaultNamespace = Ensure.IsNotNull(keyVaultNamespace, nameof(keyVaultNamespace));
             _kmsProviders = Ensure.IsNotNull(kmsProviders, nameof(kmsProviders));
+            _spawnMongoCryptD = spawnMongoCryptD;
             _bypassAutoEncryption = bypassAutoEncryption.WithDefault(false);
             _extraOptions = extraOptions.WithDefault(null);
             _keyVaultClient = keyVaultClient.WithDefault(null);
@@ -122,6 +144,8 @@ namespace MongoDB.Driver
         /// The schema map.
         /// </value>
         public IReadOnlyDictionary<string, BsonDocument> SchemaMap => _schemaMap;
+
+        internal bool SpawnMongoCryptD => _spawnMongoCryptD;
 
         /// <summary>
         /// Returns a new instance of the <see cref="AutoEncryptionOptions"/> class.

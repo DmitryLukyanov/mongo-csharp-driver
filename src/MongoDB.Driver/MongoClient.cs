@@ -185,9 +185,13 @@ namespace MongoDB.Driver
                                                fromClient.KeyVaultNamespace.Equals(fromParameter.KeyVaultNamespace) &&
                                                fromClient.KmsProviders.SequenceEqual(fromParameter.KmsProviders);
 
-            var explicitController = _settings.AutoEncryptionOptions != null && canBeConsideredAsTheSame(_settings.AutoEncryptionOptions, autoEncryptionOptions)
+            var explicitController =
+                _settings.AutoEncryptionOptions != null &&
+                _libMongoCryptController != null &&
+                canBeConsideredAsTheSame(_settings.AutoEncryptionOptions, autoEncryptionOptions)
                     ? _libMongoCryptController
                     : new LibMongoCryptController(this, autoEncryptionOptions);
+
             return new ClientEncryption(explicitController);
         }
 
@@ -501,10 +505,10 @@ namespace MongoDB.Driver
             ChangeStreamOptions options)
         {
             return ChangeStreamHelper.CreateChangeStreamOperation(
-                pipeline, 
-                options, 
-                _settings.ReadConcern, 
-                GetMessageEncoderSettings(), 
+                pipeline,
+                options,
+                _settings.ReadConcern,
+                GetMessageEncoderSettings(),
                 _settings.RetryReads);
         }
 

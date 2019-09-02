@@ -14,7 +14,10 @@
 */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,10 +37,7 @@ using MongoDB.Libmongocrypt;
 namespace MongoDB.Driver
 {
     /// <inheritdoc/>
-    // todo:
-    #pragma warning disable
-    public class MongoClient : MongoClientBase, ICryptClient, IMongoCryptDClient
-    #pragma warning restore
+    public class MongoClient : MongoClientBase
     {
         #region static
         // private static methods
@@ -59,7 +59,7 @@ namespace MongoDB.Driver
         //todo: ordering?
         private readonly ICluster _cluster;
         private readonly CryptClient _cryptClient;
-        private readonly IMongoClient _mongoGryptD;
+        private readonly MongoClient _mongoGryptD;
         private readonly LibMongoCryptController _libMongoCryptController;
         private readonly IOperationExecutor _operationExecutor;
         private readonly MongoClientSettings _settings;
@@ -87,8 +87,9 @@ namespace MongoDB.Driver
             _cluster = ClusterRegistry.Instance.GetOrCreateCluster(_settings.ToClusterKey());
             if (settings.AutoEncryptionOptions != null)
             {
-                _cryptClient = new CryptClientWrapper(settings.AutoEncryptionOptions);
-
+                //_cryptClient = null; //new CryptClientWrapper(settings.AutoEncryptionOptions);
+                _cryptClient = CryptClientHelper.CreateCryptClient(settings.AutoEncryptionOptions);
+                _mongoGryptD = MongoCryptDHelper.CreateClient(settings);
             }
             _operationExecutor = new OperationExecutor(this);
         }
@@ -144,8 +145,8 @@ namespace MongoDB.Driver
         internal IOperationExecutor OperationExecutor => _operationExecutor;
 
         // internal explicit properties
-        CryptClient ICryptClient.CryptClient => _cryptClient;
-        IMongoClient IMongoCryptDClient.MongoCryptDClient => _mongoGryptD;
+        internal CryptClient CryptClient => _cryptClient;
+        internal MongoClient MongoCryptDClient => _mongoGryptD;
 
         // private static methods
 
@@ -631,6 +632,216 @@ namespace MongoDB.Driver
             {
                 ClusterDescription = cluster;
                 return SelectServersThatDetermineWhetherSessionsAreSupported(cluster.ConnectionMode, servers);
+            }
+        }
+
+        private class CryptClientHelper
+        {
+            #region static
+            public static CryptClient CreateCryptClient(AutoEncryptionOptions autoEncryptionOptions)
+            {
+                var helper = new CryptClientHelper(autoEncryptionOptions);
+                var cryptOptions = helper.CreateCryptOptions();
+                return helper.CreateCryptClient(cryptOptions);
+            }
+            #endregion
+
+            private readonly AutoEncryptionOptions _autoEncryptionOptions;
+
+            private CryptClientHelper(AutoEncryptionOptions autoEncryptionOptions)
+            {
+                _autoEncryptionOptions = Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
+            }
+
+            private CryptClient CreateCryptClient(CryptOptions options)
+            {
+                return CryptClientFactory.Create(options);
+            }
+
+            private CryptOptions CreateCryptOptions()
+            {
+                var kmsProviders = _autoEncryptionOptions.KmsProviders;
+                Dictionary<KmsType, IKmsCredentials> kmsProvidersMap = null;
+                if (kmsProviders != null)
+                {
+                    kmsProvidersMap = new Dictionary<KmsType, IKmsCredentials>();
+                    if (kmsProviders.TryGetValue("aws", out var awsProvider))
+                    {
+                        if (awsProvider.TryGetValue("accessKeyId", out var accessKeyId) &&
+                            awsProvider.TryGetValue("secretAccessKey", out var secretAccessKey))
+                        {
+                            kmsProvidersMap.Add(KmsType.Aws, new AwsKmsCredentials((string)secretAccessKey, (string)accessKeyId));
+                        }
+                    }
+                    if (kmsProviders.TryGetValue("local", out var localProvider))
+                    {
+                        if (localProvider.TryGetValue("key", out var keyObject) && keyObject is byte[] key)
+                        {
+                            kmsProvidersMap.Add(KmsType.Local, new LocalKmsCredentials(key));
+                        }
+                    }
+                }
+
+                byte[] schemaBytes = null;
+                var schemaMap = _autoEncryptionOptions.SchemaMap;
+                if (schemaMap != null)
+                {
+                    var schemaMapElements = schemaMap.Select(c => new BsonElement(c.Key, c.Value));
+                    var schemaDocument = new BsonDocument(schemaMapElements);
+                    var writeSettings = new BsonBinaryWriterSettings { GuidRepresentation = GuidRepresentation.Unspecified };
+                    schemaBytes = schemaDocument.ToBson(writerSettings: writeSettings);
+                }
+
+                return new CryptOptions(kmsProvidersMap, schemaBytes);
+            }
+        }
+
+        private class MongoCryptDHelper
+        {
+            #region static
+            public static MongoClient CreateClient(MongoClientSettings mongoClientSettings)
+            {
+                var helper = new MongoCryptDHelper(mongoClientSettings);
+                var client = helper.CreateMongoCryptDClient(mongoClientSettings.AutoEncryptionOptions.ExtraOptions);
+                return client;
+            }
+            #endregion
+
+            private readonly AutoEncryptionOptions _autoEncryptionOptions;
+
+            private MongoCryptDHelper(MongoClientSettings mongoClientSettings)
+            {
+                Ensure.IsNotNull(mongoClientSettings, nameof(mongoClientSettings));
+                _autoEncryptionOptions = Ensure.IsNotNull(mongoClientSettings.AutoEncryptionOptions, nameof(mongoClientSettings.AutoEncryptionOptions));
+            }
+
+            //public static MongoCryptDHelper CreateEncryptionClientsIfNecessary(MongoClientSettings mongoClientSettings)
+            //{
+            //    if (mongoClientSettings.AutoEncryptionOptions != null)
+            //    {
+            //        return new MongoCryptDHelper(mongoClientSettings);
+            //    }
+            //    else
+            //    {
+            //        return null;
+            //    }
+            //}
+
+            // private methods
+            private string CreateMongoCryptDConnectionString(IReadOnlyDictionary<string, object> extraOptions)
+            {
+                if (extraOptions == null)
+                {
+                    extraOptions = new Dictionary<string, object>();
+                }
+
+                if (!extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
+                {
+                    connectionString = "mongodb://localhost:27020";
+                }
+
+                return connectionString.ToString();
+            }
+
+            private MongoClient CreateMongoCryptDClient(IReadOnlyDictionary<string, object> extraOptions)
+            {
+                if (extraOptions == null)
+                {
+                    extraOptions = new Dictionary<string, object>();
+                }
+                var connectionString = CreateMongoCryptDConnectionString(extraOptions);
+
+                if (ShouldMongocryptdBeSpawned(out var path, out var args, extraOptions))
+                {
+                    StartProcess(path, args);
+                }
+
+                return new MongoClient(connectionString);
+            }
+
+            private bool ShouldMongocryptdBeSpawned(out string path, out string args, IReadOnlyDictionary<string, object> extraOptions)
+            {
+                path = null;
+                args = null;
+                if (!extraOptions.TryGetValue("mongocryptdBypassSpawn", out var mongoCryptBypassSpawn) || (!bool.Parse(mongoCryptBypassSpawn.ToString())))
+                {
+                    if (!extraOptions.TryGetValue("mongocryptdSpawnPath", out var objPath))
+                    {
+                        path = Environment.GetEnvironmentVariable("MONGODB_BINARIES") ?? string.Empty;
+                    }
+                    else
+                    {
+                        path = objPath.ToString();
+                    }
+
+                    if (!Path.HasExtension(path))
+                    {
+                        string fileName = "mongocryptd.exe";
+                        path = Path.Combine(path, fileName);
+                    }
+
+                    args = string.Empty;
+                    if (extraOptions.TryGetValue("mongocryptdSpawnArgs", out var mongocryptdSpawnArgs))
+                    {
+                        string trimStartHyphens(string str) => str.TrimStart('-').TrimStart('-');
+                        switch (mongocryptdSpawnArgs)
+                        {
+                            case string str:
+                                var options = str.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (!options.Any(o => o.Contains("idleShutdownTimeoutSecs")))
+                                {
+                                    args += "--idleShutdownTimeoutSecs 60;";
+                                }
+                                args += str;
+                                break;
+                            case IDictionary dictionary:
+                                foreach (var key in dictionary.Keys)
+                                {
+                                    args += $"--{trimStartHyphens(key.ToString())} {dictionary[key]}".TrimEnd(';') + ";";
+                                }
+                                break;
+                            case IEnumerable enumerable:
+                                foreach (var item in enumerable)
+                                {
+                                    args += $"--{trimStartHyphens(item.ToString())}".TrimEnd(';') + ";";
+                                }
+                                break;
+                            default:
+                                args = mongocryptdSpawnArgs.ToString();
+                                break;
+                        }
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            private void StartProcess(string path, string args)
+            {
+                try
+                {
+                    using (Process mongoCryptD = new Process())
+                    {
+                        mongoCryptD.StartInfo.UseShellExecute = true;
+                        mongoCryptD.StartInfo.FileName = path;
+                        mongoCryptD.StartInfo.CreateNoWindow = true;
+                        // todo: should it be?
+                        mongoCryptD.StartInfo.UseShellExecute = false;
+                        mongoCryptD.StartInfo.Arguments = args;
+
+                        if (!mongoCryptD.Start())
+                        {
+                            // skip it. This case can happen if no new process resource is started
+                            // (for example, if an existing process is reused)
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new MongoClientException("Exception starting mongocryptd process. Is mongocryptd on the system path?", ex);
+                }
             }
         }
     }

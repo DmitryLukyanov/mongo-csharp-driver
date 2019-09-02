@@ -34,17 +34,16 @@ namespace MongoDB.Driver
         private readonly MongoClient _client;
         private readonly CryptClient _cryptClient;
         private readonly IMongoCollection<BsonDocument> _keyVaultCollection;
-        private readonly IMongoClient _mongocryptdClient;
+        private readonly MongoClient _mongocryptdClient;
 
         // constructors
         public LibMongoCryptController(
-            IMongoClient client,
+            MongoClient client,
             AutoEncryptionOptions autoEncryptionOptions)
         {
-            _client = Ensure.IsNotNull(client, nameof(client)) as MongoClient;
+            _client = Ensure.IsNotNull(client, nameof(client));
             Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
-            _cryptClient = null;
-            _mongocryptdClient = null;
+            _cryptClient = client.CryptClient;_mongocryptdClient = client.MongoCryptDClient;
             _keyVaultCollection = GetKeyVaultCollection(autoEncryptionOptions, client);
         }
 
@@ -54,7 +53,7 @@ namespace MongoDB.Driver
             byte[] keyDocumentBytes;
             try
             {
-                using (var context = GetCryptClient().StartCreateDataKeyContext(kmsKeyId))
+                using (var context = _cryptClient.StartCreateDataKeyContext(kmsKeyId))
                 {
                     keyDocumentBytes = ProcessStates(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken);
                 }
@@ -76,7 +75,7 @@ namespace MongoDB.Driver
 
             try
             {
-                using (var context = GetCryptClient().StartCreateDataKeyContext(kmsKeyId))
+                using (var context = _cryptClient.StartCreateDataKeyContext(kmsKeyId))
                 {
                     keyDocumentBytes = await ProcessStatesAsync(context, _keyVaultCollection.Database.DatabaseNamespace.DatabaseName, cancellationToken).ConfigureAwait(false);
                 }
@@ -96,7 +95,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartExplicitDecryptionContext(wrappedValueBytes))
+                using (var context = _cryptClient.StartExplicitDecryptionContext(wrappedValueBytes))
                 {
                     return ProcessStates(context, databaseName: null, cancellationToken);
                 }
@@ -111,7 +110,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartExplicitDecryptionContext(wrappedValueBytes))
+                using (var context = _cryptClient.StartExplicitDecryptionContext(wrappedValueBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName: null, cancellationToken).ConfigureAwait(false);
                 }
@@ -126,7 +125,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocumentBytes))
+                using (var context = _cryptClient.StartDecryptionContext(encryptedDocumentBytes))
                 {
                     return ProcessStates(context, databaseName: null, cancellationToken);
                 }
@@ -141,7 +140,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartDecryptionContext(encryptedDocumentBytes))
+                using (var context = _cryptClient.StartDecryptionContext(encryptedDocumentBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName: null, cancellationToken).ConfigureAwait(false);
                 }
@@ -156,15 +155,14 @@ namespace MongoDB.Driver
         {
             try
             {
-                var cryptClient = GetCryptClient();
                 CryptContext context;
                 if (keyId.HasValue)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
+                    context = _cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else if (keyAltName != null)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
+                    context = _cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else
                 {
@@ -186,15 +184,14 @@ namespace MongoDB.Driver
         {
             try
             {
-                var cryptClient = GetCryptClient();
                 CryptContext context;
                 if (keyId.HasValue)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
+                    context = _cryptClient.StartExplicitEncryptionContext(keyId.Value, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else if (keyAltName != null)
                 {
-                    context = cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
+                    context = _cryptClient.StartExplicitEncryptionContext(keyAltName, encryptionAlgorithm, wrappedValueBytes);
                 }
                 else
                 {
@@ -216,7 +213,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedCommandBytes))
+                using (var context = _cryptClient.StartEncryptionContext(databaseName, unencryptedCommandBytes))
                 {
                     return ProcessStates(context, databaseName, cancellationToken);
                 }
@@ -231,7 +228,7 @@ namespace MongoDB.Driver
         {
             try
             {
-                using (var context = GetCryptClient().StartEncryptionContext(databaseName, unencryptedCommandBytes))
+                using (var context = _cryptClient.StartEncryptionContext(databaseName, unencryptedCommandBytes))
                 {
                     return await ProcessStatesAsync(context, databaseName, cancellationToken).ConfigureAwait(false);
                 }
@@ -258,17 +255,6 @@ namespace MongoDB.Driver
             var keyVaultNamespace = autoEncryptionOptions.KeyVaultNamespace;
             var keyVaultDatabase = keyVaultClient.GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName);
             return keyVaultDatabase.GetCollection<BsonDocument>(keyVaultNamespace.CollectionName);
-        }
-
-        private CryptClient GetCryptClient()
-        {
-            return _client.GetEncryptionClients().CryptClient;
-        }
-
-        private IMongoClient GetMongoCryptD()
-        {
-            // should not be called in constructor since it's a lazy
-            return _client.GetEncryptionClients().MongoCryptDClient;
         }
 
         private void FeedResult(CryptContext context, BsonDocument document)
@@ -363,7 +349,7 @@ namespace MongoDB.Driver
 
         private void ProcessNeedMongoMarkingsState(CryptContext context, string databaseName, CancellationToken cancellationToken)
         {
-            var database = GetMongoCryptD().GetDatabase(databaseName);
+            var database = _mongocryptdClient.GetDatabase(databaseName);
             var commandBytes = context.GetOperation().ToArray();
             var commandDocument = new RawBsonDocument(commandBytes);
             var command = new BsonDocumentCommand<BsonDocument>(commandDocument);
@@ -374,7 +360,7 @@ namespace MongoDB.Driver
 
         private async Task ProcessNeedMongoMarkingsStateAsync(CryptContext context, string databaseName, CancellationToken cancellationToken)
         {
-            var database = GetMongoCryptD().GetDatabase(databaseName);
+            var database = _mongocryptdClient.GetDatabase(databaseName);
             var commandBytes = context.GetOperation().ToArray();
             var commandDocument = new RawBsonDocument(commandBytes);
             var command = new BsonDocumentCommand<BsonDocument>(commandDocument);

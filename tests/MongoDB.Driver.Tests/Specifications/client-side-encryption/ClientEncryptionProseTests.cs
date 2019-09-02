@@ -285,7 +285,14 @@ namespace MongoDB.Driver.Tests.Specifications.client_encryption_prose_tests
                 }
 
                 var coll = GetCollection(clientEncrypted, __collCollectionNamespace);
-                Insert(coll, async, corpusCopied);
+                try
+                {
+                    Insert(coll, async, corpusCopied);
+                }
+                catch (Exception ex)
+                {
+                    var t = ex;
+                }
 
                 var corpusDecrypted = Find(coll, new BsonDocument(), async).Single();
                 corpusDecrypted.Should().Be(corpus);

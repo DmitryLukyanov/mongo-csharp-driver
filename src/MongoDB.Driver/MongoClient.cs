@@ -33,7 +33,7 @@ using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 namespace MongoDB.Driver
 {
     /// <inheritdoc/>
-    public class MongoClient : MongoClientBase
+    public class MongoClient : MongoClientBase, IDisposable
     {
         #region static
         // private static methods
@@ -621,6 +621,13 @@ namespace MongoDB.Driver
             {
                 return await funcAsync(session).ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Dispose()
+        {
         }
 
         // nested types

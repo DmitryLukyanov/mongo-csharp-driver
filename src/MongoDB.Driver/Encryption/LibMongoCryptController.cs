@@ -32,8 +32,34 @@ using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver
 {
-    internal class LibMongoCryptController : IBinaryDocumentFieldDecryptor, IBinaryDocumentFieldEncryptor
+    /// <summary>
+    /// 
+    /// </summary>
+    public static class Logger
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        public static BsonDocumentWriter BsonWritter { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public static BsonDocument GetLogDocument()
+        {
+            BsonWritter.WriteEndDocument();
+            return BsonWritter.Document;
+        }
+    }
+
+    internal class LibMongoCryptController : IBinaryDocumentFieldDecryptor, IBinaryDocumentFieldEncryptor, IDisposable
+    {
+        public static BsonDocumentWriter bsonWriter
+        {
+            get => MongoDB.Driver.Logger.BsonWritter;
+            set => MongoDB.Driver.Logger.BsonWritter = value;
+        }
         // private fields
         private readonly MongoClient _client;
         private readonly CryptClient _cryptClient;
@@ -52,6 +78,12 @@ namespace MongoDB.Driver
             if (autoEncryptionOptions.SpawnMongoCryptD)
             {
                 _mongocryptdClient = MongoCryptDHelper.CreateClient(autoEncryptionOptions);
+            }
+
+            if (bsonWriter == null)
+            {
+                bsonWriter = new BsonDocumentWriter(new BsonDocument());
+                bsonWriter.WriteStartDocument();
             }
         }
 
@@ -103,9 +135,15 @@ namespace MongoDB.Driver
         {
             try
             {
+                bsonWriter.WriteStartDocument("DecryptField" + DateTime.UtcNow + "_" + Guid.NewGuid());
+                bsonWriter.WriteName("bytes");
+                bsonWriter.WriteBytes(wrappedValueBytes);
                 using (var context = _cryptClient.StartExplicitDecryptionContext(wrappedValueBytes))
                 {
-                    return ProcessStates(context, databaseName: null, cancellationToken);
+                    //return ProcessStates(context, databaseName: null, cancellationToken);
+                    var res = ProcessStates(context, databaseName: null, cancellationToken);
+                    bsonWriter.WriteEndDocument();
+                    return res;
                 }
             }
             catch (Exception ex)
@@ -133,9 +171,15 @@ namespace MongoDB.Driver
         {
             try
             {
+                bsonWriter.WriteStartDocument("DecryptFields" + DateTime.UtcNow + "_" + Guid.NewGuid());
+                bsonWriter.WriteName("bytes");
+                bsonWriter.WriteBytes(encryptedDocumentBytes);
                 using (var context = _cryptClient.StartDecryptionContext(encryptedDocumentBytes))
                 {
-                    return ProcessStates(context, databaseName: null, cancellationToken);
+                    //return ProcessStates(context, databaseName: null, cancellationToken);
+                    var res = ProcessStates(context, databaseName: null, cancellationToken);
+                    bsonWriter.WriteEndDocument();
+                    return res;
                 }
             }
             catch (Exception ex)
@@ -179,7 +223,34 @@ namespace MongoDB.Driver
 
                 using (context)
                 {
-                    return ProcessStates(context, databaseName: null, cancellationToken);
+                    //return ProcessStates(context, databaseName: null, cancellationToken);
+                    bsonWriter.WriteStartDocument("EncryptField" + DateTime.UtcNow + "_" + Guid.NewGuid());
+                    bsonWriter.WriteName("bytes");
+                    bsonWriter.WriteBytes(wrappedValueBytes);
+                    bsonWriter.WriteName("keyId");
+                    if (keyId.HasValue)
+                    {
+                        bsonWriter.WriteBytes(keyId.Value.ToByteArray());
+                    }
+                    else
+                    {
+                        bsonWriter.WriteString("<empty/>");
+                    }
+
+                    bsonWriter.WriteName("keyAltName");
+                    if (keyAltName != null)
+                    {
+                        bsonWriter.WriteBytes(keyAltName);
+                    }
+                    else
+                    {
+                        bsonWriter.WriteString("<empty/>");
+                    }
+                    bsonWriter.WriteString("encryptionAlgorithm", encryptionAlgorithm.ToString());
+
+                    var res = ProcessStates(context, databaseName: null, cancellationToken);
+                    bsonWriter.WriteEndDocument();
+                    return res;
                 }
             }
             catch (Exception ex)
@@ -221,9 +292,16 @@ namespace MongoDB.Driver
         {
             try
             {
+                bsonWriter.WriteStartDocument("EncryptFields" + DateTime.UtcNow + "_" + Guid.NewGuid());
+                bsonWriter.WriteString("database", databaseName);
+                bsonWriter.WriteName("bytes");
+                bsonWriter.WriteBytes(unencryptedCommandBytes);
                 using (var context = _cryptClient.StartEncryptionContext(databaseName, unencryptedCommandBytes))
                 {
-                    return ProcessStates(context, databaseName, cancellationToken);
+                    //return ProcessStates(context, databaseName, cancellationToken);
+                    var res = ProcessStates(context, databaseName, cancellationToken);
+                    bsonWriter.WriteEndDocument();
+                    return res;
                 }
             }
             catch (Exception ex)
@@ -267,21 +345,30 @@ namespace MongoDB.Driver
 
         private void FeedResult(CryptContext context, BsonDocument document)
         {
+            bsonWriter.WriteStartDocument("FeedResult");
+            bsonWriter.WriteString("document", document.ToString());
             var writerSettings = new BsonBinaryWriterSettings { GuidRepresentation = GuidRepresentation.Unspecified };
             var documentBytes = document.ToBson(writerSettings: writerSettings);
+            bsonWriter.WriteName("bytes");
+            bsonWriter.WriteBytes(documentBytes);
             context.Feed(documentBytes);
             context.MarkDone();
+            bsonWriter.WriteEndDocument();
         }
 
         private void FeedResults(CryptContext context, IEnumerable<BsonDocument> documents)
         {
+            bsonWriter.WriteStartDocument("FeedResults");
             var writerSettings = new BsonBinaryWriterSettings { GuidRepresentation = GuidRepresentation.Unspecified };
             foreach (var document in documents)
             {
                 var documentBytes = document.ToBson(writerSettings: writerSettings);
+                bsonWriter.WriteName("bytes" + Guid.NewGuid());
+                bsonWriter.WriteBytes(documentBytes);
                 context.Feed(documentBytes);
             }
             context.MarkDone();
+            bsonWriter.WriteEndDocument();
         }
 
         private void ProcessErrorState(CryptContext context)
@@ -293,14 +380,24 @@ namespace MongoDB.Driver
 
         private void ProcessNeedCollectionInfoState(CryptContext context, string databaseName, CancellationToken cancellationToken)
         {
+            bsonWriter.WriteStartDocument("ProcessNeedCollectionInfoState");
             var database = _client.GetDatabase(databaseName);
             var filterBytes = context.GetOperation().ToArray();
             var filterDocument = new RawBsonDocument(filterBytes);
             var filter = new BsonDocumentFilterDefinition<BsonDocument>(filterDocument);
+            bsonWriter.WriteName("ProcessNeedCollectionInfoState_bytes");
+            bsonWriter.WriteBytes(filterBytes);
+            bsonWriter.WriteString("Request", filterDocument.ToString());
             var options = new ListCollectionsOptions { Filter = filter };
+            bsonWriter.WriteStartDocument("Content");
             var cursor = database.ListCollections(options, cancellationToken);
             var results = cursor.ToList(cancellationToken);
+            bsonWriter.WriteEndDocument();
+            bsonWriter.WriteStartArray("Response");
+            results.ForEach(c => bsonWriter.WriteString(c.ToString()));
+            bsonWriter.WriteEndArray();
             FeedResults(context, results);
+            bsonWriter.WriteEndDocument();
         }
 
         private async Task ProcessNeedCollectionInfoStateAsync(CryptContext context, string databaseName, CancellationToken cancellationToken)
@@ -317,12 +414,18 @@ namespace MongoDB.Driver
 
         private void ProcessNeedKmsState(CryptContext context, CancellationToken cancellationToken)
         {
+            bsonWriter.WriteStartDocument("ProcessNeedKmsState");
             var requests = context.GetKmsMessageRequests();
+            bsonWriter.WriteStartArray("kmsRequests");
             foreach (var request in requests)
             {
+                bsonWriter.WriteStartDocument();
                 SendKmsRequest(request, cancellationToken);
+                bsonWriter.WriteEndDocument();
             }
+            bsonWriter.WriteEndArray();
             requests.MarkDone();
+            bsonWriter.WriteEndDocument();
         }
 
         private async Task ProcessNeedKmsStateAsync(CryptContext context, CancellationToken cancellationToken)
@@ -337,12 +440,22 @@ namespace MongoDB.Driver
 
         private void ProcessNeedMongoKeysState(CryptContext context, CancellationToken cancellationToken)
         {
+            bsonWriter.WriteStartDocument("ProcessNeedMongoKeysState");
             var filterBytes = context.GetOperation().ToArray();
+            bsonWriter.WriteName("ProcessNeedMongoKeysState_bytes");
+            bsonWriter.WriteBytes(filterBytes);
             var filterDocument = new RawBsonDocument(filterBytes);
+            bsonWriter.WriteString("filterDocument", filterDocument.ToString());
             var filter = new BsonDocumentFilterDefinition<BsonDocument>(filterDocument);
+            bsonWriter.WriteStartDocument("KeyVaultProcessingContent");
             var cursor = _keyVaultCollection.FindSync(filter, cancellationToken: cancellationToken);
             var results = cursor.ToList(cancellationToken);
+            bsonWriter.WriteEndDocument();
+            bsonWriter.WriteStartArray("KeyVaultResponse");
+            results.ForEach(c => bsonWriter.WriteString(c.ToString()));
+            bsonWriter.WriteEndArray();
             FeedResults(context, results);
+            bsonWriter.WriteEndDocument();
         }
 
         private async Task ProcessNeedMongoKeysStateAsync(CryptContext context, CancellationToken cancellationToken)
@@ -357,13 +470,19 @@ namespace MongoDB.Driver
 
         private void ProcessNeedMongoMarkingsState(CryptContext context, string databaseName, CancellationToken cancellationToken)
         {
+            bsonWriter.WriteStartDocument("ProcessNeedMongoMarkingsState__mongocryptdClient");
             var database = _mongocryptdClient.GetDatabase(databaseName);
             var commandBytes = context.GetOperation().ToArray();
+            bsonWriter.WriteName("ProcessNeedMongoMarkingsState_bytes");
+            bsonWriter.WriteBytes(commandBytes);
             var commandDocument = new RawBsonDocument(commandBytes);
+            bsonWriter.WriteString("Request", commandDocument.ToString());
             var command = new BsonDocumentCommand<BsonDocument>(commandDocument);
             var response = database.RunCommand(command, cancellationToken: cancellationToken);
+            bsonWriter.WriteString("Response", response.ToString());
             RestoreDbNodeInResponse(commandDocument, response);
             FeedResult(context, response);
+            bsonWriter.WriteEndDocument();
         }
 
         private async Task ProcessNeedMongoMarkingsStateAsync(CryptContext context, string databaseName, CancellationToken cancellationToken)
@@ -379,39 +498,71 @@ namespace MongoDB.Driver
 
         private byte[] ProcessReadyState(CryptContext context)
         {
-            return context.FinalizeForEncryption().ToArray();
+            //return context.FinalizeForEncryption().ToArray();
+            var res = context.FinalizeForEncryption().ToArray();
+            var doc = new RawBsonDocument(res);
+            bsonWriter.WriteName("Bytes:");
+            bsonWriter.WriteBytes(res);
+            bsonWriter.WriteString("BsonDocument", doc.ToString());
+            return res;
         }
 
         private byte[] ProcessStates(CryptContext context, string databaseName, CancellationToken cancellationToken)
         {
             byte[] result = null;
-            while (true)
+            try
             {
-                switch (context.State)
+                bsonWriter.WriteStartDocument("ProcessStates");
+                while (true)
                 {
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_DONE:
-                        return result;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_ERROR:
-                        ProcessErrorState(context);
-                        break;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_KMS:
-                        ProcessNeedKmsState(context, cancellationToken);
-                        break;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_COLLINFO:
-                        ProcessNeedCollectionInfoState(context, databaseName, cancellationToken);
-                        break;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_KEYS:
-                        ProcessNeedMongoKeysState(context, cancellationToken);
-                        break;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_MARKINGS:
-                        ProcessNeedMongoMarkingsState(context, databaseName, cancellationToken);
-                        break;
-                    case CryptContext.StateCode.MONGOCRYPT_CTX_READY:
-                        result = ProcessReadyState(context);
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Unexpected context state: {context.State}.");
+                    switch (context.State)
+                    {
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_DONE:
+                            return result;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_ERROR:
+                            ProcessErrorState(context);
+                            break;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_KMS:
+                            bsonWriter.WriteStartDocument("MONGOCRYPT_CTX_NEED_KMS");
+                            ProcessNeedKmsState(context, cancellationToken);
+                            bsonWriter.WriteEndDocument();
+                            break;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_COLLINFO:
+                            bsonWriter.WriteStartDocument("MONGOCRYPT_CTX_NEED_MONGO_COLLINFO");
+                            ProcessNeedCollectionInfoState(context, databaseName, cancellationToken);
+                            bsonWriter.WriteEndDocument();
+                            break;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_KEYS:
+                            bsonWriter.WriteStartDocument("MONGOCRYPT_CTX_NEED_MONGO_KEYS");
+                            ProcessNeedMongoKeysState(context, cancellationToken);
+                            bsonWriter.WriteEndDocument();
+                            break;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_MARKINGS:
+                            bsonWriter.WriteStartDocument("MONGOCRYPT_CTX_NEED_MONGO_MARKINGS");
+                            ProcessNeedMongoMarkingsState(context, databaseName, cancellationToken);
+                            bsonWriter.WriteEndDocument();
+                            break;
+                        case CryptContext.StateCode.MONGOCRYPT_CTX_READY:
+                            bsonWriter.WriteStartDocument("MONGOCRYPT_CTX_READY");
+                            result = ProcessReadyState(context);
+                            bsonWriter.WriteEndDocument();
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Unexpected context state: {context.State}.");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                bsonWriter.WriteStartDocument("error");
+                bsonWriter.WriteString("Content", ex.ToString());
+                bsonWriter.WriteEndDocument();
+
+                throw new MongoClientException(ex.Message, ex);
+            }
+            finally
+            {
+                bsonWriter.WriteEndDocument();
             }
         }
 
@@ -463,8 +614,11 @@ namespace MongoDB.Driver
 #else
                 sslStream.AuthenticateAsClient(request.Endpoint);
 #endif
+                bsonWriter.WriteString("Request", request.Message.ToString());
 
                 var requestBytes = request.Message.ToArray();
+                bsonWriter.WriteName("RequestBytes");
+                bsonWriter.WriteBytes(requestBytes);
                 sslStream.Write(requestBytes);
 
                 var buffer = new byte[4096];
@@ -475,6 +629,7 @@ namespace MongoDB.Driver
                     Buffer.BlockCopy(buffer, 0, responseBytes, 0, count);
                     request.Feed(responseBytes);
                 }
+                bsonWriter.WriteString("ResponseBytes", string.Join(",", buffer));
             }
         }
 
@@ -707,6 +862,11 @@ namespace MongoDB.Driver
                     throw new MongoClientException("Exception starting mongocryptd process. Is mongocryptd on the system path?", ex);
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            _cryptClient?.Dispose();
         }
     }
 }

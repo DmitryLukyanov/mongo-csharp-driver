@@ -48,6 +48,7 @@ namespace MongoDB.Driver
         private readonly CollectionNamespace _keyVaultNamespace;
         private readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> _kmsProviders;
         private readonly IReadOnlyDictionary<string, BsonDocument> _schemaMap;
+        //todo:
         private readonly bool _spawnMongoCryptD;
 
         // constructors

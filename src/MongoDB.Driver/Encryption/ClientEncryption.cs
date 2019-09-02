@@ -26,6 +26,7 @@ using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver
 {
+    // TODO: method ordering. Variables naming
     /// <summary>
     /// Explicit client encryption.
     /// </summary>

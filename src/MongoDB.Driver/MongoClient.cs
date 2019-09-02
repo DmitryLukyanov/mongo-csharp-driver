@@ -634,7 +634,5 @@ namespace MongoDB.Driver
                 return SelectServersThatDetermineWhetherSessionsAreSupported(cluster.ConnectionMode, servers);
             }
         }
-
-
     }
 }

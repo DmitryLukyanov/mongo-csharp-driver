@@ -587,28 +587,23 @@ namespace MongoDB.Driver
             public static MongoClient CreateClient(AutoEncryptionOptions autoEncryptionOptions)
             {
                 var helper = new MongoCryptDHelper(autoEncryptionOptions);
-                //todo
-                var client = helper.CreateMongoCryptDClient(helper._autoEncryptionOptions.ExtraOptions);
+                var client = helper.CreateMongoCryptDClient();
                 return client;
             }
             #endregion
 
-            private readonly AutoEncryptionOptions _autoEncryptionOptions;
+            private readonly IReadOnlyDictionary<string, object> _extraOptions;
 
             private MongoCryptDHelper(AutoEncryptionOptions autoEncryptionOptions)
             {
-                _autoEncryptionOptions = Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
+                Ensure.IsNotNull(autoEncryptionOptions, nameof(autoEncryptionOptions));
+                _extraOptions = autoEncryptionOptions.ExtraOptions ?? new Dictionary<string, object>();
             }
 
             // private methods
-            private string CreateMongoCryptDConnectionString(IReadOnlyDictionary<string, object> extraOptions)
+            private string CreateMongoCryptDConnectionString()
             {
-                if (extraOptions == null)
-                {
-                    extraOptions = new Dictionary<string, object>();
-                }
-
-                if (!extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
+                if (!_extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
                 {
                     connectionString = "mongodb://localhost:27020";
                 }
@@ -616,15 +611,11 @@ namespace MongoDB.Driver
                 return connectionString.ToString();
             }
 
-            private MongoClient CreateMongoCryptDClient(IReadOnlyDictionary<string, object> extraOptions)
+            private MongoClient CreateMongoCryptDClient()
             {
-                if (extraOptions == null)
-                {
-                    extraOptions = new Dictionary<string, object>();
-                }
-                var connectionString = CreateMongoCryptDConnectionString(extraOptions);
+                var connectionString = CreateMongoCryptDConnectionString();
 
-                if (ShouldMongocryptdBeSpawned(out var path, out var args, extraOptions))
+                if (ShouldMongocryptdBeSpawned(out var path, out var args))
                 {
                     StartProcess(path, args);
                 }
@@ -632,13 +623,13 @@ namespace MongoDB.Driver
                 return new MongoClient(connectionString);
             }
 
-            private bool ShouldMongocryptdBeSpawned(out string path, out string args, IReadOnlyDictionary<string, object> extraOptions)
+            private bool ShouldMongocryptdBeSpawned(out string path, out string args)
             {
                 path = null;
                 args = null;
-                if (!extraOptions.TryGetValue("mongocryptdBypassSpawn", out var mongoCryptBypassSpawn) || (!bool.Parse(mongoCryptBypassSpawn.ToString())))
+                if (!_extraOptions.TryGetValue("mongocryptdBypassSpawn", out var mongoCryptBypassSpawn) || (!bool.Parse(mongoCryptBypassSpawn.ToString())))
                 {
-                    if (!extraOptions.TryGetValue("mongocryptdSpawnPath", out var objPath))
+                    if (!_extraOptions.TryGetValue("mongocryptdSpawnPath", out var objPath))
                     {
                         path = Environment.GetEnvironmentVariable("MONGODB_BINARIES") ?? string.Empty;
                     }
@@ -654,7 +645,7 @@ namespace MongoDB.Driver
                     }
 
                     args = string.Empty;
-                    if (extraOptions.TryGetValue("mongocryptdSpawnArgs", out var mongocryptdSpawnArgs))
+                    if (_extraOptions.TryGetValue("mongocryptdSpawnArgs", out var mongocryptdSpawnArgs))
                     {
                         string trimStartHyphens(string str) => str.TrimStart('-').TrimStart('-');
                         switch (mongocryptdSpawnArgs)

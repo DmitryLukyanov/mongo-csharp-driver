@@ -157,7 +157,7 @@ namespace MongoDB.Driver.Encryption
             out Guid? keyId,
             out EncryptionAlgorithm algorithm)
         {
-            keyId = encryptOptions.KeyIdBytes != null ? new Guid(encryptOptions.KeyIdBytes) : (Guid?)null;
+            keyId = GuidConverter.FromBytes(encryptOptions.KeyIdBytes, GuidRepresentation.Standard);
             algorithm = (EncryptionAlgorithm)Enum.Parse(typeof(EncryptionAlgorithm), encryptOptions.Algorithm);
         }
     }

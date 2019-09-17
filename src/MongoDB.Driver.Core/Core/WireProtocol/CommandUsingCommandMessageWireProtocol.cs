@@ -261,37 +261,22 @@ namespace MongoDB.Driver.Core.WireProtocol
         {
             var extraElements = new List<BsonElement>();
 
-            void addIfNotAlreadyAdded(BsonElement element)
-            {
-                if (!_command.Contains(element.Name))
-                {
-                    extraElements.Add(element);
-                }
-            }
-
-            if (!_command.Contains("$db"))
-            {
-                var dbElement = new BsonElement("$db", _databaseNamespace.DatabaseName);
-                addIfNotAlreadyAdded(dbElement);
-            }
+            addIfNotAlreadyAdded("$db", _databaseNamespace.DatabaseName);
 
             if (_readPreference != null && _readPreference != ReadPreference.Primary)
             {
                 var readPreferenceDocument = QueryHelper.CreateReadPreferenceDocument(_readPreference);
-                var readPreferenceElement = new BsonElement("$readPreference", readPreferenceDocument);
-                addIfNotAlreadyAdded(readPreferenceElement);
+                addIfNotAlreadyAdded("$readPreference", readPreferenceDocument);
             }
 
             if (_session.Id != null)
             {
-                var lsidElement = new BsonElement("lsid", _session.Id);
-                addIfNotAlreadyAdded(lsidElement);
+                addIfNotAlreadyAdded("lsid", _session.Id);
             }
 
             if (_session.ClusterTime != null)
             {
-                var clusterTimeElement = new BsonElement("$clusterTime", _session.ClusterTime);
-                addIfNotAlreadyAdded(clusterTimeElement);
+                addIfNotAlreadyAdded("$clusterTime", _session.ClusterTime);
             }
             Action<BsonWriterSettings> writerSettingsConfigurator = s => s.GuidRepresentation = GuidRepresentation.Unspecified;
 
@@ -299,21 +284,29 @@ namespace MongoDB.Driver.Core.WireProtocol
             if (_session.IsInTransaction)
             {
                 var transaction = _session.CurrentTransaction;
-                addIfNotAlreadyAdded(new BsonElement("txnNumber", transaction.TransactionNumber));
+                addIfNotAlreadyAdded("txnNumber", transaction.TransactionNumber);
                 if (transaction.State == CoreTransactionState.Starting)
                 {
-                    addIfNotAlreadyAdded(new BsonElement("startTransaction", true));
+                    addIfNotAlreadyAdded("startTransaction", true);
                     var readConcern = ReadConcernHelper.GetReadConcernForFirstCommandInTransaction(_session, connectionDescription);
                     if (readConcern != null)
                     {
-                        addIfNotAlreadyAdded(new BsonElement("readConcern", readConcern));
+                        addIfNotAlreadyAdded("readConcern", readConcern);
                     }
                 }
-                addIfNotAlreadyAdded(new BsonElement("autocommit", false));
+                addIfNotAlreadyAdded("autocommit", false);
             }
 
             var elementAppendingSerializer = new ElementAppendingSerializer<BsonDocument>(BsonDocumentSerializer.Instance, extraElements, writerSettingsConfigurator);
             return new Type0CommandMessageSection<BsonDocument>(_command, elementAppendingSerializer);
+
+            void addIfNotAlreadyAdded(string key, object value)
+            {
+                if (!_command.Contains(key))
+                {
+                    extraElements.Add(new BsonElement(key, BsonValue.Create(value)));
+                }
+            }
         }
 
         private void MessageWasProbablySent(CommandRequestMessage message)

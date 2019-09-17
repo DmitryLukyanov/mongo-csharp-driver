@@ -91,6 +91,17 @@ namespace MongoDB.Driver.Tests
                  ? BsonDocument.Parse(stringExtraOptions)
                  : new BsonDocument();
 
+            var extraOptions = bsonDocumentExtraOptions
+                .Elements
+                .ToDictionary(k => k.Name, v => CreateTypedExtraOptions(v.Value));
+
+            var subject = new MongocryptdFactory(extraOptions);
+
+            var result = subject.ShouldMongocryptdBeSpawned(out var path, out var args);
+            result.Should().Be(shouldBeSpawned);
+            path.Should().Be(expectedPath);
+            args.Should().Be(expectedArgs);
+
             object CreateTypedExtraOptions(BsonValue value)
             {
                 if (value.IsBsonArray)
@@ -106,17 +117,6 @@ namespace MongoDB.Driver.Tests
                     return (string)value; // string
                 }
             }
-
-            var extraOptions = bsonDocumentExtraOptions
-                .Elements
-                .ToDictionary(k => k.Name, v => CreateTypedExtraOptions(v.Value));
-
-            var subject = new MongocryptdFactory(extraOptions);
-
-            var result = subject.ShouldMongocryptdBeSpawned(out var path, out var args);
-            result.Should().Be(shouldBeSpawned);
-            path.Should().Be(expectedPath);
-            args.Should().Be(expectedArgs);
         }
 
         [Theory]

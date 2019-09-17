@@ -31,43 +31,6 @@ namespace MongoDB.Driver.Tests
         private const string Key1 = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
         private const string Key2 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-        [Theory]
-        [InlineData(typeof(int), false, typeof(ArgumentException))]
-        [InlineData(typeof(int), true, typeof(ArgumentException))]
-        [InlineData(typeof(string), true, typeof(ArgumentException))]
-        [InlineData(null, false, typeof(ArgumentNullException))]
-        [InlineData(typeof(string), false, null)]
-        [InlineData(typeof(byte), true, null)]
-        public void Constructor_should_validate_kms_providers(Type valueType, bool isArray, Type expectedExceptionType)
-        {
-            var kmsProvider = new Dictionary<string, IReadOnlyDictionary<string, object>>();
-            object createSingleInstance(Type type)
-            {
-                return type == typeof(string) ? string.Empty : Activator.CreateInstance(type);
-            }
-
-            var instance =
-                valueType != null
-                    ? isArray
-                        ? Array.CreateInstance(valueType, 0)
-                        : createSingleInstance(valueType)
-                    : null;
-            kmsProvider.Add(
-                "testKey", new Dictionary<string, object>()
-                {
-                    { "nestedTestKey", instance }
-                });
-            var exception = Record.Exception(() => CreateSubjectWith(kmsProvidersValue: kmsProvider));
-            if (expectedExceptionType != null)
-            {
-                exception.GetType().Should().Be(expectedExceptionType);
-            }
-            else
-            {
-                exception.Should().BeNull();
-            }
-        }
-
         [Fact]
         public void Equals_should_return_true_if_all_fields_are_equal()
         {

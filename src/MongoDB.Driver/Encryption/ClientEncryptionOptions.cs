@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using MongoDB.Driver.Core.Misc;
 
@@ -43,6 +44,8 @@ namespace MongoDB.Driver.Encryption
             _keyVaultClient = Ensure.IsNotNull(keyVaultClient, nameof(keyVaultClient));
             _keyVaultNamespace = Ensure.IsNotNull(keyVaultNamespace, nameof(keyVaultNamespace));
             _kmsProviders = Ensure.IsNotNull(kmsProviders, nameof(kmsProviders));
+
+            EnsureKmsProvidersAreValid();
         }
 
         // public properties
@@ -85,6 +88,28 @@ namespace MongoDB.Driver.Encryption
                 keyVaultClient: keyVaultClient.WithDefault(_keyVaultClient),
                 keyVaultNamespace: keyVaultNamespace.WithDefault(_keyVaultNamespace),
                 kmsProviders: kmsProviders.WithDefault(_kmsProviders));
+        }
+
+        // private methods
+        private void EnsureKmsProvidersAreValid()
+        {
+            if (_kmsProviders == null)
+            {
+                return;
+            }
+
+            foreach (var kmsProvider in _kmsProviders)
+            {
+                foreach (var option in Ensure.IsNotNull(kmsProvider.Value, nameof(kmsProvider)))
+                {
+                    var optionValue = Ensure.IsNotNull(option.Value, "kmsProviderOption");
+                    var isSupported = optionValue is byte[] || optionValue is string;
+                    if (!isSupported)
+                    {
+                        throw new ArgumentException($"Invalid kms provider type: {optionValue.GetType().Name}.");
+                    }
+                }
+            }
         }
     }
 }

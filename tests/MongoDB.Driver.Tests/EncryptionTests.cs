@@ -24,6 +24,7 @@ using MongoDB.Driver.TestHelpers;
 using MongoDB.Libmongocrypt;
 using System;
 using System.Collections.Generic;
+using Moq;
 using Xunit;
 
 namespace MongoDB.Driver.Tests
@@ -35,6 +36,59 @@ namespace MongoDB.Driver.Tests
         #endregion
 
         private const string LocalMasterKey = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
+
+        [Theory]
+        [InlineData(typeof(int), false, typeof(ArgumentException))]
+        [InlineData(typeof(int), true, typeof(ArgumentException))]
+        [InlineData(typeof(string), true, typeof(ArgumentException))]
+        [InlineData(null, false, typeof(ArgumentNullException))]
+        [InlineData(typeof(string), false, null)]
+        [InlineData(typeof(byte), true, null)]
+        public void Constructor_of_encryption_options_should_validate_kms_providers(Type valueType, bool isArray, Type expectedExceptionType)
+        {
+            var kmsProviders = new Dictionary<string, IReadOnlyDictionary<string, object>>();
+            var options =
+                valueType != null
+                    ? isArray
+                        ? Array.CreateInstance(valueType, 0)
+                        : createInstance(valueType)
+                    : null;
+            kmsProviders.Add(
+                "testKey",
+                new Dictionary<string, object>
+                {
+                    { "nestedTestKey", options }
+                });
+
+            testCase(() =>
+                new AutoEncryptionOptions(
+                    keyVaultNamespace: __keyVaultCollectionNamespace,
+                    kmsProviders: kmsProviders));
+
+            testCase(() =>
+                new ClientEncryptionOptions(
+                    Mock.Of<IMongoClient>(),
+                    kmsProviders: kmsProviders,
+                    keyVaultNamespace: __keyVaultCollectionNamespace));
+
+            object createInstance(Type type)
+            {
+                return type == typeof(string) ? string.Empty : Activator.CreateInstance(type);
+            }
+
+            void testCase(Func<object> testCode)
+            {
+                var testCaseException = Record.Exception(testCode);
+                if (expectedExceptionType != null)
+                {
+                    testCaseException.GetType().Should().Be(expectedExceptionType);
+                }
+                else
+                {
+                    testCaseException.Should().BeNull();
+                }
+            }
+        }
 
         [SkippableTheory]
         [ParameterAttributeData]
@@ -68,7 +122,7 @@ namespace MongoDB.Driver.Tests
 
         [SkippableTheory]
         [ParameterAttributeData]
-        public void Mongocryptd_should_be_initialized_for_only_for_auto_encryption([Values(false, true)] bool withAutoEncryption)
+        public void Mongocryptd_should_be_initialized_only_for_auto_encryption([Values(false, true)] bool withAutoEncryption)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
 
@@ -85,8 +139,6 @@ namespace MongoDB.Driver.Tests
 
                     var clientEncryptionController = clientEncryption._libMongoCryptController();
                     clientEncryptionController.Should().NotBeNull();
-                    var mongoCryptD = clientEncryptionController._mongocryptdClient();
-                    mongoCryptD.Should().BeNull();
                 }
                 else
                 {
@@ -94,8 +146,6 @@ namespace MongoDB.Driver.Tests
 
                     var clientEncryptionController = clientEncryption._libMongoCryptController();
                     clientEncryptionController.Should().NotBeNull();
-                    var mongoCryptD = clientEncryptionController._mongocryptdClient();
-                    mongoCryptD.Should().BeNull();
                 }
             }
         }
@@ -153,22 +203,25 @@ namespace MongoDB.Driver.Tests
 
     internal static class ClientEncryptionReflector
     {
-        public static LibMongoCryptController _libMongoCryptController(this ClientEncryption clientEncryption)
+        public static ExplicitEncryptionLibMongoCryptController _libMongoCryptController(this ClientEncryption clientEncryption)
         {
-            return (LibMongoCryptController)Reflector.GetFieldValue(clientEncryption, nameof(_libMongoCryptController));
+            return (ExplicitEncryptionLibMongoCryptController)Reflector.GetFieldValue(clientEncryption, nameof(_libMongoCryptController));
         }
     }
 
-    internal static class LibMongoCryptControllerReflector
+    internal static class LibMongoCryptControllerBaseReflector
     {
-        public static CryptClient _cryptClient(this LibMongoCryptController libMongoCryptController)
+        public static CryptClient _cryptClient(this LibMongoCryptControllerBase libMongoCryptController)
         {
             return (CryptClient)Reflector.GetFieldValue(libMongoCryptController, nameof(_cryptClient));
         }
+    }
 
-        public static MongoClient _mongocryptdClient(this LibMongoCryptController libMongoCryptController)
+    internal static class AutoEncryptionLibMongoCryptControllerReflector
+    {
+        public static IMongoClient _mongocryptdClient(this AutoEncryptionLibMongoCryptController libMongoCryptController)
         {
-            return (MongoClient)Reflector.GetFieldValue(libMongoCryptController, nameof(_mongocryptdClient));
+            return (IMongoClient)Reflector.GetFieldValue(libMongoCryptController, nameof(_mongocryptdClient));
         }
     }
 }

@@ -79,7 +79,6 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             var eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => e.CommandName == "insert");
             using (var client = ConfigureClient())
             using (var clientEncrypted = ConfigureClientEncrypted(kmsProviderFilter: "local", eventCapturer: eventCapturer))
-            using (var clientEncryption = ConfigureClientEncryption(clientEncrypted.Wrapped as MongoClient))
             {
                 var collLimitSchema = JsonFileReader.Instance.Documents["limits.limits-schema.json"];
                 CreateCollection(client, __collCollectionNamespace, new BsonDocument("$jsonSchema", collLimitSchema));
@@ -179,49 +178,6 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-
-            EncryptionAlgorithm ParseAlgorithm(string algorithm)
-            {
-                switch (algorithm)
-                {
-                    case "rand":
-                        return EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Random;
-                    case "det":
-                        return EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic;
-                    default:
-                        throw new ArgumentException($"Unsupported algorithm {algorithm}.");
-                }
-            }
-
-            EncryptOptions CreateEncryptionOptions(string algorithm, string identifier, string kms)
-            {
-                Guid? keyId = null;
-                string alternateName = null;
-                if (identifier == "id")
-                {
-                    switch (kms)
-                    {
-                        case "local":
-                            keyId = GuidConverter.FromBytes(Convert.FromBase64String("LOCALAAAAAAAAAAAAAAAAA=="), GuidRepresentation.Standard);
-                            break;
-                        case "aws":
-                            keyId = GuidConverter.FromBytes(Convert.FromBase64String("AWSAAAAAAAAAAAAAAAAAAA=="), GuidRepresentation.Standard);
-                            break;
-                        default:
-                            throw new ArgumentException($"Unsupported kms type {kms}.");
-                    }
-                }
-                else if (identifier == "altname")
-                {
-                    alternateName = kms;
-                }
-                else
-                {
-                    throw new ArgumentException($"Unsupported identifier {identifier}.", nameof(identifier));
-                }
-
-                return new EncryptOptions(ParseAlgorithm(algorithm).ToString(), alternateName, keyId);
-            }
 
             var corpusSchema = JsonFileReader.Instance.Documents["corpus.corpus-schema.json"];
             var schemaMap = useLocalSchema ? new BsonDocument("db.coll", corpusSchema) : null;
@@ -331,6 +287,49 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     }
                 }
             }
+
+            EncryptOptions CreateEncryptionOptions(string algorithm, string identifier, string kms)
+            {
+                Guid? keyId = null;
+                string alternateName = null;
+                if (identifier == "id")
+                {
+                    switch (kms)
+                    {
+                        case "local":
+                            keyId = GuidConverter.FromBytes(Convert.FromBase64String("LOCALAAAAAAAAAAAAAAAAA=="), GuidRepresentation.Standard);
+                            break;
+                        case "aws":
+                            keyId = GuidConverter.FromBytes(Convert.FromBase64String("AWSAAAAAAAAAAAAAAAAAAA=="), GuidRepresentation.Standard);
+                            break;
+                        default:
+                            throw new ArgumentException($"Unsupported kms type {kms}.");
+                    }
+                }
+                else if (identifier == "altname")
+                {
+                    alternateName = kms;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unsupported identifier {identifier}.", nameof(identifier));
+                }
+
+                return new EncryptOptions(ParseAlgorithm(algorithm).ToString(), alternateName, keyId);
+            }
+
+            EncryptionAlgorithm ParseAlgorithm(string algorithm)
+            {
+                switch (algorithm)
+                {
+                    case "rand":
+                        return EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Random;
+                    case "det":
+                        return EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic;
+                    default:
+                        throw new ArgumentException($"Unsupported algorithm {algorithm}.");
+                }
+            }
         }
 
         [SkippableTheory]
@@ -347,7 +346,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             {
                 var dataKeyOptions = CreateDataKeyOptions(kmsProvider);
 
-                BsonValue dataKey;
+                Guid dataKey;
                 if (async)
                 {
                     dataKey = clientEncryption
@@ -359,20 +358,19 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 {
                     dataKey = clientEncryption.CreateDataKey(kmsProvider, dataKeyOptions, CancellationToken.None);
                 }
-                dataKey.AsBsonBinaryData.SubType.Should().Be(BsonBinarySubType.UuidStandard);
 
                 var keyVaultCollection = GetCollection(client, __keyVaultCollectionNamespace);
                 var keyVaultDocument =
                     Find(
                         keyVaultCollection,
-                        new BsonDocument("_id", dataKey),
+                        new BsonDocument("_id", new BsonBinaryData(dataKey, GuidRepresentation.Standard)),
                         async)
                     .Single();
                 keyVaultDocument["masterKey"]["provider"].Should().Be(BsonValue.Create(kmsProvider));
 
                 var encryptOptions = new EncryptOptions(
                     EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                    keyId: dataKey.AsBsonBinaryData.AsGuid);
+                    keyId: dataKey);
 
                 var encryptedValue = ExplicitEncrypt(
                     clientEncryption,
@@ -481,7 +479,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         view,
                         async,
                         documents: new BsonDocument("test", 1)));
-                exception.Message.Should().Be($"Exception in encryption library: cannot auto encrypt a view.");
+                exception.Message.Should().Be("Exception in encryption library: cannot auto encrypt a view.");
             }
         }
 
@@ -793,6 +791,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 }
             }
 
+            // private methods
             private IDictionary<string, BsonDocument> ReadDocuments()
             {
                 var documents = ReadJsonDocuments();

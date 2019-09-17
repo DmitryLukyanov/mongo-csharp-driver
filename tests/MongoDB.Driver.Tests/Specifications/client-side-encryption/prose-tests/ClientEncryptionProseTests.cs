@@ -711,12 +711,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
 
                 if (withExternalKeyVault)
                 {
-                    var externalKeyVaultClient =
-                        new MongoClient(
-                            new MongoClientSettings
-                            {
-                                Credential = MongoCredential.FromComponents(null, null, "fake-user", "fake-pwd")
-                            });
+                    var externalKeyVaultClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
+                    externalKeyVaultClientSettings.Credential = MongoCredential.FromComponents(null, null, "fake-user", "fake-pwd");
+                    var externalKeyVaultClient = new MongoClient(externalKeyVaultClientSettings);
                     autoEncryptionOptions = autoEncryptionOptions
                         .With(keyVaultClient: Optional.Create<IMongoClient>(externalKeyVaultClient));
                 }

@@ -45,20 +45,21 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         #endregion
 
         private const string LocalMasterKey = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
-        private const string SchemaMap = @"{
-            ""db.coll"": {
-            ""bsonType"": ""object"",
-            ""properties"": {
-                ""encrypted_placeholder"": {
-                    ""encrypt"": {
-                        ""keyId"": ""/placeholder"",
-                        ""bsonType"": ""string"",
-                        ""algorithm"": ""AEAD_AES_256_CBC_HMAC_SHA_512-Random""
-                        }
-                    }
-                }
-            }
-        }";
+        private const string SchemaMap =
+            @"{
+                ""db.coll"": {
+                    ""bsonType"": ""object"",
+                    ""properties"": {
+                        ""encrypted_placeholder"": {
+                            ""encrypt"": {
+                                ""keyId"": ""/placeholder"",
+                                ""bsonType"": ""string"",
+                                ""algorithm"": ""AEAD_AES_256_CBC_HMAC_SHA_512-Random""
+                              }
+                          }
+                      }
+                  }
+            }";
 
         private readonly ICluster _cluster;
         private readonly ICoreSessionHandle _session;
@@ -460,8 +461,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public void ViewAreProhibitedTest([Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            CollectionNamespace viewName = CollectionNamespace.FromFullName("db.view");
 
+            var viewName = CollectionNamespace.FromFullName("db.view");
             using (var client = ConfigureClient(false))
             using (var clientEncrypted = ConfigureClientEncrypted(kmsProviderFilter: "local"))
             {
@@ -508,7 +509,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             var clientEncrypted =
                 GetMongoClient(
                     keyVaultNamespace: __keyVaultCollectionNamespace,
-                    schemaMapDocument: schemaMap != null ? schemaMap : null,
+                    schemaMapDocument: schemaMap,
                     kmsProviders:
                         kmsProviderFilter == null
                             ? kmsProviders

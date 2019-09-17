@@ -65,7 +65,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                         ReplaceTypeAssertionWithActual(commandStartedEvent.Command, expectedCommand);
                     }
                 },
-                getPlaceholders: () => new KeyValuePair<string, BsonValue>[0]); // do not modify values from the default templates list
+                getPlaceholders: () => new KeyValuePair<string, BsonValue>[0]); // do not use placeholders
         }
 
         protected override MongoClient CreateClientForTestSetup()
@@ -160,7 +160,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                 { "mongocryptdSpawnPath", Environment.GetEnvironmentVariable("MONGODB_BINARIES") ?? string.Empty }
             };
 
-            IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> kmsProviders = new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(new Dictionary<string, IReadOnlyDictionary<string, object>>());
+            var kmsProviders = new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(new Dictionary<string, IReadOnlyDictionary<string, object>>());
             var autoEncryptionOptions = new AutoEncryptionOptions(
                 keyVaultNamespace: keyVaultCollectionNamespace,
                 kmsProviders: kmsProviders,
@@ -173,7 +173,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                     case "kmsProviders":
                         kmsProviders = ParseKmsProviders(option.Value.AsBsonDocument);
                         autoEncryptionOptions = autoEncryptionOptions
-                            .With(kmsProviders: Optional.Create<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>>(kmsProviders));
+                            .With(kmsProviders: kmsProviders);
                         break;
                     case "schemaMap":
                         var schemaMaps = new Dictionary<string, BsonDocument>();
@@ -199,7 +199,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
             return autoEncryptionOptions;
         }
 
-        private IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> ParseKmsProviders(BsonDocument kmsProviders)
+        private ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> ParseKmsProviders(BsonDocument kmsProviders)
         {
             var providers = new Dictionary<string, IReadOnlyDictionary<string, object>>();
             foreach (var kmsProvider in kmsProviders.Elements)

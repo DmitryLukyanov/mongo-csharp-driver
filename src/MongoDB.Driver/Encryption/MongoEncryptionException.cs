@@ -34,7 +34,7 @@ namespace MongoDB.Driver.Encryption
         /// </summary>
         /// <param name="innerException">The inner exception.</param>
         public MongoEncryptionException(Exception innerException)
-            : base($"Exception in encryption library: {innerException.Message}.", innerException)
+            : base($"Encryption related exception: {innerException.Message}.", innerException)
         {
         }
     }

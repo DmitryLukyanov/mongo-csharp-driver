@@ -13,11 +13,12 @@
 * limitations under the License.
 */
 
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Shared;
 
 namespace MongoDB.Driver.Encryption
 {
@@ -59,7 +60,8 @@ namespace MongoDB.Driver.Encryption
             _keyVaultClient = keyVaultClient.WithDefault(null);
             _schemaMap = schemaMap.WithDefault(null);
 
-            EnsureKmsProvidersAreValid();
+            EncryptionExtraOptionsValidator.EnsureThatExtraOptionsAreValid(_extraOptions);
+            KmsProvidersHelper.EnsureKmsProvidersAreValid(_kmsProviders);
         }
 
         // public properties
@@ -139,6 +141,34 @@ namespace MongoDB.Driver.Encryption
         }
 
         /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType()) { return false; }
+            var rhs = (AutoEncryptionOptions)obj;
+
+            return
+                _bypassAutoEncryption.Equals(rhs._bypassAutoEncryption) &&
+                ExtraOptionsEquals(_extraOptions, rhs._extraOptions) &&
+                object.ReferenceEquals(_keyVaultClient, rhs._keyVaultClient) &&
+                _keyVaultNamespace.Equals(rhs._keyVaultNamespace) &&
+                KmsProvidersHelper.Equals(_kmsProviders, rhs._kmsProviders) &&
+                _schemaMap.IsEquivalentTo(rhs._schemaMap, object.Equals);
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            return new Hasher()
+                .Hash(_bypassAutoEncryption)
+                .HashElements(_extraOptions)
+                .Hash(_keyVaultClient)
+                .Hash(_keyVaultNamespace)
+                .HashElements(_kmsProviders)
+                .HashElements(_schemaMap)
+                .GetHashCode();
+        }
+
+        /// <inheritdoc />
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -163,24 +193,36 @@ namespace MongoDB.Driver.Encryption
         }
 
         // private methods
-        private void EnsureKmsProvidersAreValid()
+        private static bool ExtraOptionsEquals(IReadOnlyDictionary<string, object> x, IReadOnlyDictionary<string, object> y)
         {
-            if (_kmsProviders == null)
+            return x.IsEquivalentTo(y, ExtraOptionsIsEquivalentTo);
+        }
+
+        private static bool ExtraOptionsIsEquivalentTo(object x, object y)
+        {
+            if (object.ReferenceEquals(x, y))
             {
-                return;
+                return true;
             }
 
-            foreach (var kmsProvider in _kmsProviders)
+            if (object.ReferenceEquals(x, null) || object.ReferenceEquals(y, null))
             {
-                foreach (var option in Ensure.IsNotNull(kmsProvider.Value, nameof(kmsProvider)))
-                {
-                    var optionValue = Ensure.IsNotNull(option.Value, "kmsProviderOption");
-                    var isSupported = optionValue is byte[] || optionValue is string;
-                    if (!isSupported)
-                    {
-                        throw new ArgumentException($"Invalid kms provider type: {optionValue.GetType().Name}.");
-                    }
-                }
+                return false;
+            }
+
+            if (x.GetType() != y.GetType())
+            {
+                return false;
+            }
+
+            if (x is IEnumerable<string> arrX)
+            {
+                var arrY = (IEnumerable<string>)y;
+                return arrX.SequenceEqual(arrY);
+            }
+            else
+            {
+                return x.Equals(y);
             }
         }
     }

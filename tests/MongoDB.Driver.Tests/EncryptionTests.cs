@@ -38,21 +38,60 @@ namespace MongoDB.Driver.Tests
         private const string LocalMasterKey = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
 
         [Theory]
-        [InlineData(typeof(int), false, typeof(ArgumentException))]
-        [InlineData(typeof(int), true, typeof(ArgumentException))]
-        [InlineData(typeof(string), true, typeof(ArgumentException))]
-        [InlineData(null, false, typeof(ArgumentNullException))]
-        [InlineData(typeof(string), false, null)]
-        [InlineData(typeof(byte), true, null)]
-        public void Constructor_of_encryption_options_should_validate_kms_providers(Type valueType, bool isArray, Type expectedExceptionType)
+        [InlineData("mongocryptdBypassSpawn", typeof(int), typeof(ArgumentException))]
+        [InlineData("mongocryptdBypassSpawn", typeof(string), typeof(ArgumentException))]
+        [InlineData("mongocryptdBypassSpawn", typeof(bool), null)]
+
+        [InlineData("mongocryptdSpawnArgs", typeof(Dictionary<string, string>), typeof(ArgumentException))]
+        [InlineData("mongocryptdSpawnArgs", typeof(int), typeof(ArgumentException))]
+        [InlineData("mongocryptdSpawnArgs", typeof(List<string>), null)]
+        [InlineData("mongocryptdSpawnArgs", typeof(string[]), null)]
+        [InlineData("mongocryptdSpawnArgs", typeof(string), null)]
+
+        [InlineData("mongocryptdURI", typeof(object), typeof(ArgumentException))]
+        [InlineData("mongocryptdURI", typeof(int), typeof(ArgumentException))]
+        [InlineData("mongocryptdURI", typeof(List<string>), typeof(ArgumentException))]
+        [InlineData("mongocryptdURI", typeof(string), null)]
+
+        [InlineData("mongocryptdSpawnPath", typeof(object), typeof(ArgumentException))]
+        [InlineData("mongocryptdSpawnPath", typeof(int), typeof(ArgumentException))]
+        [InlineData("mongocryptdSpawnPath", typeof(string), null)]
+
+        [InlineData("mongocryptdURI1", typeof(object), typeof(ArgumentException))]
+        [InlineData("test", typeof(object), typeof(ArgumentException))]
+        public void Constructor_of_auto_encryption_should_validate_extra_options(string extraOptionKey, Type extraOptionValueType, Type expectedException)
+        {
+            var extraOptions = new Dictionary<string, object>
+            {
+                { extraOptionKey, CreateInstance(extraOptionValueType) }
+            };
+
+            var exception = Record.Exception(() =>
+                new AutoEncryptionOptions(
+                    __keyVaultCollectionNamespace,
+                    new Dictionary<string, IReadOnlyDictionary<string, object>>(),
+                    extraOptions: extraOptions));
+            if (expectedException != null)
+            {
+                exception.GetType().Should().Be(expectedException);
+            }
+            else
+            {
+                exception.Should().BeNull();
+            }
+        }
+
+        [Theory]
+        [InlineData(typeof(int), typeof(ArgumentException))]
+        [InlineData(typeof(int[]), typeof(ArgumentException))]
+        [InlineData(typeof(string[]), typeof(ArgumentException))]
+        [InlineData(null, typeof(ArgumentNullException))]
+        [InlineData(typeof(string), null)]
+        [InlineData(typeof(byte[]), null)]
+        public void Constructor_of_encryption_options_should_validate_kms_providers(Type valueType, Type expectedExceptionType)
         {
             var kmsProviders = new Dictionary<string, IReadOnlyDictionary<string, object>>();
-            var options =
-                valueType != null
-                    ? isArray
-                        ? Array.CreateInstance(valueType, 0)
-                        : createInstance(valueType)
-                    : null;
+            var options = valueType != null ? CreateInstance(valueType) : null;
             kmsProviders.Add(
                 "testKey",
                 new Dictionary<string, object>
@@ -70,11 +109,6 @@ namespace MongoDB.Driver.Tests
                     Mock.Of<IMongoClient>(),
                     kmsProviders: kmsProviders,
                     keyVaultNamespace: __keyVaultCollectionNamespace));
-
-            object createInstance(Type type)
-            {
-                return type == typeof(string) ? string.Empty : Activator.CreateInstance(type);
-            }
 
             void testCase(Func<object> testCode)
             {
@@ -147,6 +181,19 @@ namespace MongoDB.Driver.Tests
                     var clientEncryptionController = clientEncryption._libMongoCryptController();
                     clientEncryptionController.Should().NotBeNull();
                 }
+            }
+        }
+
+        // private methods
+        private object CreateInstance(Type type)
+        {
+            if (type.IsArray)
+            {
+                return Array.CreateInstance(type.GetElementType(), 0);
+            }
+            else
+            {
+                return type == typeof(string) ? string.Empty : Activator.CreateInstance(type);
             }
         }
 

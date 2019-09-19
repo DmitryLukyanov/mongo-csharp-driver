@@ -19,27 +19,55 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace MongoDB.Driver.Encryption
 {
-    internal class MongocryptdFactory
+    internal static class EncryptionExtraOptionsValidator
     {
         #region static
-        private static string[] __supportedExtraOptionKeys=
+        private static readonly Dictionary<string, Type[]> __supportedExtraOptionKeys = new Dictionary<string, Type[]>
         {
-            "mongocryptdURI",
-            "mongocryptdBypassSpawn",
-            "mongocryptdSpawnPath",
-            "mongocryptdSpawnArgs"
+            { "mongocryptdURI", new [] { typeof(string) } },
+            { "mongocryptdBypassSpawn", new [] { typeof(bool) } },
+            { "mongocryptdSpawnPath", new [] { typeof(string) } },
+            { "mongocryptdSpawnArgs", new [] { typeof(string), typeof(IEnumerable<string>) } }
         };
         #endregion
 
+        public static void EnsureThatExtraOptionsAreValid(IReadOnlyDictionary<string, object> extraOptions)
+        {
+            if (extraOptions == null)
+            {
+                return;
+            }
+
+            foreach (var extraOption in extraOptions)
+            {
+                if (__supportedExtraOptionKeys.TryGetValue(extraOption.Key, out var validTypes))
+                {
+                    var extraOptionValueType = extraOption.Value.GetType();
+                    var isExtraOptionValueTypeValid = validTypes.Any(c => c.GetTypeInfo().IsAssignableFrom(extraOptionValueType));
+                    if (!isExtraOptionValueTypeValid)
+                    {
+                        throw new ArgumentException($"Extra option {extraOption.Key} has invalid type: {extraOptionValueType}.", "extraOptionValueType");
+                    }
+                }
+                else
+                {
+                    throw new ArgumentException($"Invalid extra option key: {extraOption.Key}.");
+                }
+            }
+        }
+    }
+
+    internal class MongocryptdFactory
+    {
         private readonly IReadOnlyDictionary<string, object> _extraOptions;
 
         public MongocryptdFactory(IReadOnlyDictionary<string, object> extraOptions)
         {
             _extraOptions = extraOptions ?? new Dictionary<string, object>();
-            EnsureThatExtraOptionsAreValid(extraOptions);
         }
 
         // public methods
@@ -60,18 +88,6 @@ namespace MongoDB.Driver.Encryption
         }
 
         // private methods
-        private bool CastMongoCryptdBypassSpawnToBool(object objectValue)
-        {
-            if (objectValue is bool value)
-            {
-                return value;
-            }
-            else
-            {
-                throw new InvalidCastException($"Invalid type: {objectValue.GetType().Name} of mongocryptdBypassSpawn option.");
-            }
-        }
-
         private string CreateMongocryptdConnectionString()
         {
             if (_extraOptions.TryGetValue("mongocryptdURI", out var connectionString))
@@ -84,23 +100,12 @@ namespace MongoDB.Driver.Encryption
             }
         }
 
-        private void EnsureThatExtraOptionsAreValid(IReadOnlyDictionary<string, object> extraOptions)
-        {
-            foreach (var extraOption in extraOptions)
-            {
-                if (!__supportedExtraOptionKeys.Contains(extraOption.Key))
-                {
-                    throw new ArgumentException($"Invalid extra option key: {extraOption.Key}.");
-                }
-            }
-        }
-
         private bool ShouldMongocryptdBeSpawned(out string path, out string args)
         {
             path = null;
             args = null;
             if (!_extraOptions.TryGetValue("mongocryptdBypassSpawn", out var mongoCryptBypassSpawn)
-                || !CastMongoCryptdBypassSpawnToBool(mongoCryptBypassSpawn))
+                || !(bool)mongoCryptBypassSpawn)
             {
                 if (_extraOptions.TryGetValue("mongocryptdSpawnPath", out var objPath))
                 {

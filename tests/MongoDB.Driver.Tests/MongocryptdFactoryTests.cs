@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers;
@@ -27,20 +26,9 @@ namespace MongoDB.Driver.Tests
     public class MongocryptdFactoryTests
     {
         [Theory]
-        [InlineData("mongocryptdURI1")]
-        [InlineData("test")]
-        public void Constructor_should_throw_when_an_invalid_extra_option_key(string key)
-        {
-            var extraOptions = new Dictionary<string, object> { { key, new object() } };
-            var exception = Record.Exception(() => new MongocryptdFactory(extraOptions));
-            var e = exception.Should().BeOfType<ArgumentException>().Subject;
-            e.Message.Should().Be($"Invalid extra option key: {key}.");
-        }
-
-        [Theory]
         [InlineData("mongocryptdURI", "mongodb://localhost:11111", "mongodb://localhost:11111")]
         [InlineData(null, null, "mongodb://localhost:27020")]
-        public void CreateMongocryptdConnectionString_should_create_expeced_connection_string(string optionKey, string optionValue, string expectedConnectionString)
+        public void CreateMongocryptdConnectionString_should_create_expected_connection_string(string optionKey, string optionValue, string expectedConnectionString)
         {
             var extraOptions = new Dictionary<string, object>();
             if (optionKey != null)
@@ -50,17 +38,6 @@ namespace MongoDB.Driver.Tests
             var subject = new MongocryptdFactory(extraOptions);
             var connectionString = subject.CreateMongocryptdConnectionString();
             connectionString.Should().Be(expectedConnectionString);
-        }
-
-        [Fact]
-        public void CreateMongocryptdConnectionString_should_throw_when_argument_not_string()
-        {
-            var extraOptions = new Dictionary<string, object>();
-            extraOptions.Add("mongocryptdURI", true);
-            var subject = new MongocryptdFactory(extraOptions);
-            var exception = Record.Exception(() => subject.CreateMongocryptdConnectionString());
-            var e = exception.Should().BeOfType<InvalidCastException>().Subject;
-            e.Message.Should().Be("Unable to cast object of type 'System.Boolean' to type 'System.String'.");
         }
 
         [SkippableTheory]
@@ -117,19 +94,6 @@ namespace MongoDB.Driver.Tests
                     return (string)value; // string
                 }
             }
-        }
-
-        [Theory]
-        [InlineData("mongocryptdBypassSpawn", 1)]
-        [InlineData("mongocryptdSpawnArgs", 1)]
-        public void Mongocryptd_should_throw_when_argument_has_unexpected_type(string key, object value)
-        {
-            var extraOptions = new Dictionary<string, object>();
-            extraOptions.Add(key, value);
-            var subject = new MongocryptdFactory(extraOptions);
-            var exception = Record.Exception(() => subject.ShouldMongocryptdBeSpawned(out _, out _));
-            var e = exception.Should().BeOfType<InvalidCastException>().Subject;
-            e.Message.Should().Be($"Invalid type: {value.GetType().Name} of {key} option.");
         }
     }
 

@@ -300,11 +300,11 @@ namespace MongoDB.Driver.Core.WireProtocol
             var elementAppendingSerializer = new ElementAppendingSerializer<BsonDocument>(BsonDocumentSerializer.Instance, extraElements, writerSettingsConfigurator);
             return new Type0CommandMessageSection<BsonDocument>(_command, elementAppendingSerializer);
 
-            void addIfNotAlreadyAdded(string key, object value)
+            void addIfNotAlreadyAdded(string key, BsonValue value)
             {
                 if (!_command.Contains(key))
                 {
-                    extraElements.Add(new BsonElement(key, BsonValue.Create(value)));
+                    extraElements.Add(new BsonElement(key, value));
                 }
             }
         }

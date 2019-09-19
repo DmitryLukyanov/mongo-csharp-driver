@@ -552,7 +552,7 @@ namespace MongoDB.Driver
                 { MessageEncoderSettingsName.WriteEncoding, _settings.WriteEncoding ?? Utf8Encodings.Strict }
             };
 
-            this.ConfigureAutoEncryptionMessageEncoderSettings(messageEncoderSettings);
+            ConfigureAutoEncryptionMessageEncoderSettings(messageEncoderSettings);
 
             return messageEncoderSettings;
         }

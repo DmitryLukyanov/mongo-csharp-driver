@@ -59,8 +59,7 @@ namespace MongoDB.Driver.Encryption
 
                     _keyVaultCollection.Value.InsertOne(wrappedKeyDocument, cancellationToken: cancellationToken);
 
-                    var keyIdBytes = keyId.Bytes;
-                    return GuidConverter.FromBytes(keyIdBytes, GuidRepresentation.Standard);
+                    return keyId;
                 }
             }
             catch (Exception ex)
@@ -88,8 +87,7 @@ namespace MongoDB.Driver.Encryption
 
                     await _keyVaultCollection.Value.InsertOneAsync(wrappedKeyDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                    var keyIdBytes = keyId.Bytes;
-                    return GuidConverter.FromBytes(keyIdBytes, GuidRepresentation.Standard);
+                    return keyId;
                 }
             }
             catch (Exception ex)
@@ -257,7 +255,7 @@ namespace MongoDB.Driver.Encryption
             var wrappedValue = new BsonDocument("v", value);
             var writerSettings = BsonBinaryWriterSettings.Defaults.Clone();
             writerSettings.GuidRepresentation = GuidRepresentation.Unspecified;
-            return wrappedValue.ToBson(serializer: BsonValueSerializer.Instance, writerSettings: writerSettings);
+            return wrappedValue.ToBson(writerSettings: writerSettings);
         }
 
         private BsonValue UnwrapDecryptedValue(byte[] wrappedBytes)
@@ -272,14 +270,14 @@ namespace MongoDB.Driver.Encryption
             return wrappedDocument["v"].AsBsonBinaryData;
         }
 
-        private BsonBinaryData UnwrapKeyId(RawBsonDocument wrappedKeyDocument)
+        private Guid UnwrapKeyId(RawBsonDocument wrappedKeyDocument)
         {
             var keyId = wrappedKeyDocument["_id"].AsBsonBinaryData;
             if (keyId.SubType != BsonBinarySubType.UuidStandard)
             {
                 throw new InvalidOperationException($"KeyId sub type must be UuidStandard, not: {keyId.SubType}.");
             }
-            return keyId;
+            return GuidConverter.FromBytes(keyId.Bytes, GuidRepresentation.Standard);
         }
     }
 }

@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Encryption;
 using MongoDB.Shared;
 
 namespace MongoDB.Driver
@@ -181,7 +181,7 @@ namespace MongoDB.Driver
                 _heartbeatInterval == rhs._heartbeatInterval &&
                 _heartbeatTimeout == rhs._heartbeatTimeout &&
                 _ipv6 == rhs._ipv6 &&
-                _kmsProviders.IsEquivalentTo(rhs.KmsProviders, KmsProviderIsEquivalentTo) &&
+                KmsProvidersHelper.Equals(_kmsProviders, rhs.KmsProviders) &&
                 _localThreshold == rhs._localThreshold &&
                 _maxConnectionIdleTime == rhs._maxConnectionIdleTime &&
                 _maxConnectionLifeTime == rhs._maxConnectionLifeTime &&
@@ -206,24 +206,6 @@ namespace MongoDB.Driver
         public override int GetHashCode()
         {
             return _hashCode;
-        }
-
-        // private methods
-        private bool KmsProviderIsEquivalentTo(IReadOnlyDictionary<string, object> x, IReadOnlyDictionary<string, object> y)
-        {
-            return x.IsEquivalentTo(y, KmsProviderOptionEquals);
-        }
-
-        public bool KmsProviderOptionEquals(object x, object y)
-        {
-            if (x is byte[] xBytes && y is byte[] yBytes)
-            {
-                return xBytes.SequenceEqual(yBytes);
-            }
-            else
-            {
-                return object.Equals(x, y);
-            }
         }
     }
 }

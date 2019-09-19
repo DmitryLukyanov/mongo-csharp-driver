@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System;
 using System.Collections.Generic;
 using MongoDB.Driver.Core.Misc;
 
@@ -45,7 +44,7 @@ namespace MongoDB.Driver.Encryption
             _keyVaultNamespace = Ensure.IsNotNull(keyVaultNamespace, nameof(keyVaultNamespace));
             _kmsProviders = Ensure.IsNotNull(kmsProviders, nameof(kmsProviders));
 
-            EnsureKmsProvidersAreValid();
+            KmsProvidersHelper.EnsureKmsProvidersAreValid(_kmsProviders);
         }
 
         // public properties
@@ -80,36 +79,14 @@ namespace MongoDB.Driver.Encryption
         /// <param name="keyVaultNamespace">The key vault namespace.</param>
         /// <param name="kmsProviders">The KMS providers.</param>
         public ClientEncryptionOptions With(
-            Optional<IMongoClient> keyVaultClient,
-            Optional<CollectionNamespace> keyVaultNamespace,
-            Optional<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> kmsProviders)
+            Optional<IMongoClient> keyVaultClient = default,
+            Optional<CollectionNamespace> keyVaultNamespace = default,
+            Optional<IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>> kmsProviders = default)
         {
             return new ClientEncryptionOptions(
                 keyVaultClient: keyVaultClient.WithDefault(_keyVaultClient),
                 keyVaultNamespace: keyVaultNamespace.WithDefault(_keyVaultNamespace),
                 kmsProviders: kmsProviders.WithDefault(_kmsProviders));
-        }
-
-        // private methods
-        private void EnsureKmsProvidersAreValid()
-        {
-            if (_kmsProviders == null)
-            {
-                return;
-            }
-
-            foreach (var kmsProvider in _kmsProviders)
-            {
-                foreach (var option in Ensure.IsNotNull(kmsProvider.Value, nameof(kmsProvider)))
-                {
-                    var optionValue = Ensure.IsNotNull(option.Value, "kmsProviderOption");
-                    var isSupported = optionValue is byte[] || optionValue is string;
-                    if (!isSupported)
-                    {
-                        throw new ArgumentException($"Invalid kms provider type: {optionValue.GetType().Name}.");
-                    }
-                }
-            }
         }
     }
 }

@@ -54,6 +54,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
         private readonly Action<ConnectionPoolOpenedEvent> _openedEventHandler;
         private readonly Action<ConnectionPoolClosingEvent> _closingEventHandler;
         private readonly Action<ConnectionPoolClosedEvent> _closedEventHandler;
+        private readonly Action<ConnectionPoolClearingEvent> _clearingEventHandler;
+        private readonly Action<ConnectionPoolClearedEvent> _clearedEventHandler;
 
         // constructors
         public ExclusiveConnectionPool(
@@ -88,6 +90,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
             eventSubscriber.TryGetEventHandler(out _closedEventHandler);
             eventSubscriber.TryGetEventHandler(out _addingConnectionEventHandler);
             eventSubscriber.TryGetEventHandler(out _addedConnectionEventHandler);
+            eventSubscriber.TryGetEventHandler(out _clearingEventHandler);
+            eventSubscriber.TryGetEventHandler(out _clearedEventHandler);
         }
 
         // properties
@@ -140,6 +144,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
         // public methods
         public IConnectionHandle AcquireConnection(CancellationToken cancellationToken)
         {
+            if (_checkingOutConnectionEventHandler != null)
+            {
+                _checkingOutConnectionEventHandler(new ConnectionPoolCheckingOutConnectionEvent(_serverId, EventContext.OperationId));
+            }
+
             ThrowIfNotOpen();
 
             var helper = new AcquireConnectionHelper(this);
@@ -185,7 +194,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
         public void Clear()
         {
             ThrowIfNotOpen();
+
+            _clearingEventHandler?.Invoke(new ConnectionPoolClearingEvent(_serverId, _settings));
+
             Interlocked.Increment(ref _generation);
+
+            _clearedEventHandler?.Invoke(new ConnectionPoolClearedEvent(_serverId, _settings));
         }
 
         private PooledConnection CreateNewConnection()
@@ -337,31 +351,58 @@ namespace MongoDB.Driver.Core.ConnectionPools
         {
             if (_state.Value == State.Disposed)
             {
+                if (_checkingInConnectionEventHandler != null)
+                {
+                    _checkingInConnectionEventHandler(new ConnectionPoolCheckingInConnectionEvent(connection.ConnectionId, EventContext.OperationId));
+                }
                 connection.Dispose();
-                return;
-            }
+                if (_checkedInConnectionEventHandler != null)
+                {
+                    _checkedInConnectionEventHandler(new ConnectionPoolCheckedInConnectionEvent(connection.ConnectionId, TimeSpan.Zero /*todo*/, EventContext.OperationId));
+                }
 
-            if (_checkingInConnectionEventHandler != null)
+                var stopwatch = Stopwatch.StartNew();
+                _connectionHolder.Return(connection);
+                stopwatch.Stop();
+                //return;
+            }
+            else
             {
-                _checkingInConnectionEventHandler(new ConnectionPoolCheckingInConnectionEvent(connection.ConnectionId, EventContext.OperationId));
+                if (_checkingInConnectionEventHandler != null)
+                {
+                    _checkingInConnectionEventHandler(
+                        new ConnectionPoolCheckingInConnectionEvent(connection.ConnectionId, EventContext.OperationId));
+                }
+
+                var stopwatch = Stopwatch.StartNew();
+                _connectionHolder.Return(connection);
+                _poolQueue.Release();
+                stopwatch.Stop();
+
+                if (_checkedInConnectionEventHandler != null)
+                {
+                    _checkedInConnectionEventHandler(new ConnectionPoolCheckedInConnectionEvent(connection.ConnectionId,
+                        stopwatch.Elapsed, EventContext.OperationId));
+                }
             }
+        }
 
-            var stopwatch = Stopwatch.StartNew();
-            _connectionHolder.Return(connection);
-            _poolQueue.Release();
-            stopwatch.Stop();
-
-            if (_checkedInConnectionEventHandler != null)
+        private void ThrowAndLogException(Exception ex)
+        {
+            var handler = _checkingOutConnectionFailedEventHandler;
+            if (handler != null)
             {
-                _checkedInConnectionEventHandler(new ConnectionPoolCheckedInConnectionEvent(connection.ConnectionId, stopwatch.Elapsed, EventContext.OperationId));
+                handler(new ConnectionPoolCheckingOutConnectionFailedEvent(_serverId, ex, EventContext.OperationId));
             }
+            throw ex;
         }
 
         private void ThrowIfDisposed()
         {
             if (_state.Value == State.Disposed)
             {
-                throw new ObjectDisposedException(GetType().Name);
+                //throw new ObjectDisposedException(GetType().Name);
+                ThrowAndLogException(new ObjectDisposedException(GetType().Name));
             }
         }
 
@@ -370,6 +411,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
             if (_state.Value != State.Open)
             {
                 ThrowIfDisposed();
+                //todo:
                 throw new InvalidOperationException("ConnectionPool must be initialized.");
             }
         }
@@ -399,11 +441,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
             // public methods
             public void CheckingOutConnection()
             {
-                var handler = _pool._checkingOutConnectionEventHandler;
-                if (handler != null)
-                {
-                    handler(new ConnectionPoolCheckingOutConnectionEvent(_pool._serverId, EventContext.OperationId));
-                }
+                //var handler = _pool._checkingOutConnectionEventHandler;
+                //if (handler != null)
+                //{
+                //    handler(new ConnectionPoolCheckingOutConnectionEvent(_pool._serverId, EventContext.OperationId));
+                //}
 
                 _enteredWaitQueue = _pool._waitQueue.Wait(0); // don't wait...
                 if (!_enteredWaitQueue)
@@ -470,6 +512,16 @@ namespace MongoDB.Driver.Core.ConnectionPools
                     handler(new ConnectionPoolCheckingOutConnectionFailedEvent(_pool._serverId, ex, EventContext.OperationId));
                 }
             }
+
+            //todo: move from here. Replace above
+            //private void LogException(Exception ex)
+            //{
+            //    var handler = _pool._checkingOutConnectionFailedEventHandler;
+            //    if (handler != null)
+            //    {
+            //        handler(new ConnectionPoolCheckingOutConnectionFailedEvent(_pool._serverId, ex, EventContext.OperationId));
+            //    }
+            //}
 
             // private methods
             private IConnectionHandle AcquireOrCreateConnection()
@@ -796,6 +848,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
                 lock (_lock)
                 {
+                    // todo:
                     _connections.Add(connection);
                 }
             }

@@ -16,10 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Events;
-using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core
 {
@@ -27,8 +27,10 @@ namespace MongoDB.Driver.Core
     {
         private readonly Queue<object> _capturedEvents;
         private readonly object _lock = new object();
-        private readonly IEventSubscriber _subscriber;
         private readonly Dictionary<Type, Func<object, bool>> _eventsToCapture;
+        private Func<Queue<object>, bool> _notifyWhenCondition;
+        private TaskCompletionSource<bool> _notifyWhenTaskCompletionSource;
+        private readonly IEventSubscriber _subscriber;
 
         public EventCapturer()
         {
@@ -56,6 +58,11 @@ namespace MongoDB.Driver.Core
                     return _capturedEvents.Count;
                 }
             }
+        }
+
+        public TaskCompletionSource<bool> NotifyWhenTaskCompletionSource
+        {
+            get { return _notifyWhenTaskCompletionSource; }
         }
 
         public void Clear()
@@ -114,6 +121,21 @@ namespace MongoDB.Driver.Core
             return true;
         }
 
+        // todo: IEventSubscription?
+        public void SetNotifyWhenCondition(Func<Queue<object>, bool> notifyWhenCondition)
+        {
+            lock (_lock)
+            {
+                _notifyWhenTaskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.AttachedToParent);
+                _notifyWhenCondition = notifyWhenCondition;
+                if (notifyWhenCondition?.Invoke(_capturedEvents) ?? false)
+                {
+                    _notifyWhenTaskCompletionSource.SetResult(true);
+                }
+            }
+        }
+
+        // private methods
         private void Capture<TEvent>(TEvent @event)
         {
             var obj = @event as object;
@@ -131,6 +153,10 @@ namespace MongoDB.Driver.Core
             lock (_lock)
             {
                 _capturedEvents.Enqueue(@event);
+                if (_notifyWhenCondition?.Invoke(_capturedEvents) ?? false)
+                {
+                    _notifyWhenTaskCompletionSource.TrySetResult(true);
+                }
             }
         }
 

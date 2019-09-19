@@ -31,8 +31,12 @@ namespace MongoDB.Driver.Core.Helpers
     {
         // fields
         private ConnectionId _connectionId;
+        private DateTime _lastUsedAtUtc;
+        private DateTime _openedAtUtc;
         private readonly Queue<MongoDBMessage> _replyMessages;
         private readonly List<RequestMessage> _sentMessages;
+        private bool? _isExpired;
+        private readonly ConnectionSettings _connectionSettings;
 
         // constructors
         public MockConnection()
@@ -40,11 +44,15 @@ namespace MongoDB.Driver.Core.Helpers
         {
         }
 
-        public MockConnection(ServerId serverId)
+        public MockConnection(ServerId serverId) : this(serverId, new ConnectionSettings())
+        {
+        }
+
+        public MockConnection(ServerId serverId, ConnectionSettings connectionSettings)
         {
             _replyMessages = new Queue<MongoDBMessage>();
             _sentMessages = new List<RequestMessage>();
-            Settings = new ConnectionSettings();
+            _connectionSettings = connectionSettings;
             _connectionId = new ConnectionId(serverId);
         }
 
@@ -61,9 +69,43 @@ namespace MongoDB.Driver.Core.Helpers
             get { return _connectionId.ServerId.EndPoint; }
         }
 
-        public bool IsExpired { get; set; }
+        public bool IsExpired
+        {
+            get
+            {
+                if (_isExpired.HasValue)
+                {
+                    return _isExpired.Value;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
 
-        public ConnectionSettings Settings { get; set; }
+                    // connection has been alive for too long
+                    if (_connectionSettings.MaxLifeTime.TotalMilliseconds > -1 && now > _openedAtUtc.Add(_connectionSettings.MaxLifeTime))
+                    {
+                        _isExpired = true;
+                        return true;
+                    }
+
+                    // connection has been idle for too long
+                    if (_connectionSettings.MaxIdleTime.TotalMilliseconds > -1 && now > _lastUsedAtUtc.Add(_connectionSettings.MaxIdleTime))
+                    {
+                        _isExpired = true;
+                        return true;
+                    }
+
+                    // NOTE: Binary connection also contains the following condition:
+                    // return _state.Value > State.Open;
+                    // which returns true is the connection is Failed or Disposed.
+                    // For that target we use `_isExpired` field.
+                    return false;
+                }
+            }
+            set => _isExpired = value;
+        }
+
+        public ConnectionSettings Settings => _connectionSettings;
 
         // methods
         public void Dispose()
@@ -88,10 +130,14 @@ namespace MongoDB.Driver.Core.Helpers
 
         public void Open(CancellationToken cancellationToken)
         {
+            _openedAtUtc = DateTime.UtcNow;
+            _lastUsedAtUtc = DateTime.UtcNow;
         }
 
         public Task OpenAsync(CancellationToken cancellationToken)
         {
+            _openedAtUtc = DateTime.UtcNow;
+            _lastUsedAtUtc = DateTime.UtcNow;
             return Task.FromResult<object>(null);
         }
 
@@ -107,11 +153,13 @@ namespace MongoDB.Driver.Core.Helpers
 
         public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
+            _lastUsedAtUtc = DateTime.UtcNow;
             _sentMessages.AddRange(messages);
         }
 
         public Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
+            _lastUsedAtUtc = DateTime.UtcNow;
             _sentMessages.AddRange(messages);
             return Task.FromResult<object>(null);
         }

@@ -62,12 +62,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             }";
 
         private readonly ICluster _cluster;
-        private readonly ICoreSessionHandle _session;
 
         public ClientEncryptionProseTests()
         {
             _cluster = CoreTestConfiguration.Cluster;
-            _session = CoreTestConfiguration.StartSession(_cluster);
         }
 
         [SkippableTheory]
@@ -217,7 +215,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                             continue;
                         case "explicit":
                             {
-                                var encryptionOptions = CreateEncryptionOptions(abbreviatedAlgorithmName, identifier, kms);
+                                var encryptionOptions = CreateEncryptOptions(abbreviatedAlgorithmName, identifier, kms);
                                 BsonBinaryData encrypted = null;
                                 var exception = Record.Exception(() =>
                                 {
@@ -290,7 +288,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 }
             }
 
-            EncryptOptions CreateEncryptionOptions(string algorithm, string identifier, string kms)
+            EncryptOptions CreateEncryptOptions(string algorithm, string identifier, string kms)
             {
                 Guid? keyId = null;
                 string alternateName = null;
@@ -488,7 +486,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         // private methods
         private DisposableMongoClient ConfigureClient(bool clearCollections = true)
         {
-            var client = GetMongoClient();
+            var client = CreateMongoClient();
             if (clearCollections)
             {
                 var clientAdminDatabase = client.GetDatabase(__keyVaultCollectionNamespace.DatabaseNamespace.DatabaseName);
@@ -508,7 +506,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             var kmsProviders = GetKmsProviders();
 
             var clientEncrypted =
-                GetMongoClient(
+                CreateMongoClient(
                     keyVaultNamespace: __keyVaultCollectionNamespace,
                     schemaMapDocument: schemaMap,
                     kmsProviders:
@@ -568,10 +566,55 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             }
         }
 
+        private DisposableMongoClient CreateMongoClient(
+            CollectionNamespace keyVaultNamespace = null,
+            BsonDocument schemaMapDocument = null,
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> kmsProviders = null,
+            bool withExternalKeyVault = false,
+            Action<ClusterBuilder> clusterConfigurator = null)
+        {
+            var mongoClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
+            mongoClientSettings.GuidRepresentation = GuidRepresentation.Unspecified;
+            mongoClientSettings.ClusterConfigurator = clusterConfigurator;
+
+            if (keyVaultNamespace != null || schemaMapDocument != null || kmsProviders != null || withExternalKeyVault)
+            {
+                var extraOptions = new Dictionary<string, object>()
+                {
+                    { "mongocryptdSpawnPath", Environment.GetEnvironmentVariable("MONGODB_BINARIES") ?? string.Empty }
+                };
+
+                var schemaMap = GetSchemaMapIfNotNull(schemaMapDocument);
+
+                if (kmsProviders == null)
+                {
+                    kmsProviders = new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(new Dictionary<string, IReadOnlyDictionary<string, object>>());
+                }
+
+                var autoEncryptionOptions = new AutoEncryptionOptions(
+                    keyVaultNamespace: keyVaultNamespace,
+                    kmsProviders: kmsProviders,
+                    schemaMap: schemaMap,
+                    extraOptions: extraOptions);
+
+                if (withExternalKeyVault)
+                {
+                    var externalKeyVaultClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
+                    externalKeyVaultClientSettings.Credential = MongoCredential.FromComponents(null, null, "fake-user", "fake-pwd");
+                    var externalKeyVaultClient = new MongoClient(externalKeyVaultClientSettings);
+                    autoEncryptionOptions = autoEncryptionOptions.With(keyVaultClient: externalKeyVaultClient);
+                }
+                mongoClientSettings.AutoEncryptionOptions = autoEncryptionOptions;
+            }
+
+            return new DisposableMongoClient(new MongoClient(mongoClientSettings));
+        }
+
         private void DropView(CollectionNamespace viewNamespace)
         {
             var operation = new DropCollectionOperation(viewNamespace, CoreTestConfiguration.MessageEncoderSettings);
-            using (var binding = new WritableServerBinding(_cluster, _session.Fork()))
+            using (var session = CoreTestConfiguration.StartSession(_cluster))
+            using (var binding = new WritableServerBinding(_cluster, session.Fork()))
             using (var bindingHandle = new ReadWriteBindingHandle(binding))
             {
                 operation.Execute(bindingHandle, CancellationToken.None);
@@ -681,50 +724,6 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             return new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(kmsProviders);
         }
 
-        private DisposableMongoClient GetMongoClient(
-            CollectionNamespace keyVaultNamespace = null,
-            BsonDocument schemaMapDocument = null,
-            IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> kmsProviders = null,
-            bool withExternalKeyVault = false,
-            Action<ClusterBuilder> clusterConfigurator = null)
-        {
-            var mongoClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
-            mongoClientSettings.GuidRepresentation = GuidRepresentation.Unspecified;
-            mongoClientSettings.ClusterConfigurator = clusterConfigurator;
-
-            if (keyVaultNamespace != null || schemaMapDocument != null || kmsProviders != null || withExternalKeyVault)
-            {
-                var extraOptions = new Dictionary<string, object>()
-                {
-                    { "mongocryptdSpawnPath", Environment.GetEnvironmentVariable("MONGODB_BINARIES") ?? string.Empty }
-                };
-
-                var schemaMap = GetSchemaMapIfNotNull(schemaMapDocument);
-
-                if (kmsProviders == null)
-                {
-                    kmsProviders = new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(new Dictionary<string, IReadOnlyDictionary<string, object>>());
-                }
-
-                var autoEncryptionOptions = new AutoEncryptionOptions(
-                    keyVaultNamespace: keyVaultNamespace,
-                    kmsProviders: kmsProviders,
-                    schemaMap: schemaMap,
-                    extraOptions: extraOptions);
-
-                if (withExternalKeyVault)
-                {
-                    var externalKeyVaultClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
-                    externalKeyVaultClientSettings.Credential = MongoCredential.FromComponents(null, null, "fake-user", "fake-pwd");
-                    var externalKeyVaultClient = new MongoClient(externalKeyVaultClientSettings);
-                    autoEncryptionOptions = autoEncryptionOptions.With(keyVaultClient: externalKeyVaultClient);
-                }
-                mongoClientSettings.AutoEncryptionOptions = autoEncryptionOptions;
-            }
-
-            return new DisposableMongoClient(new MongoClient(mongoClientSettings));
-        }
-
         private Dictionary<string, BsonDocument> GetSchemaMapIfNotNull(BsonDocument schemaMapDocument)
         {
             Dictionary<string, BsonDocument> schemaMap = null;
@@ -760,8 +759,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public class JsonFileReader : EmbeddedResourceJsonFileReader
         {
             #region static
-            private static JsonFileReader __instance;
-            public static JsonFileReader Instance => __instance ?? (__instance = new JsonFileReader());
+            private static readonly Lazy<JsonFileReader> __lazyInstance = new Lazy<JsonFileReader>(() => new JsonFileReader(), isThreadSafe: true);
+            public static JsonFileReader Instance => __lazyInstance.Value;
             private static readonly string[] __ignoreKeyNames =
             {
                 "dbPointer" // not supported

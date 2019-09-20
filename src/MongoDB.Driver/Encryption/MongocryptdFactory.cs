@@ -20,13 +20,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Encryption
 {
     internal static class EncryptionExtraOptionsValidator
     {
         #region static
-        private static readonly Dictionary<string, Type[]> __supportedExtraOptionKeys = new Dictionary<string, Type[]>
+        private static readonly Dictionary<string, Type[]> __supportedExtraOptions = new Dictionary<string, Type[]>
         {
             { "mongocryptdURI", new [] { typeof(string) } },
             { "mongocryptdBypassSpawn", new [] { typeof(bool) } },
@@ -44,18 +45,19 @@ namespace MongoDB.Driver.Encryption
 
             foreach (var extraOption in extraOptions)
             {
-                if (__supportedExtraOptionKeys.TryGetValue(extraOption.Key, out var validTypes))
+                if (__supportedExtraOptions.TryGetValue(extraOption.Key, out var validTypes))
                 {
-                    var extraOptionValueType = extraOption.Value.GetType();
-                    var isExtraOptionValueTypeValid = validTypes.Any(c => c.GetTypeInfo().IsAssignableFrom(extraOptionValueType));
+                    var extraOptionValue = Ensure.IsNotNull(extraOption.Value, nameof(extraOptions));
+                    var extraOptionValueType = extraOptionValue.GetType();
+                    var isExtraOptionValueTypeValid = validTypes.Any(t => t.GetTypeInfo().IsAssignableFrom(extraOptionValueType));
                     if (!isExtraOptionValueTypeValid)
                     {
-                        throw new ArgumentException($"Extra option {extraOption.Key} has invalid type: {extraOptionValueType}.", "extraOptionValueType");
+                        throw new ArgumentException($"Extra option {extraOption.Key} has invalid type: {extraOptionValueType}.", nameof(extraOptions));
                     }
                 }
                 else
                 {
-                    throw new ArgumentException($"Invalid extra option key: {extraOption.Key}.");
+                    throw new ArgumentException($"Invalid extra option key: {extraOption.Key}.", nameof(extraOptions));
                 }
             }
         }

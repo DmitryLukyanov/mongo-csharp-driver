@@ -195,10 +195,10 @@ namespace MongoDB.Driver.Encryption
         // private methods
         private bool ExtraOptionsEquals(IReadOnlyDictionary<string, object> x, IReadOnlyDictionary<string, object> y)
         {
-            return x.IsEquivalentTo(y, ExtraOptionsIsEquivalentTo);
+            return x.IsEquivalentTo(y, ExtraOptionEquals);
         }
 
-        private bool ExtraOptionsIsEquivalentTo(object x, object y)
+        private bool ExtraOptionEquals(object x, object y)
         {
             if (object.ReferenceEquals(x, y))
             {
@@ -215,10 +215,10 @@ namespace MongoDB.Driver.Encryption
                 return false;
             }
 
-            if (x is IEnumerable<string> arrX)
+            if (x is IEnumerable<string> enumerableX)
             {
-                var arrY = (IEnumerable<string>)y;
-                return arrX.SequenceEqual(arrY);
+                var enumerableY = (IEnumerable<string>)y;
+                return enumerableX.SequenceEqual(enumerableY);
             }
             else
             {

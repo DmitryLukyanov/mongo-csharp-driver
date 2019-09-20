@@ -271,14 +271,14 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
         {
             for (int i = 0; i < expected.Count; i++)
             {
-                var value = expected.ElementAt(i);
+                var value = expected[i];
                 if (value.IsBsonDocument)
                 {
-                    ReplaceTypeAssertionWithActual(actual.ElementAt(i).AsBsonDocument, value.AsBsonDocument);
+                    ReplaceTypeAssertionWithActual(actual[i].AsBsonDocument, value.AsBsonDocument);
                 }
                 else if (value.IsBsonArray)
                 {
-                    ReplaceTypeAssertionWithActual(actual.ElementAt(i).AsBsonArray, value.AsBsonArray);
+                    ReplaceTypeAssertionWithActual(actual[i].AsBsonArray, value.AsBsonArray);
                 }
             }
         }

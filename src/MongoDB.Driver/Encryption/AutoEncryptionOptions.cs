@@ -193,12 +193,12 @@ namespace MongoDB.Driver.Encryption
         }
 
         // private methods
-        private static bool ExtraOptionsEquals(IReadOnlyDictionary<string, object> x, IReadOnlyDictionary<string, object> y)
+        private bool ExtraOptionsEquals(IReadOnlyDictionary<string, object> x, IReadOnlyDictionary<string, object> y)
         {
             return x.IsEquivalentTo(y, ExtraOptionsIsEquivalentTo);
         }
 
-        private static bool ExtraOptionsIsEquivalentTo(object x, object y)
+        private bool ExtraOptionsIsEquivalentTo(object x, object y)
         {
             if (object.ReferenceEquals(x, y))
             {

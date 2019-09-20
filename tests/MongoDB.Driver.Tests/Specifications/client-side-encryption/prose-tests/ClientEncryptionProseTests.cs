@@ -224,7 +224,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                                     encrypted = ExplicitEncrypt(
                                         clientEncryption,
                                         encryptionOptions,
-                                        value, async);
+                                        value,
+                                        async);
                                 });
                                 if (allowed)
                                 {
@@ -548,10 +549,11 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
 
         private DataKeyOptions CreateDataKeyOptions(string kmsProvider)
         {
+            var alternateKeyNames = new[] { $"{kmsProvider}_altname" };
             switch (kmsProvider)
             {
                 case "local":
-                    return new DataKeyOptions(alternateKeyNames: Optional.Create<IReadOnlyList<string>>(new[] { $"{kmsProvider}_altname" }));
+                    return new DataKeyOptions(alternateKeyNames: alternateKeyNames);
                 case "aws":
                     var masterKey = new BsonDocument
                     {
@@ -559,8 +561,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" }
                     };
                     return new DataKeyOptions(
-                        alternateKeyNames: Optional.Create<IReadOnlyList<string>>(new[] { $"{kmsProvider}_altname" }),
-                        masterKey: Optional.Create(masterKey));
+                        alternateKeyNames: alternateKeyNames,
+                        masterKey: masterKey);
                 default:
                     throw new ArgumentException($"Incorrect kms provider {kmsProvider}", nameof(kmsProvider));
             }
@@ -707,7 +709,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 var autoEncryptionOptions = new AutoEncryptionOptions(
                     keyVaultNamespace: keyVaultNamespace,
                     kmsProviders: kmsProviders,
-                    schemaMap: Optional.Create<IReadOnlyDictionary<string, BsonDocument>>(schemaMap),
+                    schemaMap: schemaMap,
                     extraOptions: extraOptions);
 
                 if (withExternalKeyVault)
@@ -715,8 +717,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     var externalKeyVaultClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
                     externalKeyVaultClientSettings.Credential = MongoCredential.FromComponents(null, null, "fake-user", "fake-pwd");
                     var externalKeyVaultClient = new MongoClient(externalKeyVaultClientSettings);
-                    autoEncryptionOptions = autoEncryptionOptions
-                        .With(keyVaultClient: Optional.Create<IMongoClient>(externalKeyVaultClient));
+                    autoEncryptionOptions = autoEncryptionOptions.With(keyVaultClient: externalKeyVaultClient);
                 }
                 mongoClientSettings.AutoEncryptionOptions = autoEncryptionOptions;
             }

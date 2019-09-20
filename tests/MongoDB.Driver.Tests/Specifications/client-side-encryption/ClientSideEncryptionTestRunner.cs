@@ -26,7 +26,6 @@ using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
 {
-    // todo: SPEC-1385
     public class ClientSideEncryptionTestRunner : MongoClientJsonDrivenTestRunnerBase
     {
         [SkippableTheory]

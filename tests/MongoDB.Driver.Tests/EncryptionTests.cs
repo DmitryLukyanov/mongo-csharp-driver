@@ -110,7 +110,7 @@ namespace MongoDB.Driver.Tests
                     kmsProviders: kmsProviders,
                     keyVaultNamespace: __keyVaultCollectionNamespace));
 
-            void testCase(Func<object> testCode)
+            void testCase(Action testCode)
             {
                 var testCaseException = Record.Exception(testCode);
                 if (expectedExceptionType != null)
@@ -228,7 +228,7 @@ namespace MongoDB.Driver.Tests
         {
             var clientEncryptionOptions = new ClientEncryptionOptions(
                 keyVaultClient: mongoClient,
-                __keyVaultCollectionNamespace,
+                keyVaultNamespace: __keyVaultCollectionNamespace,
                 kmsProviders: kmsProviders);
 
             return new ClientEncryption(clientEncryptionOptions);

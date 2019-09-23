@@ -21,6 +21,7 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Encryption;
 using MongoDB.Shared;
 
 namespace MongoDB.Driver
@@ -32,6 +33,7 @@ namespace MongoDB.Driver
     {
         // private fields
         private string _applicationName;
+        private AutoEncryptionOptions _autoEncryptionOptions;
         private Action<ClusterBuilder> _clusterConfigurator;
         private IReadOnlyList<CompressorConfiguration> _compressors;
         private ConnectionMode _connectionMode;
@@ -77,6 +79,7 @@ namespace MongoDB.Driver
         public MongoClientSettings()
         {
             _applicationName = null;
+            _autoEncryptionOptions = null;
             _compressors = new CompressorConfiguration[0];
             _connectionMode = ConnectionMode.Automatic;
             _connectTimeout = MongoDefaults.ConnectTimeout;
@@ -121,6 +124,19 @@ namespace MongoDB.Driver
             {
                 if (_isFrozen) { throw new InvalidOperationException("MongoClientSettings is frozen."); }
                 _applicationName = ApplicationNameHelper.EnsureApplicationNameIsValid(value, nameof(value));
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the auto encryption options.
+        /// </summary>
+        public AutoEncryptionOptions AutoEncryptionOptions
+        {
+            get { return _autoEncryptionOptions; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoClientSettings is frozen."); }
+                _autoEncryptionOptions = value;
             }
         }
 
@@ -663,6 +679,7 @@ namespace MongoDB.Driver
 
             var clientSettings = new MongoClientSettings();
             clientSettings.ApplicationName = url.ApplicationName;
+            clientSettings.AutoEncryptionOptions = null; // must be configured via code
             clientSettings.Compressors = url.Compressors;
             clientSettings.ConnectionMode = url.ConnectionMode;
             clientSettings.ConnectTimeout = url.ConnectTimeout;
@@ -719,6 +736,7 @@ namespace MongoDB.Driver
         {
             var clone = new MongoClientSettings();
             clone._applicationName = _applicationName;
+            clone._autoEncryptionOptions = _autoEncryptionOptions;
             clone._compressors = _compressors;
             clone._clusterConfigurator = _clusterConfigurator;
             clone._connectionMode = _connectionMode;
@@ -779,6 +797,7 @@ namespace MongoDB.Driver
             var rhs = (MongoClientSettings)obj;
             return
                 _applicationName == rhs._applicationName &&
+                object.Equals(_autoEncryptionOptions, rhs._autoEncryptionOptions) &&
                 object.ReferenceEquals(_clusterConfigurator, rhs._clusterConfigurator) &&
                 _compressors.SequenceEqual(rhs._compressors) &&
                 _connectionMode == rhs._connectionMode &&
@@ -857,6 +876,7 @@ namespace MongoDB.Driver
 
             return new Hasher()
                 .Hash(_applicationName)
+                .Hash(_autoEncryptionOptions)
                 .Hash(_clusterConfigurator)
                 .HashElements(_compressors)
                 .Hash(_connectionMode)
@@ -908,7 +928,10 @@ namespace MongoDB.Driver
             {
                 sb.AppendFormat("ApplicationName={0};", _applicationName);
             }
-
+            if (_autoEncryptionOptions != null)
+            {
+                sb.AppendFormat("AutoEncryptionOptions={0};", _autoEncryptionOptions);
+            }
             if (_compressors?.Any() ?? false)
             {
                 sb.AppendFormat("Compressors=[{0}];", string.Join(",", _compressors));
@@ -974,6 +997,7 @@ namespace MongoDB.Driver
                 _heartbeatInterval,
                 _heartbeatTimeout,
                 _ipv6,
+                _autoEncryptionOptions?.KmsProviders,
                 _localThreshold,
                 _maxConnectionIdleTime,
                 _maxConnectionLifeTime,
@@ -981,6 +1005,7 @@ namespace MongoDB.Driver
                 _minConnectionPoolSize,
                 MongoDefaults.TcpReceiveBufferSize, // TODO: add ReceiveBufferSize to MongoClientSettings?
                 _replicaSetName,
+                _autoEncryptionOptions?.SchemaMap,
                 _scheme,
                 _sdamLogFilename,
                 MongoDefaults.TcpSendBufferSize, // TODO: add SendBufferSize to MongoClientSettings?

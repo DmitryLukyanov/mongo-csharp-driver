@@ -759,12 +759,15 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public class JsonFileReader : EmbeddedResourceJsonFileReader
         {
             #region static
-            private static readonly Lazy<JsonFileReader> __lazyInstance = new Lazy<JsonFileReader>(() => new JsonFileReader(), isThreadSafe: true);
-            public static JsonFileReader Instance => __lazyInstance.Value;
+            // private static fields
             private static readonly string[] __ignoreKeyNames =
             {
                 "dbPointer" // not supported
             };
+            private static readonly Lazy<JsonFileReader> __instance = new Lazy<JsonFileReader>(() => new JsonFileReader(), isThreadSafe: true);
+
+            // public static properties
+            public static JsonFileReader Instance => __instance.Value;
             #endregion
 
             private readonly IReadOnlyDictionary<string, BsonDocument> _documents;

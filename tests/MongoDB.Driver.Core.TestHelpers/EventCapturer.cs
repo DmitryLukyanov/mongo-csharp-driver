@@ -126,7 +126,7 @@ namespace MongoDB.Driver.Core
         {
             lock (_lock)
             {
-                _notifyWhenTaskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.AttachedToParent);
+                _notifyWhenTaskCompletionSource = new TaskCompletionSource<bool>();
                 _notifyWhenCondition = notifyWhenCondition;
                 if (notifyWhenCondition?.Invoke(_capturedEvents) ?? false)
                 {

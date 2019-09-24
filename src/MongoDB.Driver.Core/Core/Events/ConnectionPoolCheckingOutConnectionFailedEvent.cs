@@ -25,6 +25,7 @@ namespace MongoDB.Driver.Core.Events
     /// </summary>
     public struct ConnectionPoolCheckingOutConnectionFailedEvent
     {
+        private readonly ConnectionCloseReason? _closeReason;
         private readonly ServerId _serverId;
         private readonly Exception _exception;
         private readonly long? _operationId;
@@ -35,11 +36,25 @@ namespace MongoDB.Driver.Core.Events
         /// <param name="serverId">The server identifier.</param>
         /// <param name="exception">The exception.</param>
         /// <param name="operationId">The operation identifier.</param>
-        public ConnectionPoolCheckingOutConnectionFailedEvent(ServerId serverId, Exception exception, long? operationId)
+        /// <param name="closeReason">The closing reason.</param>
+        public ConnectionPoolCheckingOutConnectionFailedEvent(
+            ServerId serverId,
+            Exception exception,
+            long? operationId,
+            ConnectionCloseReason? closeReason)
         {
             _serverId = serverId;
             _exception = exception;
             _operationId = operationId;
+            _closeReason = closeReason;
+        }
+
+        /// <summary>
+        /// Gets the close reason.
+        /// </summary>
+        public ConnectionCloseReason? ConnectionCloseReason
+        {
+            get { return _closeReason; }
         }
 
         /// <summary>

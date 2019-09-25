@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Events;
@@ -25,12 +24,11 @@ namespace MongoDB.Driver.Core
 {
     public class EventCapturer : IEventSubscriber
     {
+        private Action<IEnumerable<object>, object> _addEventAction;
         private readonly Queue<object> _capturedEvents;
-        private readonly object _lock = new object();
         private readonly Dictionary<Type, Func<object, bool>> _eventsToCapture;
-        private Func<Queue<object>, bool> _notifyWhenCondition;
-        private TaskCompletionSource<bool> _notifyWhenTaskCompletionSource;
         private readonly IEventSubscriber _subscriber;
+        internal readonly object _lock = new object();
 
         public EventCapturer()
         {
@@ -60,11 +58,6 @@ namespace MongoDB.Driver.Core
             }
         }
 
-        public TaskCompletionSource<bool> NotifyWhenTaskCompletionSource
-        {
-            get { return _notifyWhenTaskCompletionSource; }
-        }
-
         public void Clear()
         {
             lock (_lock)
@@ -83,6 +76,14 @@ namespace MongoDB.Driver.Core
                 }
             }
         }
+
+        // internal properties
+        internal Action<IEnumerable<object>, object> AddEventAction
+        {
+            get => _addEventAction;
+            set => _addEventAction = value;
+        }
+
 
         public object Next()
         {
@@ -121,20 +122,6 @@ namespace MongoDB.Driver.Core
             return true;
         }
 
-        // todo: IEventSubscription?
-        public void SetNotifyWhenCondition(Func<Queue<object>, bool> notifyWhenCondition)
-        {
-            lock (_lock)
-            {
-                _notifyWhenTaskCompletionSource = new TaskCompletionSource<bool>();
-                _notifyWhenCondition = notifyWhenCondition;
-                if (notifyWhenCondition?.Invoke(_capturedEvents) ?? false)
-                {
-                    _notifyWhenTaskCompletionSource.SetResult(true);
-                }
-            }
-        }
-
         // private methods
         private void Capture<TEvent>(TEvent @event)
         {
@@ -153,10 +140,7 @@ namespace MongoDB.Driver.Core
             lock (_lock)
             {
                 _capturedEvents.Enqueue(@event);
-                if (_notifyWhenCondition?.Invoke(_capturedEvents) ?? false)
-                {
-                    _notifyWhenTaskCompletionSource.TrySetResult(true);
-                }
+                _addEventAction?.Invoke(_capturedEvents, @event);
             }
         }
 

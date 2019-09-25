@@ -166,9 +166,9 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
         public async Task<IConnectionHandle> AcquireConnectionAsync(CancellationToken cancellationToken)
         {
-            ThrowIfNotOpen();
-
             var helper = new AcquireConnectionHelper(this);
+
+            ThrowIfNotOpen();
             try
             {
                 helper.CheckingOutConnection();
@@ -353,14 +353,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
             if (_state.Value == State.Disposed)
             {
                 connection.Dispose();
-                _connectionHolder.Return(connection);
             }
             else
             {
                 _connectionHolder.Return(connection);
                 _poolQueue.Release();
             }
-
             stopwatch.Stop();
 
             if (_checkedInConnectionEventHandler != null)

@@ -52,7 +52,7 @@ namespace MongoDB.Driver.Core.Events
         /// <summary>
         /// Gets the close reason.
         /// </summary>
-        public ConnectionCloseReason? ConnectionCloseReason
+        public ConnectionCloseReason? CloseReason
         {
             get { return _closeReason; }
         }

@@ -21,17 +21,9 @@ namespace MongoDB.Driver.Core.Events
     public enum ConnectionCloseReason
     {
         /// <summary>
-        /// Idle is over.
-        /// </summary>
-        Idle,
-        /// <summary>
         /// Connection pool is closed.
         /// </summary>
         PoolClosed,
-        /// <summary>
-        /// Connection is stale.
-        /// </summary>
-        Stale,
         /// <summary>
         /// Timeout exception.
         /// </summary>

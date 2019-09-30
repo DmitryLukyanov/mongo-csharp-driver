@@ -23,10 +23,9 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoExternalIdentity" /> class.
         /// </summary>
-        /// <param name="source">The source.</param>
         /// <param name="username">The username.</param>
-        public MongoX509Identity(string source, string username)
-            : base(source, username, allowNullUsername: true)
+        public MongoX509Identity(string username)
+            : base("$external", username, allowNullUsername: true)
         { }
     }
 }

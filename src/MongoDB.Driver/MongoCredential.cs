@@ -203,7 +203,7 @@ namespace MongoDB.Driver
         {
             return FromComponents("GSSAPI",
                 source: "$external",
-                null,
+                databaseName: null,
                 username,
                 new ExternalEvidence());
         }
@@ -218,7 +218,7 @@ namespace MongoDB.Driver
         {
             return FromComponents("GSSAPI",
                 source: "$external",
-                null,
+                databaseName: null,
                 username,
                 new PasswordEvidence(password));
         }
@@ -233,7 +233,7 @@ namespace MongoDB.Driver
         {
             return FromComponents("GSSAPI",
                 source: "$external",
-                null,
+                databaseName: null,
                 username,
                 new PasswordEvidence(password));
         }
@@ -281,7 +281,7 @@ namespace MongoDB.Driver
         {
             return FromComponents("MONGODB-X509",
                 source: null,
-                "$external",
+                databaseName: "$external",
                 username,
                 new ExternalEvidence());
         }
@@ -460,6 +460,11 @@ namespace MongoDB.Driver
         }
 
         // internal static methods
+        internal static MongoCredential FromComponents(string mechanism, string source, string username, string password)
+        {
+            return FromComponents(mechanism, source, null, username, password);
+        }
+
         internal static MongoCredential FromComponents(string mechanism, string source, string databaseName, string username, string password)
         {
             var evidence = password == null ? (MongoIdentityEvidence)new ExternalEvidence() : new PasswordEvidence(password);
@@ -506,33 +511,20 @@ namespace MongoDB.Driver
                     {
                         throw new ArgumentException("A MONGODB-X509 does not support a password.");
                     }
-                    if (source == null)
-                    {
-                        source = "$external";
-                    }
-                    else if (source != "$external")
-                    {
-                        throw new ArgumentException("A MONGODB-X509 source must be $external.");
-                    }
+
+                    ensureNullOrExternal(source);
 
                     return new MongoCredential(
                         mechanism,
-                        new MongoX509Identity(source, username),
+                        new MongoX509Identity(username),
                         evidence);
                 case "GSSAPI":
-                    // always $external for GSSAPI. Should rise an exception if it is set and not to $external.
-                    if (source == null)
-                    {
-                        source = "$external";
-                    }
-                    else if (source != "$external")
-                    {
-                        throw new ArgumentException("A GSSAPI source must be $external.");
-                    }
+                    // always $external for GSSAPI.
+                    ensureNullOrExternal(source);
 
                     return new MongoCredential(
-                        "GSSAPI",
-                        new MongoExternalIdentity(source, username),
+                        mechanism,
+                        new MongoExternalIdentity(username),
                         evidence);
                 case "PLAIN":
                     source = source ?? databaseName ?? "$external";
@@ -557,6 +549,14 @@ namespace MongoDB.Driver
                         evidence);
                 default:
                     throw new NotSupportedException(string.Format("Unsupported MongoAuthenticationMechanism {0}.", mechanism));
+            }
+
+            void ensureNullOrExternal(string value)
+            {
+                if (value != null && value != "$external")
+                {
+                    throw new ArgumentException($"A {mechanism} source must be $external.");
+                }
             }
         }
     }

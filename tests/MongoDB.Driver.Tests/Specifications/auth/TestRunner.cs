@@ -25,6 +25,7 @@ using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.auth
 {
+    // todo: rename to something like `AuthTestRunner`
     public class TestRunner
     {
         [SkippableTheory]
@@ -124,14 +125,14 @@ namespace MongoDB.Driver.Tests.Specifications.auth
         }
     }
 
+    internal static class AuthenticatorReflector
+    {
+        public static object _mechanism(this IAuthenticator obj) => Reflector.GetFieldValue(obj, nameof(_mechanism));
+    }
+
     internal static class GssapiMechanismReflector
     {
         public static bool _canonicalizeHostName(this object obj) => (bool)Reflector.GetFieldValue(obj, nameof(_canonicalizeHostName));
         public static string _serviceName(this object obj) => (string)Reflector.GetFieldValue(obj, nameof(_serviceName));
-    }
-
-    internal static class AuthenticatorReflector
-    {
-        public static object _mechanism(this IAuthenticator obj) => Reflector.GetFieldValue(obj, nameof(_mechanism));
     }
 }

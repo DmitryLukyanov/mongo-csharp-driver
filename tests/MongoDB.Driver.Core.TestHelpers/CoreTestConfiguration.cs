@@ -231,7 +231,6 @@ namespace MongoDB.Driver
                     uri += "/?connect=replicaSet";
                 }
             }
-            uri = "mongodb://user%40DOMAIN.COM@localhost/?authMechanism=GSSAPI";
 
             return new ConnectionString(uri);
         }

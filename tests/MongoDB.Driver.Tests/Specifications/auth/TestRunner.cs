@@ -14,15 +14,10 @@
 */
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Reflection;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers;
+using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Configuration;
@@ -34,15 +29,17 @@ namespace MongoDB.Driver.Tests.Specifications.auth
     {
         [SkippableTheory]
         [ClassData(typeof(TestCaseFactory))]
-        public void RunTestDefinition(BsonDocument definition)
+        public void RunTestDefinition(JsonDrivenTestCase testCase)
         {
-            MongoClientSettings mongoClientSettings = null;
+            var definition = testCase.Test;
+            JsonDrivenHelper.EnsureAllFieldsAreValid(definition, "description", "uri", "valid", "credential");
+
+            MongoCredential mongoCredential = null;
             Exception parseException = null;
             try
             {
-                //var connectionString = new ConnectionString((string)definition["uri"]);
-                //MongoClientSettings.FromConnectionString(connectionString.ToString());
-                mongoClientSettings = MongoClientSettings.FromConnectionString((string)definition["uri"]);
+                var connectionString = new ConnectionString((string)definition["uri"]);
+                mongoCredential = MongoClientSettings.FromConnectionString(connectionString.ToString()).Credential;
             }
             catch (Exception ex)
             {
@@ -51,7 +48,7 @@ namespace MongoDB.Driver.Tests.Specifications.auth
 
             if (parseException == null)
             {
-                AssertValid(mongoClientSettings, definition);
+                AssertValid(mongoCredential, definition);
             }
             else
             {
@@ -59,41 +56,50 @@ namespace MongoDB.Driver.Tests.Specifications.auth
             }
         }
 
-        private void AssertValid(MongoClientSettings mongoClientSettings, BsonDocument definition)
+        private void AssertValid(MongoCredential mongoCredential, BsonDocument definition)
         {
             if (!definition["valid"].ToBoolean())
             {
                 throw new AssertionException($"The connection string '{definition["uri"]}' should be invalid.");
             }
 
-            var mongoCredential = mongoClientSettings.Credential;
-
             var credential = definition["credential"] as BsonDocument;
             if (credential != null)
             {
+                JsonDrivenHelper.EnsureAllFieldsAreValid(credential, "username", "password", "source", "mechanism", "mechanism_properties");
+
+                mongoCredential.Source.Should().Be(ValueToString(credential["source"]));
                 mongoCredential.Username.Should().Be(ValueToString(credential["username"]));
 #pragma warning disable 618
                 mongoCredential.Password.Should().Be(ValueToString(credential["password"]));
 #pragma warning restore 618
-                mongoCredential.Source.Should().Be(ValueToString(credential["source"]));
                 mongoCredential.Mechanism.Should().Be(ValueToString(credential["mechanism"]));
 
-                credential.TryGetValue("mechanism_properties", out var authMechanismOptionsBsonValue);
-                var authMechanismOptions = authMechanismOptionsBsonValue as BsonDocument;
-                if (authMechanismOptions != null)
+                if (credential.TryGetValue("mechanism_properties", out var mechanismProperties))
                 {
-                    authMechanismOptions.TryGetValue("CANONICALIZE_HOST_NAME", out var canonicalizeHostNameValue);
-                    if (canonicalizeHostNameValue != null)
+                    if (mechanismProperties.IsBsonNull)
                     {
-                        mongoCredential.ToAuthenticator()._mechanism()._canonicalizeHostName()
-                            .Should().Be(canonicalizeHostNameValue.AsBoolean);
+                        // todo:
                     }
-
-                    authMechanismOptions.TryGetValue("SERVICE_NAME", out var serviceNameValue);
-                    if (serviceNameValue != null)
+                    else
                     {
-                        mongoCredential.ToAuthenticator()._mechanism()._serviceName()
-                            .Should().Be(ValueToString(serviceNameValue));
+                        foreach (var mechanismProperty in mechanismProperties.AsBsonDocument)
+                        {
+                            var mechanismName = mechanismProperty.Name;
+                            switch (mechanismName)
+                            {
+                                case "SERVICE_NAME":
+                                    var serviceName = mongoCredential.ToAuthenticator()._mechanism()._serviceName();
+                                    serviceName.Should().Be(ValueToString(mechanismProperty.Value));
+                                    break;
+                                case "CANONICALIZE_HOST_NAME":
+                                    var canonicalizeHostName = mongoCredential.ToAuthenticator()._mechanism()._canonicalizeHostName();
+                                    canonicalizeHostName.Should().Be(mechanismProperty.Value.ToBoolean());
+                                    break;
+                                default:
+                                    throw new Exception($"Invalid mechanism property {mechanismName}.");
+                            }
+                        }
                     }
                 }
             }
@@ -112,63 +118,20 @@ namespace MongoDB.Driver.Tests.Specifications.auth
             return value == BsonNull.Value ? null : value.ToString();
         }
 
-        private class TestCaseFactory : IEnumerable<object[]>
+        private class TestCaseFactory : JsonDrivenTestCaseFactory
         {
-            // TODO: remove these ignoredTestNames once the driver implements the underlying changes required
-            private static readonly string[] __ignoredTestNames =
-            {
-                //"connection-string: should recognise the mechanism (GSSAPI)"
-                //"connection-string: should throw an exception if authSource is invalid (GSSAPI)",
-                //"connection-string: should throw an exception if authSource is invalid (MONGODB-X509)",
-                //"connection-string: should throw an exception if no username (GSSAPI)",
-                //"connection-string: should throw an exception if no username (PLAIN)",
-                //"connection-string: should throw an exception if no username (SCRAM-SHA-1)",
-                //"connection-string: should throw an exception if no username (SCRAM-SHA-256)",
-                //"connection-string: should throw an exception if no username is supplied (MONGODB-CR)",
-                //"connection-string: should throw an exception if supplied a password (MONGODB-X509)"
-            };
-
-            public IEnumerator<object[]> GetEnumerator()
-            {
-                const string prefix = "MongoDB.Driver.Tests.Specifications.auth.tests.";
-                var executingAssembly = typeof(TestCaseFactory).GetTypeInfo().Assembly;
-                var runTestDefinitionParameters = executingAssembly
-                    .GetManifestResourceNames()
-                    .Where(path => path.StartsWith(prefix) && path.EndsWith(".json"))
-                    .Select(path => new { Filename = path.Remove(0, prefix.Length).Remove(path.Length - prefix.Length - 5),
-                                          Tests = (BsonArray)ReadDefinition(path)["tests"] })
-                    .SelectMany(definition => definition.Tests
-                        .Where(test => !__ignoredTestNames.Contains($"{definition.Filename}: {test["description"]}"))
-                        .Select(test => new[] { test }));
-                return runTestDefinitionParameters.GetEnumerator();
-            }
-            
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-
-            private static BsonDocument ReadDefinition(string path)
-            {
-                var executingAssembly = typeof(TestCaseFactory).GetTypeInfo().Assembly;
-                using (var definitionStream = executingAssembly.GetManifestResourceStream(path))
-                using (var definitionStringReader = new StreamReader(definitionStream))
-                {
-                    var definitionString = definitionStringReader.ReadToEnd();
-                    return BsonDocument.Parse(definitionString);
-                }
-            }
+            protected override string PathPrefix => "MongoDB.Driver.Tests.Specifications.auth.tests.";
         }
     }
 
-    internal static class SaslMechanismExtensions
+    internal static class GssapiMechanismReflector
     {
-        public static bool _canonicalizeHostName(this Object obj) => (bool)Reflector.GetFieldValue(obj, nameof(_canonicalizeHostName));
-        public static string _serviceName(this Object obj) => (string)Reflector.GetFieldValue(obj, nameof(_serviceName));
+        public static bool _canonicalizeHostName(this object obj) => (bool)Reflector.GetFieldValue(obj, nameof(_canonicalizeHostName));
+        public static string _serviceName(this object obj) => (string)Reflector.GetFieldValue(obj, nameof(_serviceName));
     }
 
-    internal static class AuthenticatorExtensions
+    internal static class AuthenticatorReflector
     {
-        public static Object _mechanism(this IAuthenticator obj) => Reflector.GetFieldValue(obj, nameof(_mechanism));
+        public static object _mechanism(this IAuthenticator obj) => Reflector.GetFieldValue(obj, nameof(_mechanism));
     }
 }

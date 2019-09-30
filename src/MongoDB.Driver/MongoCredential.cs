@@ -165,7 +165,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateCredential(string databaseName, string username, string password)
         {
             return FromComponents(null,
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -187,7 +187,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateCredential(string databaseName, string username, SecureString password)
         {
             return FromComponents(null,
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -202,7 +202,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateGssapiCredential(string username)
         {
             return FromComponents("GSSAPI",
-                "$external",
+                source: "$external",
                 null,
                 username,
                 new ExternalEvidence());
@@ -217,7 +217,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateGssapiCredential(string username, string password)
         {
             return FromComponents("GSSAPI",
-                "$external",
+                source: "$external",
                 null,
                 username,
                 new PasswordEvidence(password));
@@ -232,7 +232,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateGssapiCredential(string username, SecureString password)
         {
             return FromComponents("GSSAPI",
-                "$external",
+                source: "$external",
                 null,
                 username,
                 new PasswordEvidence(password));
@@ -249,7 +249,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateMongoCRCredential(string databaseName, string username, string password)
         {
             return FromComponents("MONGODB-CR",
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -266,7 +266,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateMongoCRCredential(string databaseName, string username, SecureString password)
         {
             return FromComponents("MONGODB-CR",
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -280,7 +280,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreateMongoX509Credential(string username)
         {
             return FromComponents("MONGODB-X509",
-                null,
+                source: null,
                 "$external",
                 username,
                 new ExternalEvidence());
@@ -296,7 +296,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreatePlainCredential(string databaseName, string username, string password)
         {
             return FromComponents("PLAIN",
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -312,7 +312,7 @@ namespace MongoDB.Driver
         public static MongoCredential CreatePlainCredential(string databaseName, string username, SecureString password)
         {
             return FromComponents("PLAIN",
-                null,
+                source: null,
                 databaseName,
                 username,
                 new PasswordEvidence(password));
@@ -460,10 +460,10 @@ namespace MongoDB.Driver
         }
 
         // internal static methods
-        internal static MongoCredential FromComponents(string mechanism, string authenticationSource, string databaseName, string username, string password)
+        internal static MongoCredential FromComponents(string mechanism, string source, string databaseName, string username, string password)
         {
             var evidence = password == null ? (MongoIdentityEvidence)new ExternalEvidence() : new PasswordEvidence(password);
-            return FromComponents(mechanism, authenticationSource, databaseName, username, evidence);
+            return FromComponents(mechanism, source, databaseName, username, evidence);
         }
 
         // private methods
@@ -480,7 +480,7 @@ namespace MongoDB.Driver
         }
 
         // private static methods
-        private static MongoCredential FromComponents(string mechanism, string authenticationSource, string databaseName, string username, MongoIdentityEvidence evidence)
+        private static MongoCredential FromComponents(string mechanism, string source, string databaseName, string username, MongoIdentityEvidence evidence)
         {
             var defaultedMechanism = (mechanism ?? "DEFAULT").Trim().ToUpperInvariant();
             switch (defaultedMechanism)
@@ -490,7 +490,7 @@ namespace MongoDB.Driver
                 case "SCRAM-SHA-1":
                 case "SCRAM-SHA-256":
                     // it is allowed for a password to be an empty string, but not a username
-                    var source = authenticationSource ?? databaseName ?? "admin";
+                    source = source ?? databaseName ?? "admin";
                     if (evidence == null || !(evidence is PasswordEvidence))
                     {
                         var message = string.Format("A {0} credential must have a password.", defaultedMechanism);
@@ -506,36 +506,36 @@ namespace MongoDB.Driver
                     {
                         throw new ArgumentException("A MONGODB-X509 does not support a password.");
                     }
-                    if (authenticationSource == null)
+                    if (source == null)
                     {
-                        authenticationSource = "$external";
+                        source = "$external";
                     }
-                    else if (authenticationSource != "$external")
+                    else if (source != "$external")
                     {
                         throw new ArgumentException("A MONGODB-X509 source must be $external.");
                     }
 
                     return new MongoCredential(
                         mechanism,
-                        new MongoX509Identity(authenticationSource, username),
+                        new MongoX509Identity(source, username),
                         evidence);
                 case "GSSAPI":
                     // always $external for GSSAPI. Should rise an exception if it is set and not to $external.
-                    if (authenticationSource == null)
+                    if (source == null)
                     {
-                        authenticationSource = "$external";
+                        source = "$external";
                     }
-                    else if (authenticationSource != "$external")
+                    else if (source != "$external")
                     {
                         throw new ArgumentException("A GSSAPI source must be $external.");
                     }
 
                     return new MongoCredential(
                         "GSSAPI",
-                        new MongoExternalIdentity(authenticationSource, username),
+                        new MongoExternalIdentity(source, username),
                         evidence);
                 case "PLAIN":
-                    source = authenticationSource ?? databaseName ?? "$external";
+                    source = source ?? databaseName ?? "$external";
                     if (evidence == null || !(evidence is PasswordEvidence))
                     {
                         throw new ArgumentException("A PLAIN credential must have a password.");

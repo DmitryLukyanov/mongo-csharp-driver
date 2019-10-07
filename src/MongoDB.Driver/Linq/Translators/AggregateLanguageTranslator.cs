@@ -832,16 +832,21 @@ namespace MongoDB.Driver.Linq.Translators
 
             switch (node.Method.Name)
             {
-                case "ToString" when node.Arguments.Count == 1:
-                    var format = TranslateValue(node.Arguments[0]);
-                    result = new BsonDocument("$dateToString", new BsonDocument
+                case "ToString":
+                    if (node.Arguments.Count == 1)
+                    {
+                        var format = TranslateValue(node.Arguments[0]);
+                        result = new BsonDocument("$dateToString", new BsonDocument
                         {
                             { "format", format },
                             { "date", field }
                         });
-                    return true;
-                case "ToString": // without a format argument
-                    return TryTranslateViaToString(node, field, out result);
+                        return true;
+                    }
+                    else
+                    {
+                        return TryTranslateViaToString(node, field, out result);
+                    }
             }
 
             return false;

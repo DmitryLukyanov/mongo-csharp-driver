@@ -477,6 +477,20 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://nam!@#$%^&*())e:password@localhost", "mongodb://<hidden>@localhost")]
+        [InlineData("://nam!@#$%^&*())e:password@loc", "://<hidden>@loc")]
+        [InlineData("://nam!@#$%^&*())e@loc", "://<hidden>@loc")]
+        [InlineData("mongodb://nameloc@", "mongodb://<hidden>@")]
+        [InlineData("mongodb+srv://nameloc@", "mongodb+srv://<hidden>@")]
+        [InlineData("ongodb://username:password@localhost/?replicaSet=@x", "ongodb://<hidden>@localhost/?replicaSet=@x")]
+        public void When_connectionstring_invalid_security_data_should_be_protected(string connectionString, string protectedConnectionString)
+        {
+            var exception = Record.Exception(() => new ConnectionString(connectionString));
+            var e = exception.Should().BeOfType<MongoConfigurationException>().Subject;
+            e.Message.Should().StartWith($"The connection string '{protectedConnectionString}'");
+        }
+
+        [Theory]
         [InlineData("mongodb://localhost?connectTimeout=15ms", 15)]
         [InlineData("mongodb://localhost?connectTimeoutMS=15", 15)]
         [InlineData("mongodb://localhost?connectTimeout=15", 1000 * 15)]

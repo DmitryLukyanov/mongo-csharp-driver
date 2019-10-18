@@ -12,8 +12,7 @@
     <AssemblyName>Documentation</AssemblyName>
     <RootNamespace>Documentation</RootNamespace>
     <Name>Documentation</Name>
-    <!-- SHFB properties -->
-    <FrameworkVersion>.NET Framework 4.5</FrameworkVersion>
+    <!-- SHFB properties -->    
     <OutputPath>.\Help\</OutputPath>
     <HtmlHelpName>LibMongocryptDocs</HtmlHelpName>
     <Language>en-US</Language>

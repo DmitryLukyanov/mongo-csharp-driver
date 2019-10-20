@@ -133,7 +133,14 @@ namespace MongoDB.Driver.Encryption
         private IMongoCollection<BsonDocument> GetKeyVaultCollection()
         {
             var keyVaultDatabase = _keyVaultClient.GetDatabase(_keyVaultNamespace.DatabaseNamespace.DatabaseName);
-            return keyVaultDatabase.GetCollection<BsonDocument>(_keyVaultNamespace.CollectionName);
+            return keyVaultDatabase
+                .GetCollection<BsonDocument>(
+                    _keyVaultNamespace.CollectionName, 
+                    new MongoCollectionSettings()
+                    {
+                        ReadConcern = ReadConcern.Majority,
+                        WriteConcern = WriteConcern.WMajority
+                    });
         }
 
         private void ProcessNeedKmsState(CryptContext context, CancellationToken cancellationToken)

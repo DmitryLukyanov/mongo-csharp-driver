@@ -97,6 +97,20 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
         }
 
         /// <summary>
+        /// [Beta] Gets the maximum size of the encrypted document.
+        /// </summary>
+        /// <value>
+        /// The maximum size of the encrypted document.
+        /// </value>
+        protected int? MaxEncryptionDocumentSize
+        {
+            get
+            {
+                return _encoderSettings?.GetOrDefault<int?>(MessageEncoderSettingsName.MaxEncryptionDocumentSize, null);
+            }
+        }
+
+        /// <summary>
         /// Gets the maximum size of the message.
         /// </summary>
         /// <value>

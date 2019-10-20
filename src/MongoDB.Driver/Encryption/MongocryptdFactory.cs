@@ -78,6 +78,7 @@ namespace MongoDB.Driver.Encryption
             var connectionString = CreateMongocryptdConnectionString();
             var clientSettings = MongoClientSettings.FromConnectionString(connectionString);
             clientSettings.ServerSelectionTimeout = TimeSpan.FromMilliseconds(1000);
+            clientSettings.SdamLogFilename = null;
             return new MongoClient(clientSettings);
         }
 

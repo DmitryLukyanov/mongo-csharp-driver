@@ -93,22 +93,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         async,
                         new BsonDocument
                         {
-                            { "_id", "no_encryption_under_2mib" },
-                            { "unencrypted", new string('a', 2097152 - 1000) }
-                        }));
-                exception.Should().BeNull();
-                eventCapturer.Clear();
-
-                exception = Record.Exception(
-                    () => Insert(
-                        coll,
-                        async,
-                        new BsonDocument
-                        {
-                            { "_id", "no_encryption_over_2mib" },
+                            { "_id", "over_2mib_under_16mib" },
                             { "unencrypted", new string('a', 2097152) }
                         }));
-                exception.Should().NotBeNull();
+                exception.Should().BeNull();
                 eventCapturer.Clear();
 
                 var limitsDoc = JsonFileReader.Instance.Documents["limits.limits-doc.json"];
@@ -132,13 +120,13 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         async,
                         new BsonDocument
                         {
-                            { "_id", "no_encryption_under_2mib_1" },
-                            { "unencrypted", new string('a', 2097152 - 1000) }
+                            { "_id", "over_2mib_1" },
+                            { "unencrypted", new string('a', 2097152) }
                         },
                         new BsonDocument
                         {
-                            { "_id", "no_encryption_under_2mib_2" },
-                            { "unencrypted", new string('a', 2097152 - 1000) }
+                            { "_id", "over_2mib_2" },
+                            { "unencrypted", new string('a', 2097152) }
                         }));
                 exception.Should().BeNull();
                 eventCapturer.Count.Should().Be(2);
@@ -158,6 +146,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         { "_id", "encryption_exceeds_2mib_2" },
                         { "unencrypted", new string('a', 2097152 - 2000) }
                     });
+
                 exception = Record.Exception(
                     () => Insert(
                         coll,
@@ -166,6 +155,80 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         limitsDoc2));
                 exception.Should().BeNull();
                 eventCapturer.Count.Should().Be(2);
+                eventCapturer.Clear();
+
+                exception = Record.Exception(
+                    () => Insert(
+                        coll,
+                        async,
+                        new BsonDocument
+                        {
+                            { "_id", "under_16mib" },
+                            { "unencrypted", new string('a', 16777216 - 2000) }
+                        }));
+                exception.Should().BeNull();
+                eventCapturer.Clear();
+
+                limitsDoc = JsonFileReader.Instance.Documents["limits.limits-doc.json"];
+                limitsDoc.AddRange(
+                    new BsonDocument
+                    {
+                        {"_id", "encryption_exceeds_16mib"},
+                        {"unencrypted", new string('a', 16777216 - 2000)}
+                    });
+                exception = Record.Exception(
+                    () => Insert(
+                        coll,
+                        async,
+                        limitsDoc));
+                exception.Should().NotBeNull();
+                eventCapturer.Clear();
+
+                // additional not spec tests
+                exception = Record.Exception(
+                    () => Insert(
+                        coll,
+                        async,
+                        new BsonDocument
+                        {
+                            { "_id", "advanced_over_2mib_1" },
+                            { "unencrypted", new string('a', 2097152) }
+                        },
+                        new BsonDocument
+                        {
+                            { "_id", "advanced_over_2mib_2" },
+                            { "unencrypted", new string('a', 2097152) }
+                        },
+                        new BsonDocument
+                        {
+                            { "_id", "advanced_over_2mib_3" },
+                            { "unencrypted", new string('a', 2097152) }
+                        }));
+                exception.Should().BeNull();
+                eventCapturer.Count.Should().Be(3);
+                eventCapturer.Clear();
+
+                exception = Record.Exception(
+                    () => Insert(
+                        coll,
+                        async,
+                        new BsonDocument
+                        {
+                            { "_id", "small_1" },
+                            { "unencrypted", "a" }
+                        },
+                        new BsonDocument
+                        {
+                            { "_id", "small_2" },
+                            { "unencrypted", "a" }
+                        },
+                        new BsonDocument
+                        {
+                            { "_id", "small_3" },
+                            { "unencrypted", "a" }
+                        }));
+                exception.Should().BeNull();
+                eventCapturer.Count.Should().Be(1);
                 eventCapturer.Clear();
             }
         }
@@ -345,19 +408,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             using (var clientEncryption = ConfigureClientEncryption(clientEncrypted.Wrapped as MongoClient))
             {
                 var dataKeyOptions = CreateDataKeyOptions(kmsProvider);
-
-                Guid dataKey;
-                if (async)
-                {
-                    dataKey = clientEncryption
-                        .CreateDataKeyAsync(kmsProvider, dataKeyOptions, CancellationToken.None)
-                        .GetAwaiter()
-                        .GetResult();
-                }
-                else
-                {
-                    dataKey = clientEncryption.CreateDataKey(kmsProvider, dataKeyOptions, CancellationToken.None);
-                }
+                var dataKey = CreateDataKey(clientEncryption, kmsProvider, dataKeyOptions, async);
 
                 var keyVaultCollection = GetCollection(client, __keyVaultCollectionNamespace);
                 var keyVaultDocument =
@@ -408,6 +459,83 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     coll = GetCollection(clientEncrypted, __collCollectionNamespace);
                     var exception = Record.Exception(() => Insert(coll, async, new BsonDocument("encrypted_placeholder", encryptedValue)));
                     exception.Should().BeOfType<MongoEncryptionException>();
+                }
+            }
+        }
+
+        [SkippableTheory(Skip = "https://jira.mongodb.org/browse/MONGOCRYPT-194")]
+        [ParameterAttributeData]
+        public void CustomEndpointTest([Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ClientSideEncryption);
+
+            using (var client = ConfigureClient())
+            using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient))
+            {
+                var testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" }
+                };
+                testCase(testCaseMasterKey);
+
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "kms.us-east-1.amazonaws.com" }
+                };
+                testCase(testCaseMasterKey);
+
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "kms.us-east-1.amazonaws.com:443" }
+                };
+                testCase(testCaseMasterKey);
+
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "kms.us-east-1.amazonaws.com:12345" }
+                };
+                var exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception.Should().NotBeNull();
+
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "kms.us-east-2.amazonaws.com" }
+                };
+                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception.Should().NotBeNull();
+                exception.Message.Should().Contain("us-east-1");
+
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "example.com" }
+                };
+                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception.Should().NotBeNull();
+                exception.Message.Should().Contain("parse error");
+
+                void testCase(BsonDocument masterKey)
+                {
+                    var dataKeyOptions = new DataKeyOptions(masterKey: masterKey);
+                    var dataKey = CreateDataKey(clientEncryption, "aws", dataKeyOptions, async);
+
+                    var encryptOptions = new EncryptOptions(
+                        algorithm: EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                        keyId: dataKey);
+                    var value = "test";
+                    var encrypted = ExplicitEncrypt(clientEncryption, encryptOptions, value, async);
+                    var decrypted = ExplicitDecrypt(clientEncryption, encrypted, async);
+                    decrypted.Should().Be(BsonValue.Create(value));
                 }
             }
         }
@@ -526,7 +654,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         private ClientEncryption ConfigureClientEncryption(MongoClient client)
         {
             var clientEncryptionOptions = new ClientEncryptionOptions(
-                keyVaultClient: client.Settings.AutoEncryptionOptions.KeyVaultClient ?? client,
+                keyVaultClient: client.Settings.AutoEncryptionOptions?.KeyVaultClient ?? client,
                 keyVaultNamespace: __keyVaultCollectionNamespace,
                 kmsProviders: GetKmsProviders());
 
@@ -543,6 +671,25 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     {
                         Validator = new BsonDocumentFilterDefinition<BsonDocument>(validatorSchema)
                     });
+        }
+
+        private Guid CreateDataKey(
+            ClientEncryption clientEncryption,
+            string kmsProvider,
+            DataKeyOptions dataKeyOptions,
+            bool async)
+        {
+            if (async)
+            {
+                return clientEncryption
+                    .CreateDataKeyAsync(kmsProvider, dataKeyOptions, CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            else
+            {
+                return clientEncryption.CreateDataKey(kmsProvider, dataKeyOptions, CancellationToken.None);
+            }
         }
 
         private DataKeyOptions CreateDataKeyOptions(string kmsProvider)

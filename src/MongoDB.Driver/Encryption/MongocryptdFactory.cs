@@ -78,7 +78,6 @@ namespace MongoDB.Driver.Encryption
             var connectionString = CreateMongocryptdConnectionString();
             var clientSettings = MongoClientSettings.FromConnectionString(connectionString);
             clientSettings.ServerSelectionTimeout = TimeSpan.FromMilliseconds(1000);
-            clientSettings.SdamLogFilename = null;
             return new MongoClient(clientSettings);
         }
 
@@ -168,6 +167,8 @@ namespace MongoDB.Driver.Encryption
                     process.StartInfo.FileName = path;
                     process.StartInfo.CreateNoWindow = true;
                     process.StartInfo.UseShellExecute = false;
+                    process.StartInfo.RedirectStandardOutput = true;
+                    process.StartInfo.RedirectStandardError = true;
 
                     if (!process.Start())
                     {

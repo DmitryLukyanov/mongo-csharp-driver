@@ -97,16 +97,16 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
         }
 
         /// <summary>
-        /// [Beta] Gets the maximum size of the encrypted document.
+        /// [Beta] Gets the maximum splittable size of the encrypted document.
         /// </summary>
         /// <value>
-        /// The maximum size of the encrypted document.
+        /// The maximum splittable size of the encrypted document.
         /// </value>
-        protected int? MaxEncryptionDocumentSize
+        protected int MaxEncryptionSplittableDocumentSize
         {
             get
             {
-                return _encoderSettings?.GetOrDefault<int?>(MessageEncoderSettingsName.MaxEncryptionDocumentSize, null);
+                return 2097152; // 2MiB
             }
         }
 

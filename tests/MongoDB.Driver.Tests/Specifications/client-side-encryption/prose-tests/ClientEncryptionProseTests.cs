@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
@@ -463,7 +464,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             }
         }
 
-        [SkippableTheory(Skip = "https://jira.mongodb.org/browse/MONGOCRYPT-194")]
+        [SkippableTheory]
         [ParameterAttributeData]
         public void CustomEndpointTest([Values(false, true)] bool async)
         {
@@ -502,7 +503,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "endpoint", "kms.us-east-1.amazonaws.com:12345" }
                 };
                 var exception = Record.Exception(() => testCase(testCaseMasterKey));
-                exception.Should().NotBeNull();
+                exception.InnerException.Should().BeAssignableTo<SocketException>();
 
                 testCaseMasterKey = new BsonDocument
                 {
@@ -523,6 +524,17 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 exception = Record.Exception(() => testCase(testCaseMasterKey));
                 exception.Should().NotBeNull();
                 exception.Message.Should().Contain("parse error");
+
+                // additional not spec tests
+                testCaseMasterKey = new BsonDocument
+                {
+                    { "region", "us-east-1" },
+                    { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
+                    { "endpoint", "$test$" }
+                };
+                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception.Should().NotBeNull();
+                exception.InnerException.Should().BeAssignableTo<SocketException>();
 
                 void testCase(BsonDocument masterKey)
                 {

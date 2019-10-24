@@ -311,16 +311,16 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
 
                     var messageSize = stream.Position - messageStartPosition;
                     bool shouldBeSplit;
-                    if (IsEncryptionConfigured && MaxEncryptionDocumentSize.HasValue)
+                    if (IsEncryptionConfigured)
                     {
                         shouldBeSplit =
-                            messageSize > MaxEncryptionDocumentSize &&
+                            messageSize > MaxEncryptionSplittableDocumentSize &&
                             maxBatchCount > 1 &&
                             i != 0;
                     }
                     else
                     {
-                        shouldBeSplit = messageSize > maxMessageSize;
+                        shouldBeSplit = messageSize > maxMessageSize && i != 0;
                     }
 
                     if (shouldBeSplit && batch.CanBeSplit)

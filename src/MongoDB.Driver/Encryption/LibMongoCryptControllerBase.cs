@@ -191,15 +191,16 @@ namespace MongoDB.Driver.Encryption
         private void SendKmsRequest(KmsRequest request, CancellationToken cancellation)
         {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            socket.Connect(request.Endpoint, 443);
+            var address = MongoServerAddress.Parse(request.Endpoint, 443);
+            socket.Connect(address.Host, address.Port);
 
             using (var networkStream = new NetworkStream(socket, ownsSocket: true))
             using (var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false))
             {
 #if NETSTANDARD1_5
-                sslStream.AuthenticateAsClientAsync(request.Endpoint).ConfigureAwait(false).GetAwaiter().GetResult();
+                sslStream.AuthenticateAsClientAsync(address.Host).ConfigureAwait(false).GetAwaiter().GetResult();
 #else
-                sslStream.AuthenticateAsClient(request.Endpoint);
+                sslStream.AuthenticateAsClient(address.Host);
 #endif
 
                 var requestBytes = request.Message.ToArray();
@@ -219,16 +220,17 @@ namespace MongoDB.Driver.Encryption
         private async Task SendKmsRequestAsync(KmsRequest request, CancellationToken cancellation)
         {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            var address = MongoServerAddress.Parse(request.Endpoint, 443);
 #if NETSTANDARD1_5
-            await socket.ConnectAsync(request.Endpoint, 443).ConfigureAwait(false);
+            await socket.ConnectAsync(address.Host, address.Port).ConfigureAwait(false);
 #else
-            await Task.Factory.FromAsync(socket.BeginConnect(request.Endpoint, 443, null, null), socket.EndConnect).ConfigureAwait(false);
+            await Task.Factory.FromAsync(socket.BeginConnect(address.Host, address.Port, null, null), socket.EndConnect).ConfigureAwait(false);
 #endif
 
             using (var networkStream = new NetworkStream(socket, ownsSocket: true))
             using (var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false))
             {
-                await sslStream.AuthenticateAsClientAsync(request.Endpoint).ConfigureAwait(false);
+                await sslStream.AuthenticateAsClientAsync(address.Host).ConfigureAwait(false);
 
                 var requestBytes = request.Message.ToArray();
                 await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length).ConfigureAwait(false);

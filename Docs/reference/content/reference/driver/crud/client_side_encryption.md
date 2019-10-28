@@ -52,7 +52,6 @@ client-side. The following example has been adapted from
 ```csharp
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver.Encryption;
 
@@ -62,7 +61,7 @@ namespace MongoDB.Driver.Examples
     {
         private const string LocalMasterKey = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
 
-        public void ClientSideEncryptionSimpleTour()
+        public static void Main(string[] args)
         {
             var localMasterKey = Convert.FromBase64String(LocalMasterKey);
 
@@ -117,7 +116,7 @@ namespace MongoDB.Driver.Examples
     {
         private const string LocalMasterKey = "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk";
 
-        public void ClientSideEncryptionAutoEncryptionSettingsTour()
+        public static void Main(string[] args)
         {
             var localMasterKey = Convert.FromBase64String(LocalMasterKey);
 

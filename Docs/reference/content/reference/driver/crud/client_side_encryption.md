@@ -50,15 +50,11 @@ client-side. The following example has been adapted from
 [`ClientSideEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ClientEncryptionExamples.cs), which can be found on GitHub along with the driver source. 
 
 ```csharp
-using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver.Encryption;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Examples
 {
@@ -109,15 +105,11 @@ example has been adapted from
 which can be found on Github along with the driver source.
 
 ```csharp
-using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Driver.Encryption;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Examples
 {

@@ -115,7 +115,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
                     "datakeys",
                     new MongoCollectionSettings
                     {
-                        AssignIdOnInsert = false
+                        AssignIdOnInsert = false,
+                        ReadConcern = ReadConcern.Majority,
+                        WriteConcern = WriteConcern.WMajority
                     });
                 var keyVaultDocuments = keyVaultData.AsBsonArray.Select(c => c.AsBsonDocument);
                 keyVaultCollection.InsertMany(keyVaultDocuments);

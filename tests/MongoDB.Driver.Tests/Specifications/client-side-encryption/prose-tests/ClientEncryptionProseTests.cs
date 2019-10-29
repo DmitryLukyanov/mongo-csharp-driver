@@ -478,7 +478,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "region", "us-east-1" },
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" }
                 };
-                testCase(testCaseMasterKey);
+                TestCase(testCaseMasterKey);
 
                 testCaseMasterKey = new BsonDocument
                 {
@@ -486,7 +486,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "kms.us-east-1.amazonaws.com" }
                 };
-                testCase(testCaseMasterKey);
+                TestCase(testCaseMasterKey);
 
                 testCaseMasterKey = new BsonDocument
                 {
@@ -494,7 +494,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "kms.us-east-1.amazonaws.com:443" }
                 };
-                testCase(testCaseMasterKey);
+                TestCase(testCaseMasterKey);
 
                 testCaseMasterKey = new BsonDocument
                 {
@@ -502,7 +502,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "kms.us-east-1.amazonaws.com:12345" }
                 };
-                var exception = Record.Exception(() => testCase(testCaseMasterKey));
+                var exception = Record.Exception(() => TestCase(testCaseMasterKey));
                 exception.InnerException.Should().BeAssignableTo<SocketException>();
 
                 testCaseMasterKey = new BsonDocument
@@ -511,7 +511,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "kms.us-east-2.amazonaws.com" }
                 };
-                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception = Record.Exception(() => TestCase(testCaseMasterKey));
                 exception.Should().NotBeNull();
                 exception.Message.Should().Contain("us-east-1");
 
@@ -521,7 +521,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "example.com" }
                 };
-                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception = Record.Exception(() => TestCase(testCaseMasterKey));
                 exception.Should().NotBeNull();
                 exception.Message.Should().Contain("parse error");
 
@@ -532,11 +532,11 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     { "key", "arn:aws:kms:us-east-1:579766882180:key/89fcc2c4-08b0-4bd9-9f25-e30687b580d0" },
                     { "endpoint", "$test$" }
                 };
-                exception = Record.Exception(() => testCase(testCaseMasterKey));
+                exception = Record.Exception(() => TestCase(testCaseMasterKey));
                 exception.Should().NotBeNull();
                 exception.InnerException.Should().BeAssignableTo<SocketException>();
 
-                void testCase(BsonDocument masterKey)
+                void TestCase(BsonDocument masterKey)
                 {
                     var dataKeyOptions = new DataKeyOptions(masterKey: masterKey);
                     var dataKey = CreateDataKey(clientEncryption, "aws", dataKeyOptions, async);

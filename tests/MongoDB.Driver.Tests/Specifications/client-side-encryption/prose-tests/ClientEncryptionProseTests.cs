@@ -856,7 +856,12 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         {
             return client
                 .GetDatabase(collectionNamespace.DatabaseNamespace.DatabaseName)
-                .GetCollection<BsonDocument>(collectionNamespace.CollectionName);
+                .GetCollection<BsonDocument>(collectionNamespace.CollectionName,
+                    new MongoCollectionSettings
+                    {
+                        ReadConcern = ReadConcern.Majority,
+                        WriteConcern = WriteConcern.WMajority
+                    });
         }
 
         private IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> GetKmsProviders()

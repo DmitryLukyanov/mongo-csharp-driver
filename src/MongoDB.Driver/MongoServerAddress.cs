@@ -14,6 +14,8 @@
 */
 
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using MongoDB.Bson.IO;
 
@@ -58,26 +60,6 @@ namespace MongoDB.Driver
         /// Parses a string representation of a server address.
         /// </summary>
         /// <param name="value">The string representation of a server address.</param>
-        /// <param name="defaultPort">The default port.</param>
-        /// <returns>A new instance of MongoServerAddress initialized with values parsed from the string.</returns>
-        public static MongoServerAddress Parse(string value, int defaultPort)
-        {
-            MongoServerAddress address;
-            if (TryParse(value, defaultPort, out address))
-            {
-                return address;
-            }
-            else
-            {
-                var message = string.Format("'{0}' is not a valid server address.", value);
-                throw new FormatException(message);
-            }
-        }
-
-        /// <summary>
-        /// Parses a string representation of a server address.
-        /// </summary>
-        /// <param name="value">The string representation of a server address.</param>
         /// <returns>A new instance of MongoServerAddress initialized with values parsed from the string.</returns>
         public static MongoServerAddress Parse(string value)
         {
@@ -97,10 +79,9 @@ namespace MongoDB.Driver
         /// Tries to parse a string representation of a server address.
         /// </summary>
         /// <param name="value">The string representation of a server address.</param>
-        /// <param name="defaultPort">The default port.</param>
         /// <param name="address">The server address (set to null if TryParse fails).</param>
         /// <returns>True if the string is parsed succesfully.</returns>
-        public static bool TryParse(string value, int defaultPort, out MongoServerAddress address)
+        public static bool TryParse(string value, out MongoServerAddress address)
         {
             // don't throw ArgumentNullException if value is null
             if (value != null)
@@ -110,7 +91,7 @@ namespace MongoDB.Driver
                 {
                     string host = match.Groups["host"].Value;
                     string portString = match.Groups["port"].Value;
-                    int port = (portString == "") ? defaultPort : JsonConvert.ToInt32(portString);
+                    int port = (portString == "") ? 27017 : JsonConvert.ToInt32(portString);
                     address = new MongoServerAddress(host, port);
                     return true;
                 }
@@ -118,17 +99,6 @@ namespace MongoDB.Driver
 
             address = null;
             return false;
-        }
-
-        /// <summary>
-        /// Tries to parse a string representation of a server address.
-        /// </summary>
-        /// <param name="value">The string representation of a server address.</param>
-        /// <param name="address">The server address (set to null if TryParse fails).</param>
-        /// <returns>True if the string is parsed succesfully.</returns>
-        public static bool TryParse(string value, out MongoServerAddress address)
-        {
-            return TryParse(value, 27017, out address);
         }
 
         // public properties

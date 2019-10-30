@@ -854,14 +854,14 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
 
         private IMongoCollection<BsonDocument> GetCollection(IMongoClient client, CollectionNamespace collectionNamespace)
         {
+            var collectionSettings = new MongoCollectionSettings
+            {
+                ReadConcern = ReadConcern.Majority,
+                WriteConcern = WriteConcern.WMajority
+            };
             return client
                 .GetDatabase(collectionNamespace.DatabaseNamespace.DatabaseName)
-                .GetCollection<BsonDocument>(collectionNamespace.CollectionName,
-                    new MongoCollectionSettings
-                    {
-                        ReadConcern = ReadConcern.Majority,
-                        WriteConcern = WriteConcern.WMajority
-                    });
+                .GetCollection<BsonDocument>(collectionNamespace.CollectionName, collectionSettings);
         }
 
         private IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> GetKmsProviders()

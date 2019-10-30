@@ -140,13 +140,23 @@ namespace MongoDB.Driver.Core.Misc
         /// <returns>An end point.</returns>
         public static EndPoint Parse(string value)
         {
+            return Parse(value, 27017);
+        }
+
+        /// <summary>
+        /// Parses the string representation of an end point.
+        /// </summary>
+        /// <param name="value">The value to parse.</param>
+        /// <param name="defaultPort">The default port.</param>
+        /// <returns>An end point.</returns>
+        public static EndPoint Parse(string value, int defaultPort)
+        {
             Ensure.IsNotNull(value, nameof(value));
 
-            EndPoint endPoint;
-            if (!TryParse(value, out endPoint))
+            if (!TryParse(value, defaultPort, out var endPoint))
             {
-                var message = string.Format("'{0}' is not a valid end point.", value);
-                throw new ArgumentException(message, "value");
+                var message = $"'{value}' is not a valid end point.";
+                throw new ArgumentException(message, nameof(value));
             }
 
             return endPoint;

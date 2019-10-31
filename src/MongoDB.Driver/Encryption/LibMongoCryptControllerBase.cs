@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -144,23 +145,18 @@ namespace MongoDB.Driver.Encryption
             return keyVaultDatabase.GetCollection<BsonDocument>(_keyVaultNamespace.CollectionName, collectionSettings);
         }
 
-        private void ParseEndpoint(string value, out string host, out int port)
+        private void ParseKmsEndPoint(string value, out string host, out int port)
         {
-            var endpoint = EndPointHelper.Parse(value, 443);
-            if (endpoint is DnsEndPoint dnsEndPoint)
+            var match = Regex.Match(value, @"^(?<host>.*):(?<port>\d+)$");
+            if (match.Success)
             {
-                host = dnsEndPoint.Host;
-                port = dnsEndPoint.Port;
-            }
-            else if (endpoint is IPEndPoint ipEndPoint)
-            {
-                host = ipEndPoint.Address.ToString();
-                port = ipEndPoint.Port;
+                host = match.Groups["host"].Value;
+                port = int.Parse(match.Groups["port"].Value);
             }
             else
             {
-                // not expected code path
-                throw new ArgumentException("Invalid endpoint value.", nameof(endpoint));
+                host = value;
+                port = 443;
             }
         }
 
@@ -212,7 +208,7 @@ namespace MongoDB.Driver.Encryption
         private void SendKmsRequest(KmsRequest request, CancellationToken cancellation)
         {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            ParseEndpoint(request.Endpoint, out var host, out var port);
+            ParseKmsEndPoint(request.Endpoint, out var host, out var port);
             socket.Connect(host, port);
 
             using (var networkStream = new NetworkStream(socket, ownsSocket: true))
@@ -241,7 +237,7 @@ namespace MongoDB.Driver.Encryption
         private async Task SendKmsRequestAsync(KmsRequest request, CancellationToken cancellation)
         {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            ParseEndpoint(request.Endpoint, out var host, out var port);
+            ParseKmsEndPoint(request.Endpoint, out var host, out var port);
 #if NETSTANDARD1_5
             await socket.ConnectAsync(host, port).ConfigureAwait(false);
 #else

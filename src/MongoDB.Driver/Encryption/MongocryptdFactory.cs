@@ -127,7 +127,6 @@ namespace MongoDB.Driver.Encryption
                 args = string.Empty;
                 if (_extraOptions.TryGetValue("mongocryptdSpawnArgs", out var mongocryptdSpawnArgs))
                 {
-                    string trimStartHyphens(string str) => str.TrimStart('-').TrimStart('-');
                     switch (mongocryptdSpawnArgs)
                     {
                         case string str:
@@ -136,7 +135,7 @@ namespace MongoDB.Driver.Encryption
                         case IEnumerable enumerable:
                             foreach (var item in enumerable)
                             {
-                                args += $"--{trimStartHyphens(item.ToString())} ";
+                                args += $"--{item.ToString().TrimStart('-')} ";
                             }
                             break;
                         default:

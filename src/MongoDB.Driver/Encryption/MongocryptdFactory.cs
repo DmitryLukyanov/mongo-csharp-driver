@@ -149,6 +149,16 @@ namespace MongoDB.Driver.Encryption
                 {
                     args += " --idleShutdownTimeoutSecs 60";
                 }
+
+                if (!args.Contains("logpath")) // disable logging by the mongocryptd process
+                {
+                    args += " --logpath nul";
+
+                    if (!args.Contains("logappend"))
+                    {
+                        args += " --logappend";
+                    }
+                }
                 args = args.Trim();
 
                 return true;
@@ -167,8 +177,6 @@ namespace MongoDB.Driver.Encryption
                     process.StartInfo.FileName = path;
                     process.StartInfo.CreateNoWindow = true;
                     process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.RedirectStandardOutput = true;
-                    process.StartInfo.RedirectStandardError = true;
 
                     if (!process.Start())
                     {

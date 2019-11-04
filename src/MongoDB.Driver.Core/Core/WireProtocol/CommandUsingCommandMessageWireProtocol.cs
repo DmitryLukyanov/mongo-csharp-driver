@@ -282,11 +282,11 @@ namespace MongoDB.Driver.Core.WireProtocol
                 {
                     if (_session.IsImplicit)
                     {
-                        // do not set sessionId If session is implicit and write is unacknowledged
+                        // do not set sessionId if session is implicit and write is unacknowledged
                     }
                     else
                     {
-                        throw new NotSupportedException("Explicit session must not be used with unacknowledged writes.");
+                        throw new InvalidOperationException("Explicit session must not be used with unacknowledged writes.");
                     }
                 }
             }

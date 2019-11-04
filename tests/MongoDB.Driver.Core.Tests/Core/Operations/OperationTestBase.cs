@@ -478,7 +478,8 @@ namespace MongoDB.Driver.Core.Operations
             }
             else
             {
-                ex.Should().BeOfType<NotSupportedException>();
+                var e = ex.Should().BeOfType<InvalidOperationException>().Subject;
+                e.Message.Should().Be("Explicit session must not be used with unacknowledged writes.");
             }
         }
 

@@ -1115,7 +1115,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            using (var readWriteBinding = CreateReadWriteBinding(useExplicitSessionIfSupported: false))
+            using (var readWriteBinding = CreateReadWriteBinding(useImplicitSession: true))
             using (var channelSource = readWriteBinding.GetWriteChannelSource(CancellationToken.None))
             using (var channel = channelSource.GetChannel(CancellationToken.None))
             using (var channelBinding = new ChannelReadWriteBinding(channelSource.Server, channel, readWriteBinding.Session.Fork()))
@@ -1159,7 +1159,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            using (var readWriteBinding = CreateReadWriteBinding(useExplicitSessionIfSupported: false))
+            using (var readWriteBinding = CreateReadWriteBinding(useImplicitSession: true))
             using (var channelSource = readWriteBinding.GetWriteChannelSource(CancellationToken.None))
             using (var channel = channelSource.GetChannel(CancellationToken.None))
             using (var channelBinding = new ChannelReadWriteBinding(channelSource.Server, channel, readWriteBinding.Session.Fork()))
@@ -1197,7 +1197,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            using (var readWriteBinding = CreateReadWriteBinding(useExplicitSessionIfSupported: false))
+            using (var readWriteBinding = CreateReadWriteBinding(useImplicitSession: true))
             using (var channelSource = readWriteBinding.GetWriteChannelSource(CancellationToken.None))
             using (var channel = channelSource.GetChannel(CancellationToken.None))
             using (var channelBinding = new ChannelReadWriteBinding(channelSource.Server, channel, readWriteBinding.Session.Fork()))
@@ -1235,7 +1235,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            using (var readWriteBinding = CreateReadWriteBinding(useExplicitSessionIfSupported: false))
+            using (var readWriteBinding = CreateReadWriteBinding(useImplicitSession: true))
             using (var channelSource = readWriteBinding.GetWriteChannelSource(CancellationToken.None))
             using (var channel = channelSource.GetChannel(CancellationToken.None))
             using (var channelBinding = new ChannelReadWriteBinding(channelSource.Server, channel, readWriteBinding.Session.Fork()))
@@ -1252,7 +1252,7 @@ namespace MongoDB.Driver.Core.Operations
         [SkippableTheory]
         [ParameterAttributeData]
         public void Execute_with_delete_should_not_send_session_id_when_unacknowledged_writes(
-            [Values(false, true)] bool useExplicitSession,
+            [Values(false, true)] bool useImplicitSession,
             [Values(false, true)] bool async)
         {
             RequireServer.Check();
@@ -1263,7 +1263,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "delete", async, useExplicitSession);
+            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "delete", async, useImplicitSession);
         }
 
         [SkippableTheory]
@@ -1282,7 +1282,7 @@ namespace MongoDB.Driver.Core.Operations
         [SkippableTheory]
         [ParameterAttributeData]
         public void Execute_with_insert_should_not_send_session_id_when_unacknowledged_writes(
-            [Values(false, true)] bool useExplicitSession,
+            [Values(false, true)] bool useImplicitSession,
             [Values(false, true)] bool async)
         {
             RequireServer.Check();
@@ -1293,7 +1293,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "insert", async, useExplicitSession);
+            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "insert", async, useImplicitSession);
         }
 
         [SkippableTheory]
@@ -1312,7 +1312,7 @@ namespace MongoDB.Driver.Core.Operations
         [SkippableTheory]
         [ParameterAttributeData]
         public void Execute_with_update_should_not_send_session_id_when_unacknowledged_writes(
-            [Values(false, true)] bool useExplicitSession,
+            [Values(false, true)] bool useImplicitSession,
             [Values(false, true)] bool async)
         {
             RequireServer.Check();
@@ -1323,7 +1323,7 @@ namespace MongoDB.Driver.Core.Operations
                 WriteConcern = WriteConcern.Unacknowledged
             };
 
-            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "update", async, useExplicitSession);
+            VerifySessionIdWasNotSentIfUnacknowledgedWrite(subject, "update", async, useImplicitSession);
         }
 
         [SkippableTheory]

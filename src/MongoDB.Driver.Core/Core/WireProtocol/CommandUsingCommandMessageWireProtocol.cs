@@ -274,7 +274,11 @@ namespace MongoDB.Driver.Core.WireProtocol
 
             if (_session.Id != null)
             {
-                if (IsSessionUnacknowledged())
+                if (IsSessionAcknowledged())
+                {
+                    AddIfNotAlreadyAdded("lsid", _session.Id);
+                }
+                else
                 {
                     if (_session.IsImplicit)
                     {
@@ -284,10 +288,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                     {
                         throw new NotSupportedException("Explicit session must not be used with unacknowledged writes.");
                     }
-                }
-                else
-                {
-                    AddIfNotAlreadyAdded("lsid", _session.Id);
                 }
             }
 
@@ -325,17 +325,16 @@ namespace MongoDB.Driver.Core.WireProtocol
                 }
             }
 
-            bool IsSessionUnacknowledged()
+            bool IsSessionAcknowledged()
             {
-                if (_command.TryGetValue("writeConcern", out var writeConcern))
+                if (_command.TryGetValue("writeConcern", out var writeConcernDocument))
                 {
-                    return !WriteConcern
-                        .FromBsonDocument(writeConcern.AsBsonDocument)
-                        .IsAcknowledged;
+                    var writeConcern = WriteConcern.FromBsonDocument(writeConcernDocument.AsBsonDocument);
+                    return writeConcern.IsAcknowledged;
                 }
                 else
                 {
-                    return false;
+                    return true;
                 }
             }
         }

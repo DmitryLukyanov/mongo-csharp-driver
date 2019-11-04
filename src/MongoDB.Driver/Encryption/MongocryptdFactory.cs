@@ -151,6 +151,7 @@ namespace MongoDB.Driver.Encryption
 
                 if (!args.Contains("logpath")) // disable logging by the mongocryptd process
                 {
+                    // "nul" is the windows specific value. Unix-based platforms should use "/dev/null"
                     args += " --logpath nul";
 
                     if (!args.Contains("logappend"))

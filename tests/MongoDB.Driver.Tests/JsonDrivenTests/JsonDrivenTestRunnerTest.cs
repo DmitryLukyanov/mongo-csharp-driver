@@ -31,6 +31,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _testRunner = testRunner;
         }
 
+        protected IClientSessionHandle Session => _session;
         protected IJsonDrivenTestRunner TestRunner => _testRunner;
 
         protected IServer GetPinnedServer()

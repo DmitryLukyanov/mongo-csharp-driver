@@ -59,6 +59,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "targetedFailPoint": return new JsonDrivenTargetedFailPointTest(_testRunner, _objectMap);
                         case "assertSessionPinned": return new JsonDrivenAssertSessionPinnedTest(_testRunner, _objectMap);
                         case "assertSessionUnpinned": return new JsonDrivenAssertSessionUnpinnedTest(_testRunner, _objectMap);
+                        case "assertSessionTransactionState": return new JsonDrivenAssertSessionTransactionStateTest(_testRunner, _objectMap);
                         default: throw new FormatException($"Invalid method name: \"{name}\".");
                     }
 

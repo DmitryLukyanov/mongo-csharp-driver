@@ -330,7 +330,10 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
 
             var transaction = _session.CurrentTransaction;
-            if (transaction != null && transaction.State == CoreTransactionState.Starting)
+            if (transaction != null &&
+                transaction.State == CoreTransactionState.Starting &&
+                message.WasSent) // we should not change a transaction state if a client side error has been thrown
+                                 // and a message hasn't been sent
             {
                 transaction.SetState(CoreTransactionState.InProgress);
             }

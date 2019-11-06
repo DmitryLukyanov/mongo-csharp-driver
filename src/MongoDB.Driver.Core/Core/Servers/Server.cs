@@ -363,21 +363,6 @@ namespace MongoDB.Driver.Core.Servers
 
         private bool ShouldInvalidateServer(Exception exception)
         {
-            // NOTE: this comment will be removed
-
-            // it looks like the expected behavior of this ticket can be simplified to this psseudo code:
-            // // after handshake
-            // if (channelException is TimeoutException)
-            // {
-            //     // probably just `RequestHeartbeat`
-            // }
-            // else
-            // {
-            //     Invalidate();
-            // }
-
-            // __invalidatingExceptions doesn't contain `TimeoutException`,
-            // so the result of this method will be `false` and we will not call `Invalidate`
             if (__invalidatingExceptions.Contains(exception.GetType()))
             {
                 return true;

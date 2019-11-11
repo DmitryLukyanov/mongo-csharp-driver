@@ -24,7 +24,7 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
 {
     public class WithTransactionExample1
     {
-        [Fact]
+        [SkippableFact]
         public void Example1()
         {
             RequireServer.Check().ClusterTypes(ClusterType.ReplicaSet, ClusterType.Sharded).Supports(Feature.Transactions);
@@ -34,7 +34,7 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
                 connectionString, 
                 CollectionNamespace.FromFullName("mydb1.foo"), 
                 CollectionNamespace.FromFullName("mydb2.bar"));
-            var result = string.Empty;
+            string result = null;
 
             // Start Transactions withTxn API Example 1
             // For a replica set, include the replica set name and a seedlist of the members in the URI string; e.g.
@@ -53,7 +53,7 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
             collection2.InsertOne(new BsonDocument("xyz", 0));
 
             // Step 1: Start a client session.
-            using (var clientSession = client.StartSession())
+            using (var session = client.StartSession())
             {
                 // Step 2: Optional. Define options to use for the transaction.
                 var transactionOptions = new TransactionOptions(
@@ -62,11 +62,11 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
                     writeConcern: WriteConcern.WMajority);
 
                 // Step 3: Define the sequence of operations to perform inside the transactions
-                result = clientSession.WithTransaction(
-                    (handle, token) =>
+                result = session.WithTransaction(
+                    (s, cancellationToken) =>
                     {
-                        collection1.InsertOne(clientSession, new BsonDocument("abc", 1));
-                        collection2.InsertOne(clientSession, new BsonDocument("xyz", 999));
+                        collection1.InsertOne(s, new BsonDocument("abc", 1), cancellationToken: cancellationToken);
+                        collection2.InsertOne(s, new BsonDocument("xyz", 999), cancellationToken: cancellationToken);
                         return "Inserted into collections in different databases";
                     },
                     transactionOptions);
@@ -75,15 +75,15 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
 
             result.Should().Be("Inserted into collections in different databases");
 
-            var abcDocuments = collection1.Find(FilterDefinition<BsonDocument>.Empty).ToList();
-            abcDocuments.Count.Should().Be(2);
-            abcDocuments[0]["abc"].Should().Be(0);
-            abcDocuments[1]["abc"].Should().Be(1);
+            var collection1Documents = collection1.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+            collection1Documents.Count.Should().Be(2);
+            collection1Documents[0]["abc"].Should().Be(0);
+            collection1Documents[1]["abc"].Should().Be(1);
 
-            var xyzDocuments = collection2.Find(FilterDefinition<BsonDocument>.Empty).ToList();
-            xyzDocuments.Count.Should().Be(2);
-            xyzDocuments[0]["xyz"].Should().Be(0);
-            xyzDocuments[1]["xyz"].Should().Be(999);
+            var collection2Documents = collection2.Find(FilterDefinition<BsonDocument>.Empty).ToList();
+            collection2Documents.Count.Should().Be(2);
+            collection2Documents[0]["xyz"].Should().Be(0);
+            collection2Documents[1]["xyz"].Should().Be(999);
         }
 
         // private methods

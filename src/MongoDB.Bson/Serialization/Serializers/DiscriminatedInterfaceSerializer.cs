@@ -23,7 +23,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// Represents a serializer for Interfaces.
     /// </summary>
     /// <typeparam name="TInterface">The type of the interface.</typeparam>
-    public class DiscriminatedInterfaceSerializer<TInterface> : SerializerBase<TInterface> // where TInterface is an interface
+    public class DiscriminatedInterfaceSerializer<TInterface> : SerializerBase<TInterface>, IBsonDocumentSerializer // where TInterface is an interface
     {
         // private fields
         private readonly Type _interfaceType;
@@ -108,6 +108,26 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 args.NominalType = typeof(object);
                 _objectSerializer.Serialize(context, args, value);
+            }
+        }
+
+        /// <inheritdoc />
+        public bool TryGetMemberSerializationInfo(string memberName, out BsonSerializationInfo serializationInfo)
+        {
+            var memberType = _interfaceType.GetTypeInfo().GetProperty(memberName);
+            if (memberType != null)
+            {
+                var serializer = BsonSerializer.LookupSerializer(memberType.PropertyType);
+                serializationInfo = new BsonSerializationInfo(
+                    memberName,
+                    serializer,
+                    typeof(TInterface));
+                return true;
+            }
+            else
+            {
+                serializationInfo = null;
+                return false;
             }
         }
     }

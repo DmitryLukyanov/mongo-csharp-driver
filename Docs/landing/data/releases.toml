@@ -1,7 +1,7 @@
 current = "2.9.3"
 
 [[versions]]
-  version = "2.10.0"
+  version = "2.10.0-beta1"
   docs = "./2.10/"
   api = "./2.10/apidocs"
 

@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
@@ -62,14 +63,16 @@ namespace MongoDB.Driver.Examples.TransactionExamplesForDocs
                     writeConcern: WriteConcern.WMajority);
 
                 // Step 3: Define the sequence of operations to perform inside the transactions
+                var cancellationToken = CancellationToken.None; // normally a real token would be used
                 result = session.WithTransaction(
-                    (s, cancellationToken) =>
+                    (s, ct) =>
                     {
-                        collection1.InsertOne(s, new BsonDocument("abc", 1), cancellationToken: cancellationToken);
-                        collection2.InsertOne(s, new BsonDocument("xyz", 999), cancellationToken: cancellationToken);
+                        collection1.InsertOne(s, new BsonDocument("abc", 1), cancellationToken: ct);
+                        collection2.InsertOne(s, new BsonDocument("xyz", 999), cancellationToken: ct);
                         return "Inserted into collections in different databases";
                     },
-                    transactionOptions);
+                    transactionOptions,
+                    cancellationToken);
             }
             //End Transactions withTxn API Example 1
 

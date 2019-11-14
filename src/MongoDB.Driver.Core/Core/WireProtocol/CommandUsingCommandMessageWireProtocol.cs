@@ -102,8 +102,10 @@ namespace MongoDB.Driver.Core.WireProtocol
                 }
                 finally
                 {
-                    MessageWasProbablySent(message);
-                    UpdateTransactionStateIfRequired(message);
+                    if (message.WasSent)
+                    {
+                        MessageWasProbablySent(message);
+                    }
                 }
 
                 if (message.WrappedMessage.ResponseExpected)
@@ -142,8 +144,10 @@ namespace MongoDB.Driver.Core.WireProtocol
                 }
                 finally
                 {
-                    MessageWasProbablySent(message);
-                    UpdateTransactionStateIfRequired(message);
+                    if (message.WasSent)
+                    {
+                        MessageWasProbablySent(message);
+                    }
                 }
 
                 if (message.WrappedMessage.ResponseExpected)
@@ -330,6 +334,12 @@ namespace MongoDB.Driver.Core.WireProtocol
             {
                 _session.WasUsed();
             }
+
+            var transaction = _session.CurrentTransaction;
+            if (transaction != null && transaction.State == CoreTransactionState.Starting)
+            {
+                transaction.SetState(CoreTransactionState.InProgress);
+            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")]
@@ -447,18 +457,6 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
 
             return false;
-        }
-
-        private void UpdateTransactionStateIfRequired(RequestMessage message)
-        {
-            var transaction = _session.CurrentTransaction;
-            if (transaction != null &&
-                transaction.State == CoreTransactionState.Starting &&
-                message.WasSent) // we should not change a transaction state if a client side error has been thrown
-                // and a message hasn't been sent
-            {
-                transaction.SetState(CoreTransactionState.InProgress);
-            }
         }
 
         private MongoException WrapNotSupportedRetryableWriteException(MongoCommandException exception)

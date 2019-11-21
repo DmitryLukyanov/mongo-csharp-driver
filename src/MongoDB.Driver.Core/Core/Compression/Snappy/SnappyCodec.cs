@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
                 var inputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(input, offset);
                 var outputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(output, outOffset);
 
-                var status = SnappyNativeMethods.Instance.snappy_compress(inputPtr, length, outputPtr, ref outLength);
+                var status = SnappyNativeMethods.snappy_compress(inputPtr, length, outputPtr, ref outLength);
                 switch (status)
                 {
                     case SnappyStatus.Ok:
@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
 
         public static int GetMaxCompressedLength(int inLength)
         {
-            return SnappyNativeMethods.Instance.snappy_max_compressed_length(inLength);
+            return SnappyNativeMethods.snappy_max_compressed_length(inLength);
         }
 
         public static int GetUncompressedLength(byte[] input, int offset, int length)
@@ -98,7 +98,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
             try
             {
                 var inputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(input, offset);
-                var status = SnappyNativeMethods.Instance.snappy_uncompressed_length(inputPtr, length, out var outLength);
+                var status = SnappyNativeMethods.snappy_uncompressed_length(inputPtr, length, out var outLength);
                 switch (status)
                 {
                     case SnappyStatus.Ok:
@@ -143,7 +143,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
                 var inputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(input, offset);
                 var outputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(output, outOffset);
 
-                var status = SnappyNativeMethods.Instance.snappy_uncompress(inputPtr, length, outputPtr, ref outLength);
+                var status = SnappyNativeMethods.snappy_uncompress(inputPtr, length, outputPtr, ref outLength);
                 switch (status)
                 {
                     case SnappyStatus.Ok:
@@ -187,7 +187,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
             try
             {
                 var inputPtr = Marshal.UnsafeAddrOfPinnedArrayElement(input, offset);
-                return SnappyNativeMethods.Instance.snappy_validate_compressed_buffer(inputPtr, length) == SnappyStatus.Ok;
+                return SnappyNativeMethods.snappy_validate_compressed_buffer(inputPtr, length) == SnappyStatus.Ok;
             }
             finally
             {

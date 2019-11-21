@@ -29,46 +29,28 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         MacOS
     }
 
-    internal interface INativeLibrarySource
+    internal interface INativeLibrary
     {
         T GetFunction<T>(string name);
     }
 
-    internal class NativeLibrarySource : INativeLibrarySource
+    internal class NativeLibrary : INativeLibrary
     {
         private readonly string _libraryName;
-        private readonly Lazy<INativeLibraryLoader> _loader;
+        private readonly INativeLibraryLoader _loader;
 
-        public NativeLibrarySource(IDictionary<SupportedPlatforms, string> libraryRelativePaths, Func<bool, string> getLibraryNameFunc)
+        public NativeLibrary(IDictionary<SupportedPlatforms, string> libraryRelativePaths, string libraryName)
         {
-            _libraryName = Ensure.IsNotNull(getLibraryNameFunc(Is64BitnessPlatform), nameof(getLibraryNameFunc));
+            _libraryName = Ensure.IsNotNull(libraryName, nameof(libraryName));
             Ensure.IsNotNull(libraryRelativePaths, nameof(libraryRelativePaths));
-
-            _loader = new Lazy<INativeLibraryLoader>(() => CreateLibraryLoader(libraryRelativePaths), isThreadSafe: true);
-        }
-
-        public NativeLibrarySource(IDictionary<SupportedPlatforms, string> libraryRelativePaths, string libraryName)
-            : this(libraryRelativePaths, b => libraryName)
-        {
-        }
-
-        public bool Is64BitnessPlatform
-        {
-            get
-            {
-#if NET452 || NETSTANDARD2_0
-                var is64Bit = Environment.Is64BitProcess;
-#else
-                var is64Bit = IntPtr.Size == 8;
-#endif
-                return is64Bit;
-            }
+            ThrowIfNotSupportedPlatform();
+            _loader = CreateLibraryLoader(libraryRelativePaths);
         }
 
         // public methods
         public T GetFunction<T>(string name)
         {
-            return GetFunction<T>(_loader.Value, name);
+            return GetFunction<T>(_loader, name);
         }
 
         // private methods
@@ -124,7 +106,7 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         {
             var candidatePaths = new List<string>();
 
-            var assembly = typeof(NativeLibrarySource).GetTypeInfo().Assembly;
+            var assembly = typeof(NativeLibrary).GetTypeInfo().Assembly;
             var codeBase = assembly.CodeBase;
             var uri = new Uri(codeBase);
             var location = uri.AbsolutePath;
@@ -166,6 +148,19 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
             }
 
             return Marshal.GetDelegateForFunctionPointer<T>(ptr);
+        }
+
+        private void ThrowIfNotSupportedPlatform()
+        {
+#if NET452 || NETSTANDARD2_0
+            var is64Bit = Environment.Is64BitProcess;
+#else
+            var is64Bit = IntPtr.Size == 8;
+#endif
+            if (!is64Bit)
+            {
+                throw new PlatformNotSupportedException($"Native library {_libraryName} can be loaded only in a 64-bit process.");
+            }
         }
     }
 }

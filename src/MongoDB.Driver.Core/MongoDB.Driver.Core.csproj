@@ -43,7 +43,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="snappy32.dll" />
     <None Remove="snappy64.dll" />
   </ItemGroup>
 
@@ -80,9 +79,6 @@
 
   <ItemGroup>
     <Content Include="snappy64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="snappy32.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

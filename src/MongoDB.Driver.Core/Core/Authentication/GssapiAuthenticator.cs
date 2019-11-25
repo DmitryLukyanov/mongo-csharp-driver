@@ -177,6 +177,7 @@ namespace MongoDB.Driver.Core.Authentication
         {
             // fields
             private readonly bool _canonicalizeHostName;
+            private readonly IDnsResolver _dnsResolver;
             private readonly SecureString _password;
             private readonly string _realm;
             private readonly string _serviceName;
@@ -189,6 +190,7 @@ namespace MongoDB.Driver.Core.Authentication
                 _realm = realm;
                 _username = Ensure.IsNotNullOrEmpty(username, nameof(username));
                 _password = password;
+                _dnsResolver = new DnsClientWrapper();
             }
 
             public string Name
@@ -218,15 +220,7 @@ namespace MongoDB.Driver.Core.Authentication
 
                 if (_canonicalizeHostName)
                 {
-#if NETSTANDARD1_5 || NETSTANDARD1_6
-                    var entry = Dns.GetHostEntryAsync(hostName).GetAwaiter().GetResult();
-#else
-                    var entry = Dns.GetHostEntry(hostName);
-#endif
-                    if (entry != null)
-                    {
-                        hostName = entry.HostName;
-                    }
+                    hostName = _dnsResolver.GetCanonicalHostName(hostName);
                 }
 
                 return new FirstStep(_serviceName, hostName, _realm, _username, _password, conversation);

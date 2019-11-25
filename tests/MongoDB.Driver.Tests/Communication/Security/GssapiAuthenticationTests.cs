@@ -15,10 +15,9 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
-using MongoDB.Driver.Core.Authentication;
-using MongoDB.Driver.Core.Configuration;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Communication.Security
@@ -34,6 +33,19 @@ namespace MongoDB.Driver.Tests.Communication.Security
         public GssapiAuthenticationTests()
         {
             _settings = MongoClientSettings.FromUrl(new MongoUrl(CoreTestConfiguration.ConnectionString.ToString()));
+        }
+
+        [SkippableFact]
+        public void Canonicalize_host_name_with_GSSAPI_should_work_as_expected()
+        {
+            RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
+
+            var hostEntry = Dns.GetHostEntry("LDAPTEST.10GEN.CC");
+            var ipAddress = hostEntry.AddressList.First();;
+            var connectionString = $"mongodb://drivers%40LDAPTEST.10GEN.CC:powerbook17@{ipAddress}/kerberos?authMechanism=GSSAPI&authMechanismProperties=CANONICALIZE_HOST_NAME:true";
+            var client = new MongoClient(connectionString);
+            var db = client.GetDatabase("db");
+            db.RunCommand<BsonDocument>(new BsonDocument("ping", 1));
         }
 
         [SkippableFact]

@@ -38,6 +38,19 @@ namespace MongoDB.Driver.Core.Misc
         public LookupClient LookupClient => _lookupClient;
 
         // public methods
+        public string GetCanonicalHostName(string hostNameOrAddress)
+        {
+            var hostEntry = _lookupClient.GetHostEntry(hostNameOrAddress);
+            if (hostEntry.Aliases != null && hostEntry.Aliases.Length > 0)
+            {
+                return hostEntry.Aliases[0];
+            }
+            else
+            {
+                return hostNameOrAddress;
+            }
+        }
+
         public List<SrvRecord> ResolveSrvRecords(string service, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(service, nameof(service));

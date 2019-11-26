@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Tests.Communication.Security
     {
         private static readonly string __collectionName = "test";
 
-        private MongoClientSettings _settings;
+        private readonly MongoClientSettings _settings;
 
         public GssapiAuthenticationTests()
         {
@@ -36,13 +36,16 @@ namespace MongoDB.Driver.Tests.Communication.Security
         }
 
         [SkippableFact]
-        public void Canonicalize_host_name_with_GSSAPI_should_work_as_expected()
+        public void Authentication_with_canonicalize_host_name_should_work_as_expected()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
 
-            var hostEntry = Dns.GetHostEntry("LDAPTEST.10GEN.CC");
-            var ipAddress = hostEntry.AddressList.First();;
-            var connectionString = $"mongodb://drivers%40LDAPTEST.10GEN.CC:powerbook17@{ipAddress}/kerberos?authMechanism=GSSAPI&authMechanismProperties=CANONICALIZE_HOST_NAME:true";
+            var authHost = Environment.GetEnvironmentVariable("AUTH_HOST") ?? throw new Exception("AUTH_HOST has not been configured.");
+            var authGssapi = Environment.GetEnvironmentVariable("AUTH_GSSAPI") ?? throw new Exception("AUTH_GSSAPI has not been configured.");
+            var hostEntry = Dns.GetHostEntry(authHost);
+            var ipAddress = hostEntry.AddressList.First();
+            var connectionString = $"mongodb://{authGssapi}@{ipAddress}/kerberos?authMechanism=GSSAPI&authMechanismProperties=CANONICALIZE_HOST_NAME:true";
+
             var client = new MongoClient(connectionString);
             var db = client.GetDatabase("db");
             db.RunCommand<BsonDocument>(new BsonDocument("ping", 1));
@@ -91,7 +94,7 @@ namespace MongoDB.Driver.Tests.Communication.Security
 
             var client = new MongoClient(_settings);
 
-            Assert.Throws<TimeoutException>(() =>
+            Assert.Throws<MongoAuthenticationException>(() =>
             {
                 client
                     .GetDatabase(DriverTestConfiguration.DatabaseNamespace.DatabaseName)

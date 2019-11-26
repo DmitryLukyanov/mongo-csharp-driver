@@ -230,6 +230,15 @@ functions:
           # DO NOT ECHO WITH XTRACE (which PREPARE_SHELL does)
           ATLAS_FREE="${ATLAS_FREE}" ATLAS_FREE_SRV="${ATLAS_FREE_SRV}" ATLAS_REPLICA="${ATLAS_REPLICA}" ATLAS_REPLICA_SRV="${ATLAS_REPLICA_SRV}" ATLAS_SHARDED="${ATLAS_SHARDED}" ATLAS_SHARDED_SRV="${ATLAS_SHARDED_SRV}" ATLAS_TLS11="${ATLAS_TLS11}" ATLAS_TLS11_SRV="${ATLAS_TLS11_SRV}" ATLAS_TLS12="${ATLAS_TLS12}" ATLAS_TLS12_SRV="${ATLAS_TLS12_SRV}" evergreen/run-atlas-connectivity-tests.sh
 
+  run-gssapi-auth-tests:
+    - command: shell.exec
+      type: test
+      params:
+        working_dir: mongo-csharp-driver
+        script: |
+          ${PREPARE_SHELL}
+          MONGODB_URI="${gssapi_auth_mongodb_uri}" evergreen/run-gssapi-auth-tests.sh
+    
   run-plain-auth-tests:
     - command: shell.exec
       type: test
@@ -340,6 +349,13 @@ tasks:
           name: compile
       commands:
         - func: run-atlas-connectivity-tests
+
+    - name: gssapi-auth-tests
+      depends_on:
+        - variant: windows-64-compile
+          name: compile
+      commands:
+        - func: run-gssapi-auth-tests
 
     - name: plain-auth-tests
       depends_on:
@@ -496,6 +512,13 @@ buildvariants:
     - windows-64-vs2017-test
   tasks:
     - name: atlas-connectivity-tests
+
+- name: gssapi-auth-tests
+  display_name: "GSSAPI (Kerberos) Auth tests"
+  run_on:
+    - windows-64-vs2017-test
+  tasks:
+    - name: gssapi-auth-tests
 
 # - name: plain-auth-tests
 #   display_name: "PLAIN (LDAP) Auth tests"

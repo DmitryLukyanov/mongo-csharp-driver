@@ -145,6 +145,24 @@ Task("TestAtlasConnectivity")
     );
 });
 
+Task("TestGssapi")
+    .IsDependentOn("Build")
+    .DoesForEach(
+        GetFiles("./**/MongoDB.Driver.Tests.csproj"),
+        testProject => 
+{
+    DotNetCoreTest(
+        testProject.FullPath,
+        new DotNetCoreTestSettings {
+            NoBuild = true,
+            NoRestore = true,
+            Configuration = configuration,
+            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64"),
+			Filter = "Category=\"GssapiMechanism\""
+        }
+    );
+});
+
 Task("Docs")
     .IsDependentOn("ApiDocs")
     .IsDependentOn("RefDocs");

@@ -33,6 +33,27 @@ namespace MongoDB.Driver.Core.Clusters
             subject.LookupClient.Should().NotBeNull();
         }
 
+        [Theory]
+        [InlineData("test", "test")]
+        [InlineData("test.test", "test.test")]
+        [InlineData("127.0.0", null)]
+        public void GetHostNameWithReverseDnsLookup_should_return_input_value_for_incorrect_host_name(string host, string expectedHost)
+        {
+            var subject = new DnsClientWrapper();
+
+            var result = subject.GetHostNameWithReverseDnsLookup(host);
+            result.Should().Be(expectedHost);
+        }
+
+        [Fact]
+        public void GetHostNameWithReverseDnsLookup_should_throw_when_host_is_null()
+        {
+            var subject = new DnsClientWrapper();
+
+            var exception = Record.Exception(() => subject.GetHostNameWithReverseDnsLookup(null));
+            exception.Should().BeOfType<ArgumentNullException>();
+        }
+
         [Fact]
         public void LookupClient_should_return_expected_result()
         {
@@ -41,17 +62,6 @@ namespace MongoDB.Driver.Core.Clusters
             var result = subject.LookupClient;
 
             result.Should().NotBeNull();
-        }
-
-        [Theory]
-        [InlineData("ldaptest.10gen.cc", "ldaptest.10gen.cc")]
-        [InlineData("ec2-54-225-237-121.compute-1.amazonaws.com", "ec2-54-225-237-121.compute-1.amazonaws.com")]
-        [InlineData("54.225.237.121", "ldaptest.10gen.cc")]
-        public void GetHostNameWithReverseDnsLookup_should_return_expected_result(string hostName, string expectedHostName)
-        {
-            var subject = new DnsClientWrapper();
-            var result = subject.GetHostNameWithReverseDnsLookup(hostName);
-            result.Should().Be(expectedHostName);
         }
 
         [Theory]

@@ -41,14 +41,18 @@ namespace MongoDB.Driver.Core.Misc
         public string GetHostNameWithReverseDnsLookup(string hostNameOrAddress)
         {
             var hostEntry = _lookupClient.GetHostEntry(hostNameOrAddress);
-            if (hostEntry.Aliases != null && hostEntry.Aliases.Length > 0)
+            if (hostEntry != null)
             {
-                return hostEntry.Aliases[0];
+                if (hostEntry.Aliases != null && hostEntry.Aliases.Length > 0)
+                {
+                    return hostEntry.Aliases[0];
+                }
+                else
+                {
+                    return hostEntry.HostName;
+                }
             }
-            else
-            {
-                return hostNameOrAddress;
-            }
+            return null;
         }
 
         public List<SrvRecord> ResolveSrvRecords(string service, CancellationToken cancellationToken)

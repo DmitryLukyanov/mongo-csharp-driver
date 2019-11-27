@@ -25,7 +25,4 @@ fi;
 
 export EXPLICIT=true
 
-# Arguments for AUTH_GSSAPI + AUTH_HOST
-export MONGODB_URI="mongodb://${AUTH_GSSAPI}@${AUTH_HOST}:27017/kerberos?authMechanism=GSSAPI"
-
 powershell.exe .\\build.ps1 -target TestGssapi

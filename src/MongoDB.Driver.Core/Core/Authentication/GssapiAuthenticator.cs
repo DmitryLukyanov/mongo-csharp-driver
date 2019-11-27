@@ -220,7 +220,11 @@ namespace MongoDB.Driver.Core.Authentication
 
                 if (_canonicalizeHostName)
                 {
-                    hostName = _dnsResolver.GetHostNameWithReverseDnsLookup(hostName);
+                    var canonicalizedHostName = _dnsResolver.GetHostNameWithReverseDnsLookup(hostName);
+                    if (canonicalizedHostName != null)
+                    {
+                        hostName = canonicalizedHostName;
+                    }
                 }
 
                 return new FirstStep(_serviceName, hostName, _realm, _username, _password, conversation);

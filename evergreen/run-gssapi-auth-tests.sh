@@ -4,7 +4,8 @@
 set -o errexit  # Exit the script with error if any of the commands fail
 
 # Supported/used environment variables:
-#       MONGODB_URI             Set the URI, including username/password to use to connect to the server via GSSAPI authentication mechanism
+#       AUTH_HOST             Set the hostname of a key distribution center (KDC)
+#       AUTH_GSSAPI           Set the GSSAPI credentials, including a user principal/password to use to connect to AUTH_HOST server via GSSAPI authentication mechanism
 
 ############################################
 #            Main Program                  #

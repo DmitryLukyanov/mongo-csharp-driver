@@ -38,7 +38,7 @@ namespace MongoDB.Driver.Core.Misc
         public LookupClient LookupClient => _lookupClient;
 
         // public methods
-        public string GetCanonicalHostName(string hostNameOrAddress)
+        public string GetHostNameWithReverseDnsLookup(string hostNameOrAddress)
         {
             var hostEntry = _lookupClient.GetHostEntry(hostNameOrAddress);
             if (hostEntry.Aliases != null && hostEntry.Aliases.Length > 0)

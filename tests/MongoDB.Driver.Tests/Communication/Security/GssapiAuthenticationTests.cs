@@ -28,15 +28,8 @@ namespace MongoDB.Driver.Tests.Communication.Security
     {
         private static readonly string __collectionName = "test";
 
-        private readonly MongoClientSettings _settings;
-
-        public GssapiAuthenticationTests()
-        {
-            _settings = MongoClientSettings.FromUrl(new MongoUrl(CoreTestConfiguration.ConnectionString.ToString()));
-        }
-
         [SkippableFact]
-        public void Authentication_with_canonicalize_host_name_should_work_as_expected()
+        public void Authentication_with_canonicalize_host_name_and_ip_host_should_work_as_expected()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
 
@@ -55,8 +48,10 @@ namespace MongoDB.Driver.Tests.Communication.Security
         public void TestNoCredentials()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
-            _settings.Credential = null;
-            var client = new MongoClient(_settings);
+
+            var clientSettings = CreateClientSettings();
+            clientSettings.Credential = null;
+            var client = new MongoClient(clientSettings);
 
             Assert.Throws<MongoCommandException>(() =>
             {
@@ -74,7 +69,9 @@ namespace MongoDB.Driver.Tests.Communication.Security
         public void TestSuccessfulAuthentication()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
-            var client = new MongoClient(_settings);
+
+            var clientSettings = CreateClientSettings();
+            var client = new MongoClient(clientSettings);
 
             var result = client
                 .GetDatabase(DriverTestConfiguration.DatabaseNamespace.DatabaseName)
@@ -89,10 +86,12 @@ namespace MongoDB.Driver.Tests.Communication.Security
         public void TestBadPassword()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
-            var currentCredentialUsername = _settings.Credential.Username;
-            _settings.Credential = MongoCredential.CreateGssapiCredential(currentCredentialUsername, "wrongPassword");
 
-            var client = new MongoClient(_settings);
+            var clientSettings = CreateClientSettings();
+            var currentCredentialUsername = clientSettings.Credential.Username;
+            clientSettings.Credential = MongoCredential.CreateGssapiCredential(currentCredentialUsername, "wrongPassword");
+
+            var client = new MongoClient(clientSettings);
 
             Assert.Throws<MongoAuthenticationException>(() =>
             {
@@ -102,6 +101,12 @@ namespace MongoDB.Driver.Tests.Communication.Security
                     .FindSync(new BsonDocument())
                     .ToList();
             });
+        }
+
+        // private methods
+        private MongoClientSettings CreateClientSettings()
+        {
+            return MongoClientSettings.FromUrl(new MongoUrl(CoreTestConfiguration.ConnectionString.ToString()));
         }
     }
 }

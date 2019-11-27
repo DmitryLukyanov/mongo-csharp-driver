@@ -158,7 +158,7 @@ Task("TestGssapi")
             NoRestore = true,
             Configuration = configuration,
             ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64"),
-			Filter = "Category=\"GssapiMechanism\""
+            Filter = "Category=\"GssapiMechanism\""
         }
     );
 });

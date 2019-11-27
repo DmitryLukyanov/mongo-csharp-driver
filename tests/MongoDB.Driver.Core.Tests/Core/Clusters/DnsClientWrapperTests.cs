@@ -44,6 +44,17 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+        [InlineData("ldaptest.10gen.cc", "ldaptest.10gen.cc")]
+        [InlineData("ec2-54-225-237-121.compute-1.amazonaws.com", "ec2-54-225-237-121.compute-1.amazonaws.com")]
+        [InlineData("54.225.237.121", "ldaptest.10gen.cc")]
+        public void GetHostNameWithReverseDnsLookup_should_return_expected_result(string hostName, string expectedHostName)
+        {
+            var subject = new DnsClientWrapper();
+            var result = subject.GetHostNameWithReverseDnsLookup(hostName);
+            result.Should().Be(expectedHostName);
+        }
+
+        [Theory]
         [InlineData("_mongodb._tcp.test5.test.build.10gen.cc", new[] { "localhost.test.build.10gen.cc.:27017" }, false)]
         [InlineData("_mongodb._tcp.test5.test.build.10gen.cc", new[] { "localhost.test.build.10gen.cc.:27017" }, true)]
         public void ResolveSrvRecords_should_return_expected_result(string service, string[] expectedEndPoints, bool async)

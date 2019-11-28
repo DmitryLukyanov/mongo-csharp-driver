@@ -150,6 +150,52 @@ namespace MongoDB.Driver.Core.Operations
             subject.WriteConcern.Should().Be(WriteConcern.W2);
         }
 
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void Execute_should_send_BypassDocumentValidation_only_if_value_is_true_for_insert_and_update_requests(
+            [Values(null, false, true)] bool? bypassDocumentValidation)
+        {
+            DropCollection();
+
+            using (EventContext.BeginOperation())
+            {
+                var commandsToCapture = new[] { "insert", "update" };
+                var eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => commandsToCapture.Contains(e.CommandName) && e.OperationId == EventContext.OperationId);
+                using (var cluster = CoreTestConfiguration.CreateCluster(b => b.Subscribe(eventCapturer)))
+                using (var session = NoCoreSession.NewHandle())
+                using (var binding = new ReadWriteBindingHandle(new WritableServerBinding(cluster, session.Fork())))
+                {
+                    var insertDocument = CreateDocument(1, 1);
+                    var insertRequest = new InsertRequest(insertDocument);
+                    var updateRequest = CreateUpdateRequest(1);
+                    var writeRequests = new WriteRequest[] { insertRequest, updateRequest };
+                    var operation = new BulkMixedWriteOperation(_collectionNamespace, writeRequests, _messageEncoderSettings)
+                    {
+                        BypassDocumentValidation = bypassDocumentValidation
+                    };
+
+                    var result = ExecuteOperation(operation, binding, async: false);
+
+                    result.RequestCount.Should().Be(writeRequests.Length);
+                    result.InsertedCount.Should().Be(1);
+                    result.ModifiedCount.Should().Be(1);
+                    var commandStartedEvents = eventCapturer.Events.OfType<CommandStartedEvent>().ToList();
+                    foreach (var commandStartedEvent in commandStartedEvents)
+                    {
+                        var command = commandStartedEvent.Command;
+                        if (bypassDocumentValidation.GetValueOrDefault())
+                        {
+                            command["bypassDocumentValidation"].AsBoolean.Should().BeTrue();
+                        }
+                        else
+                        {
+                            command.Contains("bypassDocumentValidation").Should().BeFalse();
+                        }
+                    }
+                }
+            }
+        }
+
         [Theory]
         [ParameterAttributeData]
         public void Execute_with_zero_requests_should_throw_an_exception(

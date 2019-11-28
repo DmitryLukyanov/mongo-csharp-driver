@@ -302,7 +302,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 { "aggregate", _collectionNamespace.CollectionName },
                 { "pipeline", new BsonArray(__pipeline) },
-                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation != null && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
+                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
                 { "cursor", new BsonDocument(), serverVersion >= new SemanticVersion(3, 5, 0) }
             };
             result.Should().Be(expectedResult);

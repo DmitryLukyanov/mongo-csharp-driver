@@ -262,7 +262,7 @@ namespace MongoDB.Driver.Core.Operations
                 { "aggregate", _collectionNamespace == null ? (BsonValue)1 : _collectionNamespace.CollectionName },
                 { "pipeline", new BsonArray(_pipeline) },
                 { "allowDiskUse", () => _allowDiskUse.Value, _allowDiskUse.HasValue },
-                { "bypassDocumentValidation", () => _bypassDocumentValidation.Value, _bypassDocumentValidation.HasValue && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
+                { "bypassDocumentValidation", () => _bypassDocumentValidation.Value, _bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
                 { "maxTimeMS", () => MaxTimeHelper.ToMaxTimeMS(_maxTime.Value), _maxTime.HasValue },
                 { "collation", () => _collation.ToBsonDocument(), _collation != null },
                 { "readConcern", readConcern, readConcern != null },

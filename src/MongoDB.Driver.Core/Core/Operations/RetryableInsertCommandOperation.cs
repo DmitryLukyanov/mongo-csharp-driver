@@ -115,7 +115,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 { "insert", _collectionNamespace.CollectionName },
                 { "ordered", IsOrdered },
-                { "bypassDocumentValidation", () => _bypassDocumentValidation, _bypassDocumentValidation.HasValue },
+                { "bypassDocumentValidation", () => _bypassDocumentValidation, _bypassDocumentValidation.GetValueOrDefault() },
                 { "writeConcern", writeConcern, writeConcern != null },
                 { "txnNumber", () => transactionNumber.Value, transactionNumber.HasValue }
             };

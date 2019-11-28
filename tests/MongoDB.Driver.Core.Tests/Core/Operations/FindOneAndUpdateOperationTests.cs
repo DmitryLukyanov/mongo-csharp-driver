@@ -274,7 +274,7 @@ namespace MongoDB.Driver.Core.Operations
                 { "findAndModify", _collectionNamespace.CollectionName },
                 { "query", _filter },
                 { "update", _update },
-                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation.HasValue && Feature.BypassDocumentValidation.IsSupported(serverVersion) }
+                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion) }
             };
             result.Should().Be(expectedResult);
         }

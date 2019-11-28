@@ -176,7 +176,7 @@ namespace MongoDB.Driver.Core.Operations
                 { "upsert", true, _isUpsert },
                 { "maxTimeMS", () => MaxTimeHelper.ToMaxTimeMS(_maxTime.Value), _maxTime.HasValue },
                 { "writeConcern", writeConcern, writeConcern != null },
-                { "bypassDocumentValidation", () => _bypassDocumentValidation.Value, _bypassDocumentValidation.HasValue && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
+                { "bypassDocumentValidation", () => _bypassDocumentValidation.Value, _bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion) },
                 { "collation", () => Collation.ToBsonDocument(), Collation != null },
                 { "txnNumber", () => transactionNumber, transactionNumber.HasValue }
             };

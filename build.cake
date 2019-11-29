@@ -224,11 +224,12 @@ Task("RefDocs")
         var artifactsReferencePublicDirectory = artifactsDocsRefDocsDirectory.Combine(gitVersion.Major + "." + gitVersion.Minor);
         CopyDirectory(referencePublicDirectory, artifactsReferencePublicDirectory);
 
-        var refDocsZipFileName = artifactsDocsRefDocsDirectory.GetDirectoryName() + "-html.zip";
-        var refDocsZipFile = artifactsDocsDirectory.CombineWithFilePath(refDocsZipFileName);
-        Zip(artifactsDocsRefDocsDirectory, refDocsZipFile);
-
-        DeleteDirectory(artifactsDocsRefDocsDirectory, recursive: true);
+        var artifactsDocsRefDocsHtmlDirectory = MakeAbsolute(Directory(artifactsDocsRefDocsDirectory.FullPath + "-html"));
+        if (DirectoryExists(artifactsDocsRefDocsHtmlDirectory))
+        {
+            DeleteDirectory(artifactsDocsRefDocsHtmlDirectory, true);
+        }
+        MoveDirectory(artifactsDocsRefDocsDirectory, artifactsDocsRefDocsHtmlDirectory);
     });
 
 Task("Package")

@@ -19,7 +19,7 @@ var artifactsBinNet452Directory = artifactsBinDirectory.Combine("net452");
 var artifactsBinNetStandard15Directory = artifactsBinDirectory.Combine("netstandard1.5");
 var artifactsDocsDirectory = artifactsDirectory.Combine("docs");
 var artifactsDocsApiDocsDirectory = artifactsDocsDirectory.Combine("ApiDocs-" + gitVersion.LegacySemVer);
-var artifactsDocsRefDocsDirectory = artifactsDocsDirectory.Combine("RefDocs-" + gitVersion.LegacySemVer);
+var artifactsDocsRefDocsDirectory = artifactsDocsDirectory.Combine("RefDocs-" + gitVersion.LegacySemVer + "-html");
 var artifactsPackagesDirectory = artifactsDirectory.Combine("packages");
 var docsDirectory = solutionDirectory.Combine("Docs");
 var docsApiDirectory = docsDirectory.Combine("Api");
@@ -223,13 +223,6 @@ Task("RefDocs")
 
         var artifactsReferencePublicDirectory = artifactsDocsRefDocsDirectory.Combine(gitVersion.Major + "." + gitVersion.Minor);
         CopyDirectory(referencePublicDirectory, artifactsReferencePublicDirectory);
-
-        var artifactsDocsRefDocsHtmlDirectory = MakeAbsolute(Directory(artifactsDocsRefDocsDirectory.FullPath + "-html"));
-        if (DirectoryExists(artifactsDocsRefDocsHtmlDirectory))
-        {
-            DeleteDirectory(artifactsDocsRefDocsHtmlDirectory, true);
-        }
-        MoveDirectory(artifactsDocsRefDocsDirectory, artifactsDocsRefDocsHtmlDirectory);
     });
 
 Task("Package")

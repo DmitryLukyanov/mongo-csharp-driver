@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Core.Clusters
         [Theory]
         [InlineData("test", "test")]
         [InlineData("test.test", "test.test")]
-        [InlineData("127.0.0", null)]
+        [InlineData("128.0.0", null)]
         public void GetHostNameWithReverseDnsLookup_should_return_input_value_for_incorrect_host_name(string host, string expectedHost)
         {
             var subject = new DnsClientWrapper();

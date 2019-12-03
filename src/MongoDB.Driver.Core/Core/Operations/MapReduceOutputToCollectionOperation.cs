@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -142,7 +141,7 @@ namespace MongoDB.Driver.Core.Operations
             var command = base.CreateCommand(session, connectionDescription);
 
             var serverVersion = connectionDescription.ServerVersion;
-            if (_bypassDocumentValidation.HasValue && Feature.BypassDocumentValidation.IsSupported(serverVersion))
+            if (_bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion))
             {
                 command.Add("bypassDocumentValidation", _bypassDocumentValidation.Value);
             }

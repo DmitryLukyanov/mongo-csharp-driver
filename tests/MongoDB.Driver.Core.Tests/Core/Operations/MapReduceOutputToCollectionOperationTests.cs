@@ -203,7 +203,7 @@ namespace MongoDB.Driver.Core.Operations
                 { "map", _mapFunction },
                 { "reduce", _reduceFunction },
                 { "out", new BsonDocument { {"replace", _outputCollectionNamespace.CollectionName }, { "db", _databaseNamespace.DatabaseName } } },
-                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation.HasValue && Feature.BypassDocumentValidation.IsSupported(serverVersion) }
+                { "bypassDocumentValidation", () => bypassDocumentValidation.Value, bypassDocumentValidation.GetValueOrDefault() && Feature.BypassDocumentValidation.IsSupported(serverVersion) }
             };
             result.Should().Be(expectedResult);
         }

@@ -273,24 +273,18 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
 
         private class TestCaseFactory : JsonDrivenTestCaseFactory
         {
-            #region static
-            private static readonly string[] __ignoredTestNames =
-            {
-                "MongoDB.Driver.Core.Tests.Specifications.server_discovery_and_monitoring.tests.monitoring."
-            };
-            #endregion
+            private readonly string __ignoredTestFolder = "MongoDB.Driver.Core.Tests.Specifications.server_discovery_and_monitoring.tests.monitoring.";
 
             protected override string PathPrefix => "MongoDB.Driver.Core.Tests.Specifications.server_discovery_and_monitoring.tests.";
 
             protected override IEnumerable<JsonDrivenTestCase> CreateTestCases(BsonDocument document)
             {
                 var path = document["_path"].ToString();
-                if (__ignoredTestNames.Any(i => path.Contains(i)))
+                if (!path.StartsWith(__ignoredTestFolder))
                 {
-                    yield break;
+                    var name = GetTestCaseName(document, document, 0);
+                    yield return new JsonDrivenTestCase(name, document, document);
                 }
-                var name = GetTestCaseName(document, document, 0);
-                yield return new JsonDrivenTestCase(name, document, document);
             }
         }
     }

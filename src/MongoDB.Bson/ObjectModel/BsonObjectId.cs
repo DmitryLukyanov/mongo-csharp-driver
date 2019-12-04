@@ -71,10 +71,8 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
-        [Obsolete("Use new BsonObjectId(new ObjectId(uint timestamp, int machine, short pid, int increment)) instead.")]
-#pragma warning disable CS3001
-        public BsonObjectId(uint timestamp, int machine, short pid, int increment)
-#pragma warning restore CS3001
+        [Obsolete("Use new BsonObjectId(new ObjectId(int timestamp, int machine, short pid, int increment)) instead.")]
+        public BsonObjectId(int timestamp, int machine, short pid, int increment)
         {
             _value = new ObjectId(timestamp, machine, pid, increment);
         }
@@ -111,9 +109,7 @@ namespace MongoDB.Bson
         /// Gets the timestamp.
         /// </summary>
         [Obsolete("Use Value.Timestamp instead.")]
-#pragma warning disable CS3003
-        public uint Timestamp
-#pragma warning restore CS3003
+        public int Timestamp
         {
             get { return _value.Timestamp; }
         }
@@ -247,10 +243,8 @@ namespace MongoDB.Bson
         /// </summary>
         /// <param name="timestamp">The timestamp component.</param>
         /// <returns>A BsonObjectId.</returns>
-        [Obsolete("Use new BsonObjectId(ObjectId.GenerateNewId(uint timestamp)) instead.")]
-#pragma warning disable CS3001
-        public static BsonObjectId GenerateNewId(uint timestamp)
-#pragma warning restore CS3001
+        [Obsolete("Use new BsonObjectId(ObjectId.GenerateNewId(int timestamp)) instead.")]
+        public static BsonObjectId GenerateNewId(int timestamp)
         {
             return new BsonObjectId(ObjectId.GenerateNewId(timestamp));
         }

@@ -31,51 +31,44 @@ namespace MongoDB.Bson.Tests
         [InlineData(0x1FFFFFE, 0xFFFFFF)]
         [InlineData(0x1FFFFFF, 0)]
         [InlineData(0x2000000, 1)]
-        public void Ensure_that_counter_is_resetted_after_max_value(int incrementValue, int expectedIncrement)
+        public void Ensure_that_increment_wraps_around_after_max_value(int seedIncrement, int expectedIncrement)
         {
-            ObjectIdReflector.__staticIncrement(incrementValue);
-            var oid = ObjectId.GenerateNewId();
-            var resultCounter = oid.Increment;
-            resultCounter.Should().Be(expectedIncrement);
+            ObjectIdReflector.__staticIncrement(seedIncrement);
+            var objectId = ObjectId.GenerateNewId();
+            objectId.Increment.Should().Be(expectedIncrement);
         }
 
+#if NET452
         [Fact]
         public void Ensure_that_machine_value_is_not_the_same_if_created_from_different_appdomain()
         {
-#if NET452
-            var parentOid = ObjectId.GenerateNewId();
+            var objectIdCreatedInThisAppDomain = ObjectId.GenerateNewId();
 
-            ObjectId childOid = default;
-            AppDomain testDomain = null;
+            var differentAppDomain = AppDomain.CreateDomain("DifferentObjectIdCreatorAppDomain", null, new AppDomainSetup { ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase });
             try
             {
-                testDomain = AppDomain.CreateDomain("MyDomain", null, new AppDomainSetup { ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase });
-                var marshalType = typeof(AppDomainCourier);
-                var testProxy = (AppDomainCourier)testDomain.CreateInstanceAndUnwrap(marshalType.Assembly.FullName, marshalType.FullName);
-                childOid = testProxy.ObjectId;
+                var objectIdCreatorType = typeof(ObjectIdCreator);
+                var objectIdCreator = (ObjectIdCreator)differentAppDomain.CreateInstanceAndUnwrap(objectIdCreatorType.Assembly.FullName, objectIdCreatorType.FullName);
+                var objectIdCreatedInDifferentAppDomain = objectIdCreator.CreateObjectId(); // CreateObjectId method runs in differentAppDomain
+                objectIdCreatedInDifferentAppDomain.Machine.Should().NotBe(objectIdCreatedInThisAppDomain.Machine);
             }
             finally
             {
-                if (testDomain != null)
-                {
-                    AppDomain.Unload(testDomain);
-                }
+                AppDomain.Unload(differentAppDomain);
             }
-
-            childOid.Machine.Should().NotBe(parentOid.Machine);
-#endif
         }
+#endif
 
         [Theory]
-        [InlineData(0x00000000, "January 1, 1970 00:00:00Z")]
-        [InlineData(0x7FFFFFFF, "January 19, 2038 03:14:07Z")]
-        [InlineData(0x80000000, "January 19, 2038 03:14:08Z")]
-        [InlineData(0xFFFFFFFF, "February 7, 2106 06:28:15Z")]
-        public void Ensure_that_timestamp_is_represented_as_unsigned_int(uint timestamp, string expectedDateString)
+        [InlineData(0x00000000, "1970-01-01T00:00:00Z")]
+        [InlineData(0x7FFFFFFF, "2038-01-19T03:14:07Z")]
+        [InlineData(0x80000000, "2038-01-19T03:14:08Z")]
+        [InlineData(0xFFFFFFFF, "2106-02-07T06:28:15Z")]
+        public void Ensure_that_timestamp_is_interpreted_as_unsigned_int(uint timestamp, string expectedDateString)
         {
-            var oid = ObjectId.GenerateNewId(timestamp);
+            var objectId = ObjectId.GenerateNewId((int)timestamp);
             var expectedDate = DateTime.Parse(expectedDateString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
-            oid.CreationTime.Should().Be(expectedDate);
+            objectId.CreationTime.Should().Be(expectedDate);
         }
 
         [Fact]
@@ -83,7 +76,7 @@ namespace MongoDB.Bson.Tests
         {
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId(bytes);
-            Assert.Equal((uint)0x01020304, objectId.Timestamp);
+            Assert.Equal(0x01020304, objectId.Timestamp);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
@@ -100,7 +93,7 @@ namespace MongoDB.Bson.Tests
         {
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId(0x01020304, 0x050607, 0x0809, 0x0a0b0c);
-            Assert.Equal((uint)0x01020304, objectId.Timestamp);
+            Assert.Equal(0x01020304, objectId.Timestamp);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
@@ -150,7 +143,7 @@ namespace MongoDB.Bson.Tests
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var timestamp = BsonConstants.UnixEpoch.AddSeconds(0x01020304);
             var objectId = new ObjectId(timestamp, 0x050607, 0x0809, 0x0a0b0c);
-            Assert.Equal((uint)0x01020304, objectId.Timestamp);
+            Assert.Equal(0x01020304, objectId.Timestamp);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
@@ -163,7 +156,7 @@ namespace MongoDB.Bson.Tests
         }
 
         [Theory]
-        [InlineData(uint.MinValue)]
+        [InlineData(0)]
         [InlineData(uint.MaxValue)]
         public void TestDateTimeConstructorAtEdgeOfRange(uint secondsSinceEpoch)
         {
@@ -173,7 +166,7 @@ namespace MongoDB.Bson.Tests
         }
 
         [Theory]
-        [InlineData((long)uint.MinValue - 1)]
+        [InlineData(-1L)]
         [InlineData((long)uint.MaxValue + 1)]
         public void TestDateTimeConstructorArgumentOutOfRangeException(long secondsSinceEpoch)
         {
@@ -186,7 +179,7 @@ namespace MongoDB.Bson.Tests
         {
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId("0102030405060708090a0b0c");
-            Assert.Equal((uint)0x01020304, objectId.Timestamp);
+            Assert.Equal(0x01020304, objectId.Timestamp);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
@@ -223,7 +216,7 @@ namespace MongoDB.Bson.Tests
         [Fact]
         public void TestGenerateNewIdWithTimestamp()
         {
-            uint timestamp = 0x01020304;
+            var timestamp = 0x01020304;
             var objectId = ObjectId.GenerateNewId(timestamp);
             Assert.True(objectId.Timestamp == timestamp);
             Assert.True(objectId.Machine != 0);
@@ -452,9 +445,9 @@ namespace MongoDB.Bson.Tests
         }
 
         // nested types
-        private class AppDomainCourier : MarshalByRefObject
+        private class ObjectIdCreator : MarshalByRefObject
         {
-            public ObjectId ObjectId => ObjectId.GenerateNewId();
+            public ObjectId CreateObjectId() => ObjectId.GenerateNewId();
         }
     }
 

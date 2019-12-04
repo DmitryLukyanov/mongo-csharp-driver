@@ -111,18 +111,6 @@ namespace MongoDB.Bson
         }
 
         /// <summary>
-        /// Converts a value to a hex character.
-        /// </summary>
-        /// <param name="value">The value (assumed to be between 0 and 15).</param>
-        /// <returns>The hex character.</returns>
-#pragma warning disable CS3001
-        public static char ToHexChar(uint value)
-#pragma warning restore CS3001
-        {
-            return ToHexChar((int) value);
-        }
-
-        /// <summary>
         /// Converts a byte array to a hex string.
         /// </summary>
         /// <param name="bytes">The byte array.</param>

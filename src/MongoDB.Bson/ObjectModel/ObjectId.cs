@@ -36,7 +36,7 @@ namespace MongoDB.Bson
         private static int __staticIncrement = (new Random()).Next();
 
         // private fields
-        private readonly uint _a;
+        private readonly int _a;
         private readonly int _b;
         private readonly int _c;
 
@@ -76,10 +76,8 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
-#pragma warning disable CS3003
         public ObjectId(DateTime timestamp, int machine, short pid, int increment)
             : this(GetTimestampFromDateTime(timestamp), machine, pid, increment)
-#pragma warning restore CS3001
         {
         }
 
@@ -90,9 +88,7 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
-#pragma warning disable CS3001
-        public ObjectId(uint timestamp, int machine, short pid, int increment)
-#pragma warning restore CS3001
+        public ObjectId(int timestamp, int machine, short pid, int increment)
         {
             if ((machine & 0xff000000) != 0)
             {
@@ -136,7 +132,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the timestamp.
         /// </summary>
-        public uint Timestamp
+        public int Timestamp
         {
             get { return _a; }
         }
@@ -170,7 +166,7 @@ namespace MongoDB.Bson
         /// </summary>
         public DateTime CreationTime
         {
-            get { return BsonConstants.UnixEpoch.AddSeconds(Timestamp); }
+            get { return BsonConstants.UnixEpoch.AddSeconds((uint)Timestamp); }
         }
 
         // public operators
@@ -265,9 +261,7 @@ namespace MongoDB.Bson
         /// </summary>
         /// <param name="timestamp">The timestamp component.</param>
         /// <returns>An ObjectId.</returns>
-#pragma warning disable CS3001
-        public static ObjectId GenerateNewId(uint timestamp)
-#pragma warning restore CS3001
+        public static ObjectId GenerateNewId(int timestamp)
         {
             int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff; // only use low order 3 bytes
             return new ObjectId(timestamp, __staticMachine, __staticPid, increment);
@@ -281,9 +275,7 @@ namespace MongoDB.Bson
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
         /// <returns>A byte array.</returns>
-#pragma warning disable CS3001
-        public static byte[] Pack(uint timestamp, int machine, short pid, int increment)
-#pragma warning restore CS3001
+        public static byte[] Pack(int timestamp, int machine, short pid, int increment)
         {
             if ((machine & 0xff000000) != 0)
             {
@@ -365,9 +357,7 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
-#pragma warning disable CS3001
-        public static void Unpack(byte[] bytes, out uint timestamp, out int machine, out short pid, out int increment)
-#pragma warning restore CS3001
+        public static void Unpack(byte[] bytes, out int timestamp, out int machine, out short pid, out int increment)
         {
             if (bytes == null)
             {
@@ -378,7 +368,7 @@ namespace MongoDB.Bson
                 throw new ArgumentOutOfRangeException("bytes", "Byte array must be 12 bytes long.");
             }
 
-            timestamp = (uint)((bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3]);
+            timestamp = (bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3];
             machine = (bytes[4] << 16) + (bytes[5] << 8) + bytes[6];
             pid = (short)((bytes[7] << 8) + bytes[8]);
             increment = (bytes[9] << 16) + (bytes[10] << 8) + bytes[11];
@@ -429,19 +419,19 @@ namespace MongoDB.Bson
             }
         }
 
-        private static uint GetTimestampFromDateTime(DateTime timestamp)
+        private static int GetTimestampFromDateTime(DateTime timestamp)
         {
             var secondsSinceEpoch = (long)Math.Floor((BsonUtils.ToUniversalTime(timestamp) - BsonConstants.UnixEpoch).TotalSeconds);
             if (secondsSinceEpoch < uint.MinValue || secondsSinceEpoch > uint.MaxValue)
             {
                 throw new ArgumentOutOfRangeException("timestamp");
             }
-            return (uint)secondsSinceEpoch;
+            return (int)(uint)secondsSinceEpoch;
         }
 
-        private static void FromByteArray(byte[] bytes, int offset, out uint a, out int b, out int c)
+        private static void FromByteArray(byte[] bytes, int offset, out int a, out int b, out int c)
         {
-            a = (uint)((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]);
+            a = (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
             b = (bytes[offset + 4] << 24) | (bytes[offset + 5] << 16) | (bytes[offset + 6] << 8) | bytes[offset + 7];
             c = (bytes[offset + 8] << 24) | (bytes[offset + 9] << 16) | (bytes[offset + 10] << 8) | bytes[offset + 11];
         }

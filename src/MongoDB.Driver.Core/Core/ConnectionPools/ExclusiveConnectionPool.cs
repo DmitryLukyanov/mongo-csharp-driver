@@ -258,13 +258,13 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 {
                     await PrunePoolAsync(maintenanceCancellationToken).ConfigureAwait(false);
                     await EnsureMinSizeAsync(maintenanceCancellationToken).ConfigureAwait(false);
-                    await Task.Delay(_settings.MaintenanceInterval, maintenanceCancellationToken).ConfigureAwait(false);
                 }
                 catch
                 {
                     // do nothing, this is called in the background and, quite frankly, should never
                     // result in an error
                 }
+                await Task.Delay(_settings.MaintenanceInterval, maintenanceCancellationToken).ConfigureAwait(false);
             }
         }
 

@@ -34,23 +34,24 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
-        [InlineData("test", "test")]
-        [InlineData("test.test", "test.test")]
-        [InlineData("128.0.0", null)]
-        public void GetHostNameWithReverseDnsLookup_should_return_input_value_for_incorrect_host_name(string host, string expectedHost)
+        [InlineData("54.225.237.121", "ldaptest.10gen.cc")]
+        [InlineData("ec2-54-225-237-121.compute-1.amazonaws.com", "ldaptest.10gen.cc")]
+        [InlineData("ldaptest.10gen.cc", "ldaptest.10gen.cc")]
+        [InlineData("azure.microsoft.com", "l-0007.l-msedge.net")]
+        public void GetCanonicalizedHostName_should_return_expected_result(string host, string expectedHost)
         {
             var subject = new DnsClientWrapper();
 
-            var result = subject.GetHostNameWithReverseDnsLookup(host);
+            var result = subject.GetCanonicalizedHostName(host);
             result.Should().Be(expectedHost);
         }
 
         [Fact]
-        public void GetHostNameWithReverseDnsLookup_should_throw_when_host_is_null()
+        public void GetCanonicalizedHostName_should_throw_when_host_is_null()
         {
             var subject = new DnsClientWrapper();
 
-            var exception = Record.Exception(() => subject.GetHostNameWithReverseDnsLookup(null));
+            var exception = Record.Exception(() => subject.GetCanonicalizedHostName(null));
             exception.Should().BeOfType<ArgumentNullException>();
         }
 

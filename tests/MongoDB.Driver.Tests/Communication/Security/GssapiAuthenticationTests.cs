@@ -29,14 +29,13 @@ namespace MongoDB.Driver.Tests.Communication.Security
     {
         private static readonly string __collectionName = "test";
 
-        public string AuthHost => Environment.GetEnvironmentVariable("AUTH_HOST") ?? throw new Exception("AUTH_HOST has not been configured.");
-
         [SkippableFact]
         public void Authentication_with_canonicalize_host_name_and_ip_host_should_work_as_expected()
         {
             RequireEnvironment.Check().EnvironmentVariable("EXPLICIT");
 
-            var hostEntry = Dns.GetHostEntry(AuthHost);
+            var authHost = GetEnvironmentVariable("AUTH_HOST");
+            var hostEntry = Dns.GetHostEntry(authHost);
             var ipAddress = hostEntry.AddressList.First().ToString();
             var connectionString = CreateGssapiConnectionString(ipAddress, "&authMechanismProperties=CANONICALIZE_HOST_NAME:true");
             var mongoUrl = new MongoUrl(connectionString);
@@ -106,16 +105,19 @@ namespace MongoDB.Driver.Tests.Communication.Security
         // private methods
         private string CreateGssapiConnectionString(string authHost, string mechanismProperty = null)
         {
-            var authGssapi = Environment.GetEnvironmentVariable("AUTH_GSSAPI") ?? throw new Exception("AUTH_GSSAPI has not been configured.");
+            var authGssapi = GetEnvironmentVariable("AUTH_GSSAPI");
 
             return $"mongodb://{authGssapi}@{authHost}/kerberos?authMechanism=GSSAPI{mechanismProperty}";
         }
 
         private MongoUrl CreateMongoUrl()
         {
-            var connectionString = CreateGssapiConnectionString(AuthHost);
+            var authHost = GetEnvironmentVariable("AUTH_HOST");
+            var connectionString = CreateGssapiConnectionString(authHost);
             return MongoUrl.Create(connectionString);
         }
+
+        private string GetEnvironmentVariable(string name) => Environment.GetEnvironmentVariable(name) ?? throw new Exception($"{name} has not been configured.");
 
         private IMongoCollection<BsonDocument> GetTestCollection(MongoClient client, string databaseName)
         {

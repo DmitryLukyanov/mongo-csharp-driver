@@ -25,6 +25,11 @@ namespace MongoDB.Driver.Core.Misc
 {
     internal class DnsClientWrapper : IDnsResolver
     {
+        #region static
+        private static DnsClientWrapper __instance;
+        public static DnsClientWrapper Instance => __instance ?? (__instance = new DnsClientWrapper());
+        #endregion
+
         // private fields
         private readonly LookupClient _lookupClient;
 
@@ -38,21 +43,28 @@ namespace MongoDB.Driver.Core.Misc
         public LookupClient LookupClient => _lookupClient;
 
         // public methods
-        public string GetHostNameWithReverseDnsLookup(string hostNameOrAddress)
+        public string GetCanonicalizedHostName(string hostNameOrAddress)
         {
-            var hostEntry = _lookupClient.GetHostEntry(hostNameOrAddress);
-            if (hostEntry != null)
+#if NETSTANDARD1_5 || NETSTANDARD1_6
+            var hostEntry = Dns.GetHostEntryAsync(hostNameOrAddress).GetAwaiter().GetResult();
+#else
+            var hostEntry = Dns.GetHostEntry(hostNameOrAddress);
+#endif
+            if (hostEntry == null)
             {
-                if (hostEntry.Aliases != null && hostEntry.Aliases.Length > 0)
+                return null;
+            }
+
+            var ipAddress = hostEntry.AddressList?.Length > 0 ? hostEntry.AddressList[0] : null;
+            if (ipAddress != null)
+            {
+                var hostName = _lookupClient.GetHostName(ipAddress);
+                if (hostName != null)
                 {
-                    return hostEntry.Aliases[0];
-                }
-                else
-                {
-                    return hostEntry.HostName;
+                    return hostName;
                 }
             }
-            return null;
+            return hostEntry.HostName;
         }
 
         public List<SrvRecord> ResolveSrvRecords(string service, CancellationToken cancellationToken)
@@ -90,7 +102,7 @@ namespace MongoDB.Driver.Core.Misc
         {
             var wrappedSrvRecords = response.Answers.SrvRecords().ToList();
             var srvRecords = new List<SrvRecord>();
-            
+
             foreach (var wrappedSrvRecord in wrappedSrvRecords)
             {
                 var host = wrappedSrvRecord.Target.ToString();

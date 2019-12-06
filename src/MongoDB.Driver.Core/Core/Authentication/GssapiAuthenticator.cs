@@ -190,7 +190,7 @@ namespace MongoDB.Driver.Core.Authentication
                 _realm = realm;
                 _username = Ensure.IsNotNullOrEmpty(username, nameof(username));
                 _password = password;
-                _dnsResolver = new DnsClientWrapper();
+                _dnsResolver = DnsClientWrapper.Instance;
             }
 
             public string Name
@@ -220,7 +220,7 @@ namespace MongoDB.Driver.Core.Authentication
 
                 if (_canonicalizeHostName)
                 {
-                    var canonicalizedHostName = _dnsResolver.GetHostNameWithReverseDnsLookup(hostName);
+                    var canonicalizedHostName = _dnsResolver.GetCanonicalizedHostName(hostName);
                     if (canonicalizedHostName != null)
                     {
                         hostName = canonicalizedHostName;

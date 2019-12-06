@@ -31,7 +31,7 @@ namespace MongoDB.Bson
     {
         // private static fields
         private static readonly ObjectId __emptyInstance = default(ObjectId);
-        private static readonly int __staticMachineAndCurrentTime = (GetCurrentTime() + GetMachineHash() + GetAppDomainId()) & 0x00ffffff;
+        private static readonly int __random = CalculateRandomValue();
         private static readonly short __staticPid = GetPid();
         private static int __staticIncrement = (new Random()).Next();
 
@@ -140,6 +140,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the machine.
         /// </summary>
+        [Obsolete("No longer used.")]
         public int Machine
         {
             get { return (_b >> 8) & 0xffffff; }
@@ -148,6 +149,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the PID.
         /// </summary>
+        [Obsolete("No longer used.")]
         public short Pid
         {
             get { return (short)(((_b << 8) & 0xff00) | ((_c >> 24) & 0x00ff)); }
@@ -264,7 +266,7 @@ namespace MongoDB.Bson
         public static ObjectId GenerateNewId(int timestamp)
         {
             int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff; // only use low order 3 bytes
-            return new ObjectId(timestamp, __staticMachineAndCurrentTime, __staticPid, increment);
+            return new ObjectId(timestamp, __random, __staticPid, increment);
         }
 
         /// <summary>
@@ -375,6 +377,12 @@ namespace MongoDB.Bson
         }
 
         // private static methods
+        private static int CalculateRandomValue()
+        {
+            var seed = (GetCurrentTime() + GetMachineHash() + GetAppDomainId()) & 0x00ffffff;
+            return new Random(seed).Next();
+        }
+
         private static int GetAppDomainId()
         {
 #if NETSTANDARD1_5 || NETSTANDARD1_6

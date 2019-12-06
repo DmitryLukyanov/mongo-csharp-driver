@@ -117,7 +117,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the machine.
         /// </summary>
-        [Obsolete("Use Value.Machine instead.")]
+        [Obsolete("No longer used.")]
         public int Machine
         {
             get { return _value.Machine; }
@@ -126,7 +126,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the PID.
         /// </summary>
-        [Obsolete("Use Value.Pid instead.")]
+        [Obsolete("No longer used.")]
         public short Pid
         {
             get { return _value.Pid; }

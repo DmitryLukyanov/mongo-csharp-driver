@@ -50,7 +50,9 @@ namespace MongoDB.Bson.Tests
                 var objectIdCreatorType = typeof(ObjectIdCreator);
                 var objectIdCreator = (ObjectIdCreator)differentAppDomain.CreateInstanceAndUnwrap(objectIdCreatorType.Assembly.FullName, objectIdCreatorType.FullName);
                 var objectIdCreatedInDifferentAppDomain = objectIdCreator.CreateObjectId(); // CreateObjectId method runs in differentAppDomain
+#pragma warning disable 618
                 objectIdCreatedInDifferentAppDomain.Machine.Should().NotBe(objectIdCreatedInThisAppDomain.Machine);
+#pragma warning restore 618
             }
             finally
             {
@@ -77,11 +79,13 @@ namespace MongoDB.Bson.Tests
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId(bytes);
             Assert.Equal(0x01020304, objectId.Timestamp);
+#pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
+#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
@@ -94,11 +98,13 @@ namespace MongoDB.Bson.Tests
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId(0x01020304, 0x050607, 0x0809, 0x0a0b0c);
             Assert.Equal(0x01020304, objectId.Timestamp);
+#pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
+#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
@@ -117,7 +123,9 @@ namespace MongoDB.Bson.Tests
         public void TestIntIntShortIntConstructorWithInvalidMachine()
         {
             var objectId = new ObjectId(0, 0x00ffffff, 0, 0);
+#pragma warning disable 618
             Assert.Equal(0x00ffffff, objectId.Machine);
+#pragma warning restore 618
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(0, 0x01000000, 0, 0));
         }
 
@@ -133,7 +141,9 @@ namespace MongoDB.Bson.Tests
         public void TestPackWithInvalidMachine()
         {
             var objectId = new ObjectId(ObjectId.Pack(0, 0x00ffffff, 0, 0));
+#pragma warning disable 618
             Assert.Equal(0x00ffffff, objectId.Machine);
+#pragma warning restore 618
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(ObjectId.Pack(0, 0x01000000, 0, 0)));
         }
 
@@ -144,11 +154,13 @@ namespace MongoDB.Bson.Tests
             var timestamp = BsonConstants.UnixEpoch.AddSeconds(0x01020304);
             var objectId = new ObjectId(timestamp, 0x050607, 0x0809, 0x0a0b0c);
             Assert.Equal(0x01020304, objectId.Timestamp);
+#pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
+#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
@@ -180,11 +192,13 @@ namespace MongoDB.Bson.Tests
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var objectId = new ObjectId("0102030405060708090a0b0c");
             Assert.Equal(0x01020304, objectId.Timestamp);
+#pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
+#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
@@ -199,8 +213,10 @@ namespace MongoDB.Bson.Tests
             var objectId = ObjectId.GenerateNewId();
             var timestamp2 = (int)Math.Floor((DateTime.UtcNow - BsonConstants.UnixEpoch).TotalSeconds);
             Assert.True(objectId.Timestamp == timestamp1 || objectId.Timestamp == timestamp2);
+#pragma warning disable 618
             Assert.True(objectId.Machine != 0);
             Assert.True(objectId.Pid != 0);
+#pragma warning restore 618
         }
 
         [Fact]
@@ -209,8 +225,10 @@ namespace MongoDB.Bson.Tests
             var timestamp = new DateTime(2011, 1, 2, 3, 4, 5, DateTimeKind.Utc);
             var objectId = ObjectId.GenerateNewId(timestamp);
             Assert.True(objectId.CreationTime == timestamp);
+#pragma warning disable 618
             Assert.True(objectId.Machine != 0);
             Assert.True(objectId.Pid != 0);
+#pragma warning restore 618
         }
 
         [Fact]
@@ -219,8 +237,10 @@ namespace MongoDB.Bson.Tests
             var timestamp = 0x01020304;
             var objectId = ObjectId.GenerateNewId(timestamp);
             Assert.True(objectId.Timestamp == timestamp);
+#pragma warning disable 618
             Assert.True(objectId.Machine != 0);
             Assert.True(objectId.Pid != 0);
+#pragma warning restore 618
         }
 
         [Fact]

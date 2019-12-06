@@ -261,8 +261,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 }
                 catch
                 {
-                    // do nothing, this is called in the background and, quite frankly, should never
-                    // result in an error
+                    // ignore exceptions
                 }
                 await Task.Delay(_settings.MaintenanceInterval, maintenanceCancellationToken).ConfigureAwait(false);
             }

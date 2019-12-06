@@ -472,7 +472,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
                     .Throws<Exception>()    // failed attempt
                     .Returns(() =>          // successful attempt which should be delayed
                     {
-                        // break the loop. with this line the MaintainSizeAsync loop will contain only 2 iteration
+                        // break the loop. With this line the MaintainSizeAsync will contain only 2 iterations
                         subject._maintenanceCancellationTokenSource().Cancel();
                         return new MockConnection(_serverId);
                     });

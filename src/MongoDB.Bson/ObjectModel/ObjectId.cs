@@ -31,7 +31,7 @@ namespace MongoDB.Bson
     {
         // private static fields
         private static readonly ObjectId __emptyInstance = default(ObjectId);
-        private static readonly int __staticMachine = (GetMachineHash() + GetAppDomainId()) & 0x00ffffff;
+        private static readonly int __staticMachineAndCurrentTime = (GetCurrentTime() + GetMachineHash() + GetAppDomainId()) & 0x00ffffff;
         private static readonly short __staticPid = GetPid();
         private static int __staticIncrement = (new Random()).Next();
 
@@ -264,7 +264,7 @@ namespace MongoDB.Bson
         public static ObjectId GenerateNewId(int timestamp)
         {
             int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff; // only use low order 3 bytes
-            return new ObjectId(timestamp, __staticMachine, __staticPid, increment);
+            return new ObjectId(timestamp, __staticMachineAndCurrentTime, __staticPid, increment);
         }
 
         /// <summary>
@@ -393,6 +393,11 @@ namespace MongoDB.Bson
         private static int GetCurrentProcessId()
         {
             return Process.GetCurrentProcess().Id;
+        }
+
+        private static int GetCurrentTime()
+        {
+            return GetTimestampFromDateTime(DateTime.UtcNow);
         }
 
         private static int GetMachineHash()

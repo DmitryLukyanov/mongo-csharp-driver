@@ -321,7 +321,16 @@ namespace MongoDB.Driver.Core.ConnectionPools
                     // when adding in a connection, we need to open it because 
                     // the whole point of having a min pool size is to have
                     // them available and ready...
-                    await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (MongoAuthenticationException)
+                    {
+                        // if connection fails with MongoAuthenticationException we should close the socket
+                        connection.Dispose();
+                        throw;
+                    }
                     _connectionHolder.Return(connection);
                     stopwatch.Stop();
 

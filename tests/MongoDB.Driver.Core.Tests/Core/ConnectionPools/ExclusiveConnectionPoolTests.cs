@@ -461,6 +461,30 @@ namespace MongoDB.Driver.Core.ConnectionPools
         }
 
         [Fact]
+        public void MaintainSizeAsync_should_call_connection_dispose_when_connection_authentication_fail()
+        {
+            var authenticationFailedConnection = new Mock<IConnection>();
+            authenticationFailedConnection
+                .Setup(c => c.OpenAsync(It.IsAny<CancellationToken>())) // an authentication exception is thrown from _connectionInitializer.InitializeConnection
+                                                                        // that in turn is called from OpenAsync
+                .Throws(new MongoAuthenticationException(new ConnectionId(_serverId), "test message"));
+
+            using (var subject = CreateSubject())
+            {
+                _mockConnectionFactory
+                    .Setup(f => f.CreateConnection(_serverId, _endPoint))
+                    .Returns(() =>
+                    {
+                        subject._maintenanceCancellationTokenSource().Cancel(); // Task.Delay will be canceled 
+                        return authenticationFailedConnection.Object;
+                    });
+
+                var _ = Record.Exception(() => subject.MaintainSizeAsync().GetAwaiter().GetResult());
+                authenticationFailedConnection.Verify(conn => conn.Dispose(), Times.Once);
+            }
+        }
+
+        [Fact]
         public void MaintainSizeAsync_should_not_try_new_attempt_after_failing_without_delay()
         {
             var settings =_settings.With(maintenanceInterval: TimeSpan.FromSeconds(10));

@@ -325,9 +325,8 @@ namespace MongoDB.Driver.Core.ConnectionPools
                     {
                         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                     }
-                    catch (MongoAuthenticationException)
+                    catch (Exception)
                     {
-                        // if connection fails with MongoAuthenticationException we should close the socket
                         connection.Dispose();
                         throw;
                     }

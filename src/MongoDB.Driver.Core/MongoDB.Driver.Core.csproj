@@ -42,8 +42,37 @@
     <RootNamespace>MongoDB.Driver</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <NoWarn>NU5100</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="snappy64.dll" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <SnappyBinaries>Core/Compression/Snappy/lib/win</SnappyBinaries>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy64.dll">
+      <Pack>true</Pack>
+      <PackagePath>x64/native/windows</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>snappy64.dll</Link>
+    </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="MongoDB.Driver.Core.targets">
+      <Pack>true</Pack>
+      <PackagePath>build</PackagePath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -75,12 +104,6 @@
     <Compile Include="..\MongoDB.Shared\ApplicationNameHelper.cs" Link="Core\Configuration\ApplicationNameHelper.cs" />
     <Compile Include="..\MongoDB.Shared\Hasher.cs" Link="Core\Misc\Hasher.cs" />
     <Compile Include="..\MongoDB.Shared\MaxTimeHelper.cs" Link="Core\Operations\MaxTimeHelper.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Core\Compression\Snappy\lib\win\snappy64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

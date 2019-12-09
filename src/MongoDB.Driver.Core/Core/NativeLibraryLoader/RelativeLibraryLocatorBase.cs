@@ -45,21 +45,30 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         public abstract string GetLibraryRelativePath(SupportedPlatform currentPlatform);
 
         // private methods
-        private string FindLibraryOrThrow(string basePath, string relativePath)
-        {
-            var absolutePath = Path.Combine(basePath, relativePath);
-            if (!File.Exists(absolutePath))
-            {
-                throw new FileNotFoundException($"Could not find library {absolutePath}.");
-            }
-
-            return absolutePath;
-        }
-
         private string GetAbsolutePath(string relativePath)
         {
+            var libraryName = Path.GetFileName(relativePath);
+
             var basePath = GetLibraryBasePath();
-            return FindLibraryOrThrow(basePath, relativePath);
+            var absolutePath = Path.Combine(basePath, relativePath);
+
+            var currentFolderAbsolutePath = Path.GetFullPath(libraryName);
+
+            var locationsToCheck = new[]
+            {
+                currentFolderAbsolutePath,    // look at the current folder
+                absolutePath
+            };
+
+            foreach (var location in locationsToCheck)
+            {
+                if (File.Exists(location))
+                {
+                    return location;
+                }
+            }
+            
+            throw new FileNotFoundException($"Could not find library {libraryName}. Checked {string.Join(";", locationsToCheck)}.");
         }
     }
 }

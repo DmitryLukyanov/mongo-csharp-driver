@@ -31,8 +31,7 @@ namespace MongoDB.Bson
     {
         // private static fields
         private static readonly ObjectId __emptyInstance = default(ObjectId);
-        private static readonly int __random = CalculateRandomValue();
-        private static readonly short __staticPid = GetPid();
+        private static readonly long __random = CalculateRandomValue();
         private static int __staticIncrement = (new Random()).Next();
 
         // private fields
@@ -76,6 +75,7 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
+        [Obsolete("This constructor will be removed in a later release.")]
         public ObjectId(DateTime timestamp, int machine, short pid, int increment)
             : this(GetTimestampFromDateTime(timestamp), machine, pid, increment)
         {
@@ -88,6 +88,7 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
+        [Obsolete("This constructor will be removed in a later release.")]
         public ObjectId(int timestamp, int machine, short pid, int increment)
         {
             if ((machine & 0xff000000) != 0)
@@ -119,6 +120,13 @@ namespace MongoDB.Bson
             FromByteArray(bytes, 0, out _a, out _b, out _c);
         }
 
+        private ObjectId(int a, int b, int c)
+        {
+            _a = a;
+            _b = b;
+            _c = c;
+        }
+
         // public static properties
         /// <summary>
         /// Gets an instance of ObjectId where the value is empty.
@@ -140,7 +148,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the machine.
         /// </summary>
-        [Obsolete("No longer used.")]
+        [Obsolete("This property will be removed in a later release.")]
         public int Machine
         {
             get { return (_b >> 8) & 0xffffff; }
@@ -149,7 +157,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the PID.
         /// </summary>
-        [Obsolete("No longer used.")]
+        [Obsolete("This property will be removed in a later release.")]
         public short Pid
         {
             get { return (short)(((_b << 8) & 0xff00) | ((_c >> 24) & 0x00ff)); }
@@ -266,7 +274,7 @@ namespace MongoDB.Bson
         public static ObjectId GenerateNewId(int timestamp)
         {
             int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff; // only use low order 3 bytes
-            return new ObjectId(timestamp, __random, __staticPid, increment);
+            return Create(timestamp, __random, increment);
         }
 
         /// <summary>
@@ -359,6 +367,7 @@ namespace MongoDB.Bson
         /// <param name="machine">The machine hash.</param>
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
+        [Obsolete("This method will be removed in a later release.")]
         public static void Unpack(byte[] bytes, out int timestamp, out int machine, out short pid, out int increment)
         {
             if (bytes == null)
@@ -377,19 +386,27 @@ namespace MongoDB.Bson
         }
 
         // private static methods
-        private static int CalculateRandomValue()
+        private static long CalculateRandomValue()
         {
-            var seed = (GetCurrentTime() + GetMachineHash() + GetAppDomainId()) & 0x00ffffff;
-            return new Random(seed).Next();
+            var seed = GetCurrentTime() + GetMachineHash() + GetPid();
+            return new Random(seed).Next() & 0xffffffffff; // 5 bytes
         }
 
-        private static int GetAppDomainId()
+        private static ObjectId Create(int timestamp, long random, int increment)
         {
-#if NETSTANDARD1_5 || NETSTANDARD1_6
-            return 1;
-#else
-            return AppDomain.CurrentDomain.Id;
-#endif
+            if ((random & 0xff00000000) != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(random), "The random value must be between 0 and 4294967295 (it must fit in 5 bytes).");
+            }
+            if ((increment & 0xff000000) != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(increment), "The increment value must be between 0 and 16777215 (it must fit in 3 bytes).");
+            }
+
+            var a = timestamp;
+            var b = (int)(random & 0xffffffff); // take first 4 bytes
+            var c = (int)(random >> 40 & 0xff) | increment; // bytes[5] + increment
+            return new ObjectId(a, b, c);
         }
 
         /// <summary>

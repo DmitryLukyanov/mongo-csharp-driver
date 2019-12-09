@@ -912,7 +912,9 @@ namespace MongoDB.Bson.Tests
             var bytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var stream = new MemoryStream(bytes);
             var subject = new BsonStreamAdapter(stream);
+#pragma warning disable 618
             var expectedResult = new ObjectId(0x01020304, 0x050607, 0x0809, 0x0a0b0c);
+#pragma warning restore 618
 
             var result = subject.ReadObjectId();
 
@@ -1529,7 +1531,9 @@ namespace MongoDB.Bson.Tests
         {
             var stream = new MemoryStream();
             var subject = new BsonStreamAdapter(stream);
+#pragma warning disable 618
             var value = new ObjectId(0x01020304, 0x050607, 0x0809, 0x0a0b0c);
+#pragma warning restore 618
             var expectedBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
 
             subject.WriteObjectId(value);

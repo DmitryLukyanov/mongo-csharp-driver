@@ -25,6 +25,28 @@ namespace MongoDB.Bson.Tests
     public class ObjectIdTests
     {
         [Theory]
+        [InlineData(0, 0)]
+        [InlineData(0xffffffff, 0xffffff)]
+        [InlineData(0x11111111, 0x111111)]
+        public void Create_should_not_throw_when_income_parameters_are_valid(long random, int increment)
+        {
+            var _ = ObjectIdReflector.Create(1, random, increment);
+        }
+
+        [Theory]
+        [InlineData(-1, 1)]
+        [InlineData(1, -1)]
+        [InlineData(0x100000000, 1)]
+        [InlineData(0x200000000, 1)]
+        [InlineData(1, 0x1000000)]
+        [InlineData(1, 0x2000000)]
+        public void Create_should_throw_when_income_parameters_are_out_of_range(long random, int increment)
+        {
+            var exception = Record.Exception(() => ObjectIdReflector.Create(1, random, increment));
+            exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        }
+
+        [Theory]
         [InlineData(0xFFFFFE, 0xFFFFFF)]
         [InlineData(0xFFFFFF, 0)]
         [InlineData(0x1000000, 1)]
@@ -37,29 +59,6 @@ namespace MongoDB.Bson.Tests
             var objectId = ObjectId.GenerateNewId();
             objectId.Increment.Should().Be(expectedIncrement);
         }
-
-#if NET452
-        [Fact]
-        public void Ensure_that_machine_value_is_not_the_same_if_created_from_different_appdomain()
-        {
-            var objectIdCreatedInThisAppDomain = ObjectId.GenerateNewId();
-
-            var differentAppDomain = AppDomain.CreateDomain("DifferentObjectIdCreatorAppDomain", null, new AppDomainSetup { ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase });
-            try
-            {
-                var objectIdCreatorType = typeof(ObjectIdCreator);
-                var objectIdCreator = (ObjectIdCreator)differentAppDomain.CreateInstanceAndUnwrap(objectIdCreatorType.Assembly.FullName, objectIdCreatorType.FullName);
-                var objectIdCreatedInDifferentAppDomain = objectIdCreator.CreateObjectId(); // CreateObjectId method runs in differentAppDomain
-#pragma warning disable 618
-                objectIdCreatedInDifferentAppDomain.Machine.Should().NotBe(objectIdCreatedInThisAppDomain.Machine);
-#pragma warning restore 618
-            }
-            finally
-            {
-                AppDomain.Unload(differentAppDomain);
-            }
-        }
-#endif
 
         [Theory]
         [InlineData(0x00000000, "1970-01-01T00:00:00Z")]
@@ -96,7 +95,9 @@ namespace MongoDB.Bson.Tests
         public void TestIntIntShortIntConstructor()
         {
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+#pragma warning disable 618
             var objectId = new ObjectId(0x01020304, 0x050607, 0x0809, 0x0a0b0c);
+#pragma warning restore 618
             Assert.Equal(0x01020304, objectId.Timestamp);
 #pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
@@ -114,19 +115,21 @@ namespace MongoDB.Bson.Tests
         [Fact]
         public void TestIntIntShortIntConstructorWithInvalidIncrement()
         {
+#pragma warning disable 618
             var objectId = new ObjectId(0, 0, 0, 0x00ffffff);
             Assert.Equal(0x00ffffff, objectId.Increment);
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(0, 0, 0, 0x01000000));
+#pragma warning restore 618
         }
 
         [Fact]
         public void TestIntIntShortIntConstructorWithInvalidMachine()
         {
-            var objectId = new ObjectId(0, 0x00ffffff, 0, 0);
 #pragma warning disable 618
+            var objectId = new ObjectId(0, 0x00ffffff, 0, 0);
             Assert.Equal(0x00ffffff, objectId.Machine);
-#pragma warning restore 618
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(0, 0x01000000, 0, 0));
+#pragma warning restore 618
         }
 
         [Fact]
@@ -152,9 +155,9 @@ namespace MongoDB.Bson.Tests
         {
             byte[] bytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             var timestamp = BsonConstants.UnixEpoch.AddSeconds(0x01020304);
+#pragma warning disable 618
             var objectId = new ObjectId(timestamp, 0x050607, 0x0809, 0x0a0b0c);
             Assert.Equal(0x01020304, objectId.Timestamp);
-#pragma warning disable 618
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
             Assert.Equal(0x0a0b0c, objectId.Increment);
@@ -173,7 +176,9 @@ namespace MongoDB.Bson.Tests
         public void TestDateTimeConstructorAtEdgeOfRange(uint secondsSinceEpoch)
         {
             var timestamp = BsonConstants.UnixEpoch.AddSeconds(secondsSinceEpoch);
+#pragma warning disable 618
             var objectId = new ObjectId(timestamp, 0, 0, 0);
+#pragma warning restore 618
             Assert.Equal(timestamp, objectId.CreationTime);
         }
 
@@ -183,7 +188,9 @@ namespace MongoDB.Bson.Tests
         public void TestDateTimeConstructorArgumentOutOfRangeException(long secondsSinceEpoch)
         {
             var timestamp = BsonConstants.UnixEpoch.AddSeconds(secondsSinceEpoch);
+#pragma warning disable 618
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(timestamp, 0, 0, 0));
+#pragma warning restore 618
         }
 
         [Fact]
@@ -463,16 +470,15 @@ namespace MongoDB.Bson.Tests
 
             Assert.Equal(oid, oidConverted);
         }
-
-        // nested types
-        private class ObjectIdCreator : MarshalByRefObject
-        {
-            public ObjectId CreateObjectId() => ObjectId.GenerateNewId();
-        }
     }
 
     internal class ObjectIdReflector
     {
+        public static ObjectId Create(int timestamp, long random, int increment)
+        {
+            return (ObjectId)Reflector.InvokeStatic(typeof(ObjectId), nameof(Create), timestamp, random, increment);
+        }
+
         public static void __staticIncrement(int value)
         {
             Reflector.SetStaticFieldValue(typeof(ObjectId), nameof(__staticIncrement), value);

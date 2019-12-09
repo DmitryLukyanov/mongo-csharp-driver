@@ -158,10 +158,10 @@ namespace MongoDB.Driver.GridFS.Tests.Specifications.gridfs
 
         protected override void Assert(GridFSBucket bucket)
         {
+#pragma warning disable 618
             var expectedTimestampMin = new ObjectId(_startTime, 0, 0, 0).Timestamp;
             var expectedTimestampMax = new ObjectId(_endTime, 0, 0, 0).Timestamp;
             _result.Timestamp.Should().BeInRange(expectedTimestampMin, expectedTimestampMax);
-#pragma warning disable 618
             _result.Machine.Should().Be(_referenceObjectId.Machine);
             _result.Pid.Should().Be(_referenceObjectId.Pid);
 #pragma warning restore 618

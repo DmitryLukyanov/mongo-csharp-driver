@@ -407,7 +407,7 @@ namespace MongoDB.Bson
 
             var a = timestamp;
             var b = (int)(random & 0xffffffff); // take first 4 bytes
-            var c = (int)(random >> 40 & 0xff) | increment; // 5th byte and increment
+            var c = (int)(random >> 32) & 0xff | increment; // 5th byte and increment
             return new ObjectId(a, b, c);
         }
 

@@ -752,8 +752,8 @@ namespace MongoDB.Bson.Tests.IO
 #pragma warning disable 618
             result.Machine.Should().Be(0x050607);
             result.Pid.Should().Be(0x0809);
-#pragma warning restore 618
             result.Increment.Should().Be(0x0a0b0c);
+#pragma warning restore 618
         }
 
         [Theory]

@@ -166,6 +166,7 @@ namespace MongoDB.Bson
         /// <summary>
         /// Gets the increment.
         /// </summary>
+        [Obsolete("This property will be removed in a later release.")]
         public int Increment
         {
             get { return _c & 0xffffff; }
@@ -285,6 +286,7 @@ namespace MongoDB.Bson
         /// <param name="pid">The PID.</param>
         /// <param name="increment">The increment.</param>
         /// <returns>A byte array.</returns>
+        [Obsolete("This method will be removed in a later release.")]
         public static byte[] Pack(int timestamp, int machine, short pid, int increment)
         {
             if ((machine & 0xff000000) != 0)
@@ -394,11 +396,11 @@ namespace MongoDB.Bson
 
         private static ObjectId Create(int timestamp, long random, int increment)
         {
-            if ((random & 0xff00000000) != 0)
+            if (random < 0 || random > 0xffffffffff)
             {
-                throw new ArgumentOutOfRangeException(nameof(random), "The random value must be between 0 and 4294967295 (it must fit in 5 bytes).");
+                throw new ArgumentOutOfRangeException(nameof(random), "The random value must be between 0 and 1099511627775 (it must fit in 5 bytes).");
             }
-            if ((increment & 0xff000000) != 0)
+            if (increment < 0 || increment > 0xffffff)
             {
                 throw new ArgumentOutOfRangeException(nameof(increment), "The increment value must be between 0 and 16777215 (it must fit in 3 bytes).");
             }

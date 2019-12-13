@@ -26,8 +26,8 @@ namespace MongoDB.Bson.Tests
     {
         [Theory]
         [InlineData(0, 0)]
-        [InlineData(0xffffffff, 0xffffff)]
-        [InlineData(0x11111111, 0x111111)]
+        [InlineData(0xffffffffff, 0xffffff)]
+        [InlineData(0x1111111111, 0x111111)]
         public void Create_should_not_throw_when_income_parameters_are_valid(long random, int increment)
         {
             var _ = ObjectIdReflector.Create(1, random, increment);
@@ -36,8 +36,8 @@ namespace MongoDB.Bson.Tests
         [Theory]
         [InlineData(-1, 1)]
         [InlineData(1, -1)]
-        [InlineData(0x100000000, 1)]
-        [InlineData(0x200000000, 1)]
+        [InlineData(0x10000000000, 1)]
+        [InlineData(0x20000000000, 1)]
         [InlineData(1, 0x1000000)]
         [InlineData(1, 0x2000000)]
         public void Create_should_throw_when_income_parameters_are_out_of_range(long random, int increment)
@@ -57,7 +57,9 @@ namespace MongoDB.Bson.Tests
         {
             ObjectIdReflector.__staticIncrement(seedIncrement);
             var objectId = ObjectId.GenerateNewId();
+#pragma warning disable 618
             objectId.Increment.Should().Be(expectedIncrement);
+#pragma warning restore 618
         }
 
         [Theory]
@@ -84,8 +86,8 @@ namespace MongoDB.Bson.Tests
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
-#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
+#pragma warning restore 618
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
             Assert.True(bytes.SequenceEqual(objectId.ToByteArray()));
@@ -105,8 +107,8 @@ namespace MongoDB.Bson.Tests
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
-#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
+#pragma warning restore 618
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
             Assert.True(bytes.SequenceEqual(objectId.ToByteArray()));
@@ -135,19 +137,21 @@ namespace MongoDB.Bson.Tests
         [Fact]
         public void TestPackWithInvalidIncrement()
         {
+#pragma warning disable 618
             var objectId = new ObjectId(ObjectId.Pack(0, 0, 0, 0x00ffffff));
             Assert.Equal(0x00ffffff, objectId.Increment);
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(ObjectId.Pack(0, 0, 0, 0x01000000)));
+#pragma warning restore 618
         }
 
         [Fact]
         public void TestPackWithInvalidMachine()
         {
-            var objectId = new ObjectId(ObjectId.Pack(0, 0x00ffffff, 0, 0));
 #pragma warning disable 618
+            var objectId = new ObjectId(ObjectId.Pack(0, 0x00ffffff, 0, 0));
             Assert.Equal(0x00ffffff, objectId.Machine);
-#pragma warning restore 618
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectId(ObjectId.Pack(0, 0x01000000, 0, 0)));
+#pragma warning restore 618
         }
 
         [Fact]
@@ -163,8 +167,8 @@ namespace MongoDB.Bson.Tests
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
-#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
+#pragma warning restore 618
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
             Assert.True(bytes.SequenceEqual(objectId.ToByteArray()));
@@ -205,8 +209,8 @@ namespace MongoDB.Bson.Tests
             Assert.Equal(0x0a0b0c, objectId.Increment);
             Assert.Equal(0x050607, objectId.Machine);
             Assert.Equal(0x0809, objectId.Pid);
-#pragma warning restore 618
             Assert.Equal(0x0a0b0c, objectId.Increment);
+#pragma warning restore 618
             Assert.Equal(BsonConstants.UnixEpoch.AddSeconds(0x01020304), objectId.CreationTime);
             Assert.Equal("0102030405060708090a0b0c", objectId.ToString());
             Assert.True(bytes.SequenceEqual(objectId.ToByteArray()));

@@ -25,6 +25,17 @@ namespace MongoDB.Bson.Tests
     public class ObjectIdTests
     {
         [Theory]
+        [InlineData(0x01020304, 0x0000000506070809, 0x0a0b0c, 0x01020304, 0x05060708, 0x090a0b0c)]
+        [InlineData(0xf1f2f3f4, 0x000000f5f6f7f8f9, 0xfafbfc, 0xf1f2f3f4, 0xf5f6f7f8, 0xf9fafbfc)]
+        public void Create_should_generate_expected_a_b_c(uint timestamp, long random, uint increment, uint expectedA, uint expectedB, uint expectedC)
+        {
+            var objectId = ObjectIdReflector.Create((int)timestamp, random, (int)increment);
+            objectId._a().Should().Be((int)expectedA);
+            objectId._b().Should().Be((int)expectedB);
+            objectId._c().Should().Be((int)expectedC);
+        }
+
+        [Theory]
         [InlineData(0, 0)]
         [InlineData(0xffffffffff, 0xffffff)]
         [InlineData(0x1111111111, 0x111111)]
@@ -476,8 +487,23 @@ namespace MongoDB.Bson.Tests
         }
     }
 
-    internal class ObjectIdReflector
+    internal static class ObjectIdReflector
     {
+        public static int _a(this ObjectId obj)
+        {
+            return (int)Reflector.GetFieldValue(obj, nameof(_a));
+        }
+
+        public static int _b(this ObjectId obj)
+        {
+            return (int)Reflector.GetFieldValue(obj, nameof(_b));
+        }
+
+        public static int _c(this ObjectId obj)
+        {
+            return (int)Reflector.GetFieldValue(obj, nameof(_c));
+        }
+
         public static ObjectId Create(int timestamp, long random, int increment)
         {
             return (ObjectId)Reflector.InvokeStatic(typeof(ObjectId), nameof(Create), timestamp, random, increment);

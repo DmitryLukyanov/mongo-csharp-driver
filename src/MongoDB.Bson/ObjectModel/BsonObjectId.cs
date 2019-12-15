@@ -45,7 +45,7 @@ namespace MongoDB.Bson
         /// Initializes a new instance of the BsonObjectId class.
         /// </summary>
         /// <param name="bytes">The bytes.</param>
-        [Obsolete("Use new BsonObjectId(byte[] bytes) instead.")]
+        [Obsolete("Use new BsonObjectId(ObjectId value) instead.")]
         public BsonObjectId(byte[] bytes)
         {
             _value = new ObjectId(bytes);

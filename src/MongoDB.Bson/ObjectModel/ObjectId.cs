@@ -390,8 +390,12 @@ namespace MongoDB.Bson
         // private static methods
         private static long CalculateRandomValue()
         {
-            var seed = GetCurrentTime() + GetMachineHash() + GetPid();
-            return new Random(seed).Next() & 0xffffffffff; // 5 bytes
+            var seed = (int)DateTime.UtcNow.Ticks ^ GetMachineHash() ^ GetPid();
+            var random = new Random(seed);
+            var high = random.Next();
+            var low = random.Next();
+            var combined = (long)((ulong)(uint)high << 32 | (ulong)(uint)low);
+            return combined & 0xffffffffff; // low order 5 bytes
         }
 
         private static ObjectId Create(int timestamp, long random, int increment)
@@ -406,8 +410,8 @@ namespace MongoDB.Bson
             }
 
             var a = timestamp;
-            var b = (int)(random >> 8); // take first 4 bytes
-            var c = (int)((random & 0xff) << 24) | increment; // 5th byte and increment
+            var b = (int)(random >> 8); // first 4 bytes of random
+            var c = (int)(random << 24) | increment; // 5th byte of random and 3 byte increment
             return new ObjectId(a, b, c);
         }
 
@@ -420,11 +424,6 @@ namespace MongoDB.Bson
         private static int GetCurrentProcessId()
         {
             return Process.GetCurrentProcess().Id;
-        }
-
-        private static int GetCurrentTime()
-        {
-            return GetTimestampFromDateTime(DateTime.UtcNow);
         }
 
         private static int GetMachineHash()

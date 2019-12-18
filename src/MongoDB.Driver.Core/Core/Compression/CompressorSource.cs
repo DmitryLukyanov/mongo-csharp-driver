@@ -86,6 +86,8 @@ namespace MongoDB.Driver.Core.Compression
 
                         return new ZlibCompressor(zlibCompressionLevel);
                     }
+                case CompressorType.Zstandard:
+                    return new ZstandardCompressor();
             }
 
             throw new NotSupportedException($"The compressor {compressorConfiguration.Type} is not supported.");

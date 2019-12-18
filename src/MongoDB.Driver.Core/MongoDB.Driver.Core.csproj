@@ -67,6 +67,24 @@
       <Link>snappy64.dll</Link>
     </Content>
   </ItemGroup>
+
+  <PropertyGroup>
+    <ZstdBinaries>Core/Compression/Zstd/lib/win</ZstdBinaries>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="$(ZstdBinaries)/libzstd.dll">
+      <Pack>true</Pack>
+      <PackagePath>x64/native/windows</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(ZstdBinaries)/libzstd.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libzstd.dll</Link>
+    </Content>
+  </ItemGroup>
   
   <ItemGroup>
     <Content Include="MongoDB.Driver.Core.targets">

@@ -33,6 +33,10 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         public LibraryLoader(ILibraryLocator libraryLocator)
         {
             Ensure.IsNotNull(libraryLocator, nameof(libraryLocator));
+            if (!libraryLocator.IsX32ModeSupported)
+            {
+                ThrowIfNot64BitProcess();
+            }
             _nativeLoader = CreateNativeLoader(libraryLocator);
         }
 

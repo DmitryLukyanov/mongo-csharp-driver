@@ -340,83 +340,81 @@ namespace MongoDB.Bson.Tests.Serialization.DictionaryGenericSerializers
             Assert.Throws<BsonSerializationException>(() => obj.ToBson());
         }
 
-        [Fact]
-        public void TestMixedPrimitiveTypes()
+        [Theory]
+        [ProtectGuidRepresentation]
+        [ClassData(typeof(TemporaryGuidRepresentationModeTestCases))]
+        public void TestMixedPrimitiveTypes(TemporaryGuidRepresentationMode mode)
         {
-#pragma warning disable 618
-            foreach (var mode in TemporaryGuidRepresentationModes.All)
-            {
-                using (mode.Set())
-                {
-                    var dateTime = DateTime.SpecifyKind(new DateTime(2010, 1, 1, 11, 22, 33), DateTimeKind.Utc);
-                    var isoDate = dateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.FFFZ");
-                    var guid = Guid.Empty;
-                    string expectedGuidJson = null;
-                    if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                    {
-                        switch (BsonDefaults.GuidRepresentation)
-                        {
-                            case GuidRepresentation.CSharpLegacy: expectedGuidJson = "CSUUID('00000000-0000-0000-0000-000000000000')"; break;
-                            case GuidRepresentation.JavaLegacy: expectedGuidJson = "JUUID('00000000-0000-0000-0000-000000000000')"; break;
-                            case GuidRepresentation.PythonLegacy: expectedGuidJson = "PYUUID('00000000-0000-0000-0000-000000000000')"; break;
-                            case GuidRepresentation.Standard: expectedGuidJson = "UUID('00000000-0000-0000-0000-000000000000')"; break;
-                        }
-                    }
-                    var objectId = ObjectId.Empty;
-                    var d = new Dictionary<object, object>
-                    {
-                        { "A", true },
-                        { "B", dateTime },
-                        { "C", 1.5 },
-                        { "D", 1 },
-                        { "E", 2L },
-                        { "G", objectId },
-                        { "H", "x" }
-                    };
-                    if (expectedGuidJson != null)
-                    {
-                        d.Add("F", guid);
-                    }
-                    var rod = new ReadOnlyDictionary<object, object>(d);
-                    var sd = CreateSortedDictionary(d);
-                    var sl = CreateSortedList(d);
-                    var obj = new T { D = d, ID = d, IROD = rod, ROD = rod, SD = sd, SL = sl };
-                    var json = obj.ToJson(new JsonWriterSettings());
-                    var reps = new Dictionary<object, object>
-                    {
-                        { "A", "true" },
-                        { "B", string.Format("ISODate('{0}')", isoDate) },
-                        { "C", "1.5" },
-                        { "D", "1" },
-                        { "E", "NumberLong(2)" },
-                        { "G", "ObjectId('000000000000000000000000')" },
-                        { "H", "'x'" }
-                    };
-                    if (expectedGuidJson != null)
-                    {
-                        reps.Add("F", expectedGuidJson);
-                    }
-                    var htRep = GetDocumentRepresentationInKeyOrder(d, reps);
-                    var sdRep = GetDocumentRepresentationInKeyOrder(sd, reps);
-                    var slRep = GetDocumentRepresentationInKeyOrder(sl, reps);
-                    var expected = "{ 'D' : #D, 'ID' : #D, 'IROD' : #D, 'ROD' : #D, 'SD' : #SD, 'SL' : #SL }"
-                        .Replace("#D", htRep)
-                        .Replace("#SD", sdRep)
-                        .Replace("#SL", slRep)
-                        .Replace("'", "\"");
-                    Assert.Equal(expected, json);
+            mode.Set();
 
-                    var bson = obj.ToBson(writerSettings: new BsonBinaryWriterSettings());
-                    var rehydrated = BsonSerializer.Deserialize<T>(new BsonBinaryReader(new MemoryStream(bson), new BsonBinaryReaderSettings()));
-                    Assert.IsType<Dictionary<object, object>>(rehydrated.D);
-                    Assert.IsType<Dictionary<object, object>>(rehydrated.ID);
-                    Assert.IsType<ReadOnlyDictionary<object, object>>(rehydrated.IROD);
-                    Assert.IsType<ReadOnlyDictionary<object, object>>(rehydrated.ROD);
-                    Assert.IsType<SortedDictionary<object, object>>(rehydrated.SD);
-                    Assert.IsType<SortedList<object, object>>(rehydrated.SL);
-                    Assert.True(bson.SequenceEqual(rehydrated.ToBson(writerSettings: new BsonBinaryWriterSettings())));
+#pragma warning disable 618
+            var dateTime = DateTime.SpecifyKind(new DateTime(2010, 1, 1, 11, 22, 33), DateTimeKind.Utc);
+            var isoDate = dateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.FFFZ");
+            var guid = Guid.Empty;
+            string expectedGuidJson = null;
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+            {
+                switch (BsonDefaults.GuidRepresentation)
+                {
+                    case GuidRepresentation.CSharpLegacy: expectedGuidJson = "CSUUID('00000000-0000-0000-0000-000000000000')"; break;
+                    case GuidRepresentation.JavaLegacy: expectedGuidJson = "JUUID('00000000-0000-0000-0000-000000000000')"; break;
+                    case GuidRepresentation.PythonLegacy: expectedGuidJson = "PYUUID('00000000-0000-0000-0000-000000000000')"; break;
+                    case GuidRepresentation.Standard: expectedGuidJson = "UUID('00000000-0000-0000-0000-000000000000')"; break;
                 }
             }
+            var objectId = ObjectId.Empty;
+            var d = new Dictionary<object, object>
+            {
+                { "A", true },
+                { "B", dateTime },
+                { "C", 1.5 },
+                { "D", 1 },
+                { "E", 2L },
+                { "G", objectId },
+                { "H", "x" }
+            };
+            if (expectedGuidJson != null)
+            {
+                d.Add("F", guid);
+            }
+            var rod = new ReadOnlyDictionary<object, object>(d);
+            var sd = CreateSortedDictionary(d);
+            var sl = CreateSortedList(d);
+            var obj = new T { D = d, ID = d, IROD = rod, ROD = rod, SD = sd, SL = sl };
+            var json = obj.ToJson(new JsonWriterSettings());
+            var reps = new Dictionary<object, object>
+            {
+                { "A", "true" },
+                { "B", string.Format("ISODate('{0}')", isoDate) },
+                { "C", "1.5" },
+                { "D", "1" },
+                { "E", "NumberLong(2)" },
+                { "G", "ObjectId('000000000000000000000000')" },
+                { "H", "'x'" }
+            };
+            if (expectedGuidJson != null)
+            {
+                reps.Add("F", expectedGuidJson);
+            }
+            var htRep = GetDocumentRepresentationInKeyOrder(d, reps);
+            var sdRep = GetDocumentRepresentationInKeyOrder(sd, reps);
+            var slRep = GetDocumentRepresentationInKeyOrder(sl, reps);
+            var expected = "{ 'D' : #D, 'ID' : #D, 'IROD' : #D, 'ROD' : #D, 'SD' : #SD, 'SL' : #SL }"
+                .Replace("#D", htRep)
+                .Replace("#SD", sdRep)
+                .Replace("#SL", slRep)
+                .Replace("'", "\"");
+            Assert.Equal(expected, json);
+
+            var bson = obj.ToBson(writerSettings: new BsonBinaryWriterSettings());
+            var rehydrated = BsonSerializer.Deserialize<T>(new BsonBinaryReader(new MemoryStream(bson), new BsonBinaryReaderSettings()));
+            Assert.IsType<Dictionary<object, object>>(rehydrated.D);
+            Assert.IsType<Dictionary<object, object>>(rehydrated.ID);
+            Assert.IsType<ReadOnlyDictionary<object, object>>(rehydrated.IROD);
+            Assert.IsType<ReadOnlyDictionary<object, object>>(rehydrated.ROD);
+            Assert.IsType<SortedDictionary<object, object>>(rehydrated.SD);
+            Assert.IsType<SortedList<object, object>>(rehydrated.SL);
+            Assert.True(bson.SequenceEqual(rehydrated.ToBson(writerSettings: new BsonBinaryWriterSettings())));
 #pragma warning restore 618
         }
 

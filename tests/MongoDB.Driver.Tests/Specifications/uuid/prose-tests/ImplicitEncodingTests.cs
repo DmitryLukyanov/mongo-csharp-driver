@@ -26,107 +26,107 @@ namespace MongoDB.Driver.Tests.Specifications.uuid.prose_tests
     public class ImplicitEncodingTests
     {
         [Fact]
+        [ProtectGuidRepresentation]
         public void Implicit_encoding_with_csharp_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var collection = GetCollection<ClassWithGuidIdUsingCSharpLegacyRepresentation>();
-                var guid = Guid.Parse("00112233445566778899aabbccddeeff");
-                var document = new ClassWithGuidIdUsingCSharpLegacyRepresentation { Id = guid };
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                DropCollection(collection);
-                collection.InsertOne(document);
+            var collection = GetCollection<ClassWithGuidIdUsingCSharpLegacyRepresentation>();
+            var guid = Guid.Parse("00112233445566778899aabbccddeeff");
+            var document = new ClassWithGuidIdUsingCSharpLegacyRepresentation { Id = guid };
 
-                var insertedDocument = FindSingleDocument(collection);
-                insertedDocument.Id.Should().Be(guid);
+            DropCollection(collection);
+            collection.InsertOne(document);
 
-                var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
-                var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
-                binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
-                binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("33221100554477668899aabbccddeeff"));
-            }
+            var insertedDocument = FindSingleDocument(collection);
+            insertedDocument.Id.Should().Be(guid);
+
+            var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
+            var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
+            binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
+            binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("33221100554477668899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Implicit_encoding_with_java_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var collection = GetCollection<ClassWithGuidIdUsingJavaLegacyRepresentation>();
-                var guid = Guid.Parse("00112233445566778899aabbccddeeff");
-                var document = new ClassWithGuidIdUsingJavaLegacyRepresentation { Id = guid };
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                DropCollection(collection);
-                collection.InsertOne(document);
+            var collection = GetCollection<ClassWithGuidIdUsingJavaLegacyRepresentation>();
+            var guid = Guid.Parse("00112233445566778899aabbccddeeff");
+            var document = new ClassWithGuidIdUsingJavaLegacyRepresentation { Id = guid };
 
-                var insertedDocument = FindSingleDocument(collection);
-                insertedDocument.Id.Should().Be(guid);
+            DropCollection(collection);
+            collection.InsertOne(document);
 
-                var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
-                var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
-                binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
-                binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("7766554433221100ffeeddccbbaa9988"));
-            }
+            var insertedDocument = FindSingleDocument(collection);
+            insertedDocument.Id.Should().Be(guid);
+
+            var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
+            var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
+            binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
+            binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("7766554433221100ffeeddccbbaa9988"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Implicit_encoding_with_pyton_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var collection = GetCollection<ClassWithGuidIdUsingPythonLegacyRepresentation>();
-                var guid = Guid.Parse("00112233445566778899aabbccddeeff");
-                var document = new ClassWithGuidIdUsingPythonLegacyRepresentation { Id = guid };
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                DropCollection(collection);
-                collection.InsertOne(document);
+            var collection = GetCollection<ClassWithGuidIdUsingPythonLegacyRepresentation>();
+            var guid = Guid.Parse("00112233445566778899aabbccddeeff");
+            var document = new ClassWithGuidIdUsingPythonLegacyRepresentation { Id = guid };
 
-                var insertedDocument = FindSingleDocument(collection);
-                insertedDocument.Id.Should().Be(guid);
+            DropCollection(collection);
+            collection.InsertOne(document);
 
-                var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
-                var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
-                binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
-                binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("00112233445566778899aabbccddeeff"));
-            }
+            var insertedDocument = FindSingleDocument(collection);
+            insertedDocument.Id.Should().Be(guid);
+
+            var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
+            var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
+            binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
+            binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("00112233445566778899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Implicit_encoding_with_standard_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var collection = GetCollection<ClassWithGuidIdUsingStandardRepresentation>();
-                var guid = Guid.Parse("00112233445566778899aabbccddeeff");
-                var document = new ClassWithGuidIdUsingStandardRepresentation { Id = guid };
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                DropCollection(collection);
-                collection.InsertOne(document);
+            var collection = GetCollection<ClassWithGuidIdUsingStandardRepresentation>();
+            var guid = Guid.Parse("00112233445566778899aabbccddeeff");
+            var document = new ClassWithGuidIdUsingStandardRepresentation { Id = guid };
 
-                var insertedDocument = FindSingleDocument(collection);
-                insertedDocument.Id.Should().Be(guid);
+            DropCollection(collection);
+            collection.InsertOne(document);
 
-                var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
-                var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
-                binaryData.SubType.Should().Be(BsonBinarySubType.UuidStandard);
-                binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("00112233445566778899aabbccddeeff"));
-            }
+            var insertedDocument = FindSingleDocument(collection);
+            insertedDocument.Id.Should().Be(guid);
+
+            var insertedDocumentAsBsonDocument = FindSingleDocumentAsBsonDocument(collection);
+            var binaryData = (BsonBinaryData)insertedDocumentAsBsonDocument["_id"];
+            binaryData.SubType.Should().Be(BsonBinarySubType.UuidStandard);
+            binaryData.Bytes.Should().Equal(BsonUtils.ParseHexString("00112233445566778899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Implicit_encoding_with_unspecified_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var collection = GetCollection<ClassWithGuidIdUsingUnspecifiedRepresentation>();
-                var guid = Guid.Parse("00112233445566778899aabbccddeeff");
-                var document = new ClassWithGuidIdUsingUnspecifiedRepresentation { Id = guid };
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                DropCollection(collection);
-                var exception = Record.Exception(() => collection.InsertOne(document));
+            var collection = GetCollection<ClassWithGuidIdUsingUnspecifiedRepresentation>();
+            var guid = Guid.Parse("00112233445566778899aabbccddeeff");
+            var document = new ClassWithGuidIdUsingUnspecifiedRepresentation { Id = guid };
 
-                exception.Should().BeOfType<BsonSerializationException>();
-            }
+            DropCollection(collection);
+            var exception = Record.Exception(() => collection.InsertOne(document));
+
+            exception.Should().BeOfType<BsonSerializationException>();
         }
 
         // private methods

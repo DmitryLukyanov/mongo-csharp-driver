@@ -35,27 +35,25 @@ namespace MongoDB.Bson.Tests.Jira.CSharp147
             public int A { get; set; }
         }
 
-        [Fact]
-        public void Test()
+        [Theory]
+        [ProtectGuidRepresentation]
+        [ClassData(typeof(TemporaryGuidRepresentationModeTestCases))]
+        public void Test(TemporaryGuidRepresentationMode mode)
         {
+            mode.Set();
+
 #pragma warning disable 618
-            foreach (var mode in TemporaryGuidRepresentationModes.All)
+            var p = new Parent { Child = new Child() };
+            p.Child.A = 1;
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 && BsonDefaults.GuidRepresentation != GuidRepresentation.Unspecified)
             {
-                using (mode.Set())
-                {
-                    var p = new Parent { Child = new Child() };
-                    p.Child.A = 1;
-                    if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 && BsonDefaults.GuidRepresentation != GuidRepresentation.Unspecified)
-                    {
-                        var json = p.ToJson(new JsonWriterSettings());
-                        BsonSerializer.Deserialize<Parent>(json); // throws Unexpected element exception
-                    }
-                    else
-                    {
-                        var exception = Record.Exception(() => p.ToJson(new JsonWriterSettings()));
-                        exception.Should().BeOfType<BsonSerializationException>();
-                    }
-                }
+                var json = p.ToJson(new JsonWriterSettings());
+                BsonSerializer.Deserialize<Parent>(json); // throws Unexpected element exception
+            }
+            else
+            {
+                var exception = Record.Exception(() => p.ToJson(new JsonWriterSettings()));
+                exception.Should().BeOfType<BsonSerializationException>();
             }
 #pragma warning restore 618
         }

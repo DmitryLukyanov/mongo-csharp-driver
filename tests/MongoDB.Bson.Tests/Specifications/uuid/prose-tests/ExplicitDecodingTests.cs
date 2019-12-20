@@ -23,95 +23,95 @@ namespace MongoDB.Bson.Tests.Specifications.uuid.prose_tests
     public class ExplicitDecodingTests
     {
         [Fact]
+        [ProtectGuidRepresentation]
         public void Explicit_decoding_with_csharp_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var bytes = BsonUtils.ParseHexString("33221100554477668899aabbccddeeff");
-                var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                var exception = Record.Exception(() => binaryData.ToGuid());
-                exception.Should().BeOfType<InvalidOperationException>();
+            var bytes = BsonUtils.ParseHexString("33221100554477668899aabbccddeeff");
+            var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
-                exception.Should().BeOfType<InvalidOperationException>();
+            var exception = Record.Exception(() => binaryData.ToGuid());
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
-                exception.Should().BeOfType<ArgumentException>();
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                var result = binaryData.ToGuid(GuidRepresentation.CSharpLegacy);
-                result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
-            }
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
+            exception.Should().BeOfType<ArgumentException>();
+
+            var result = binaryData.ToGuid(GuidRepresentation.CSharpLegacy);
+            result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Explicit_decoding_with_java_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var bytes = BsonUtils.ParseHexString("7766554433221100ffeeddccbbaa9988");
-                var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                var exception = Record.Exception(() => binaryData.ToGuid());
-                exception.Should().BeOfType<InvalidOperationException>();
+            var bytes = BsonUtils.ParseHexString("7766554433221100ffeeddccbbaa9988");
+            var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
-                exception.Should().BeOfType<InvalidOperationException>();
+            var exception = Record.Exception(() => binaryData.ToGuid());
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
-                exception.Should().BeOfType<ArgumentException>();
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                var result = binaryData.ToGuid(GuidRepresentation.JavaLegacy);
-                result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
-            }
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
+            exception.Should().BeOfType<ArgumentException>();
+
+            var result = binaryData.ToGuid(GuidRepresentation.JavaLegacy);
+            result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Explicit_decoding_with_python_legacy_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var bytes = BsonUtils.ParseHexString("00112233445566778899aabbccddeeff");
-                var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                var exception = Record.Exception(() => binaryData.ToGuid());
-                exception.Should().BeOfType<InvalidOperationException>();
+            var bytes = BsonUtils.ParseHexString("00112233445566778899aabbccddeeff");
+            var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidLegacy);
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
-                exception.Should().BeOfType<InvalidOperationException>();
+            var exception = Record.Exception(() => binaryData.ToGuid());
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
-                exception.Should().BeOfType<ArgumentException>();
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Standard));
+            exception.Should().BeOfType<InvalidOperationException>();
 
-                var result = binaryData.ToGuid(GuidRepresentation.PythonLegacy);
-                result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
-            }
+            exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
+            exception.Should().BeOfType<ArgumentException>();
+
+            var result = binaryData.ToGuid(GuidRepresentation.PythonLegacy);
+            result.Should().Be(new Guid("00112233445566778899aabbccddeeff"));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void Explicit_decoding_with_standard_representation_should_work_as_expected()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
+            TemporaryGuidRepresentationModes.V3.Set();
+
+            var guid = new Guid("00112233445566778899aabbccddeeff");
+            var bytes = GuidConverter.ToBytes(guid, GuidRepresentation.Standard);
+            var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidStandard);
+
+            var exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
+            exception.Should().BeOfType<ArgumentException>();
+
+            foreach (var guidRepresentation in new[] { GuidRepresentation.CSharpLegacy, GuidRepresentation.JavaLegacy, GuidRepresentation.PythonLegacy })
             {
-                var guid = new Guid("00112233445566778899aabbccddeeff");
-                var bytes = GuidConverter.ToBytes(guid, GuidRepresentation.Standard);
-                var binaryData = new BsonBinaryData(bytes, BsonBinarySubType.UuidStandard);
-
-                var exception = Record.Exception(() => binaryData.ToGuid(GuidRepresentation.Unspecified));
-                exception.Should().BeOfType<ArgumentException>();
-
-                foreach (var guidRepresentation in new[] { GuidRepresentation.CSharpLegacy, GuidRepresentation.JavaLegacy, GuidRepresentation.PythonLegacy })
-                {
-                    exception = Record.Exception(() => binaryData.ToGuid(guidRepresentation));
-                    exception.Should().BeOfType<InvalidOperationException>();
-                }
-
-                var result = binaryData.ToGuid();
-                result.Should().Be(guid);
-
-                result = binaryData.ToGuid(GuidRepresentation.Standard);
-                result.Should().Be(guid);
+                exception = Record.Exception(() => binaryData.ToGuid(guidRepresentation));
+                exception.Should().BeOfType<InvalidOperationException>();
             }
+
+            var result = binaryData.ToGuid();
+            result.Should().Be(guid);
+
+            result = binaryData.ToGuid(GuidRepresentation.Standard);
+            result.Should().Be(guid);
         }
     }
 }

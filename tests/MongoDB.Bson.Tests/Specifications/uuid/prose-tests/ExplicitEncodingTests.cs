@@ -23,18 +23,18 @@ namespace MongoDB.Bson.Tests.Specifications.uuid.prose_tests
     public class ExplicitEncodingTests
     {
         [Fact]
+        [ProtectGuidRepresentation]
         public void BsonBinaryData_constructor_with_a_Guid_and_no_representation_should_throw()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var guid = new Guid("00112233445566778899aabbccddeeff");
+            TemporaryGuidRepresentationModes.V3.Set();
+
+            var guid = new Guid("00112233445566778899aabbccddeeff");
 
 #pragma warning disable 618
-                var exception = Record.Exception(() => new BsonBinaryData(guid));
+            var exception = Record.Exception(() => new BsonBinaryData(guid));
 #pragma warning disable 618
 
-                exception.Should().BeOfType<InvalidOperationException>();
-            }
+            exception.Should().BeOfType<InvalidOperationException>();
         }
 
         [Theory]
@@ -42,32 +42,32 @@ namespace MongoDB.Bson.Tests.Specifications.uuid.prose_tests
         [InlineData(GuidRepresentation.JavaLegacy, BsonBinarySubType.UuidLegacy, "7766554433221100ffeeddccbbaa9988")]
         [InlineData(GuidRepresentation.PythonLegacy, BsonBinarySubType.UuidLegacy, "00112233445566778899aabbccddeeff")]
         [InlineData(GuidRepresentation.Standard, BsonBinarySubType.UuidStandard, "00112233445566778899aabbccddeeff")]
+        [ProtectGuidRepresentation]
         public void BsonBinaryData_constructor_with_a_Guid_and_a_representation_should_return_expected_result(GuidRepresentation guidRepresentation, BsonBinarySubType expectedSubType, string expectedBytes)
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var guid = new Guid("00112233445566778899aabbccddeeff");
+            TemporaryGuidRepresentationModes.V3.Set();
 
-                var result = new BsonBinaryData(guid, guidRepresentation);
+            var guid = new Guid("00112233445566778899aabbccddeeff");
 
-                result.SubType.Should().Be(expectedSubType);
-                result.Bytes.Should().Equal(BsonUtils.ParseHexString(expectedBytes));
-            }
+            var result = new BsonBinaryData(guid, guidRepresentation);
+
+            result.SubType.Should().Be(expectedSubType);
+            result.Bytes.Should().Equal(BsonUtils.ParseHexString(expectedBytes));
         }
 
         [Fact]
+        [ProtectGuidRepresentation]
         public void BsonBinaryData_constructor_with_a_Guid_and_representation_Unspecified_should_throw()
         {
-            using (TemporaryGuidRepresentationModes.V3.Set())
-            {
-                var guid = new Guid("00112233445566778899aabbccddeeff");
+            TemporaryGuidRepresentationModes.V3.Set();
+
+            var guid = new Guid("00112233445566778899aabbccddeeff");
 
 #pragma warning disable 618
-                var exception = Record.Exception(() => new BsonBinaryData(guid, GuidRepresentation.Unspecified));
+            var exception = Record.Exception(() => new BsonBinaryData(guid, GuidRepresentation.Unspecified));
 #pragma warning disable 618
 
-                exception.Should().BeOfType<InvalidOperationException>();
-            }
+            exception.Should().BeOfType<InvalidOperationException>();
         }
     }
 }

@@ -30,52 +30,22 @@ namespace MongoDB.Bson.TestHelpers
 
         public GuidRepresentationMode GuidRepresentationMode => _guidRepresentationMode;
 
-        public GuidRepresentation GuidRepresenation => _guidRepresentation;
+        public GuidRepresentation GuidRepresentation => _guidRepresentation;
 
-        public IDisposable Set()
+        public void Set()
         {
 #pragma warning disable 618
-            var resetter = new Resetter();
             BsonDefaults.GuidRepresentationMode = _guidRepresentationMode;
             if (_guidRepresentationMode == GuidRepresentationMode.V2)
             {
                 BsonDefaults.GuidRepresentation = _guidRepresentation;
             }
-            return resetter;
 #pragma warning restore 618
         }
 
         public override string ToString()
         {
             return _guidRepresentationMode == GuidRepresentationMode.V2 ? $"V2:{_guidRepresentation}" : "V3";
-        }
-
-        private class Resetter : IDisposable
-        {
-            private GuidRepresentationMode _originalGuidRepresentationMode;
-            private GuidRepresentation _originalGuidRepresentation;
-
-            public Resetter()
-            {
-#pragma warning disable 618
-                _originalGuidRepresentationMode = BsonDefaults.GuidRepresentationMode;
-                if (_originalGuidRepresentationMode == GuidRepresentationMode.V2)
-                {
-                    _originalGuidRepresentation = BsonDefaults.GuidRepresentation;
-                }
-#pragma warning restore 618
-            }
-
-            public void Dispose()
-            {
-#pragma warning disable 618
-                BsonDefaults.GuidRepresentationMode = _originalGuidRepresentationMode;
-                if (_originalGuidRepresentationMode == GuidRepresentationMode.V2)
-                {
-                    BsonDefaults.GuidRepresentation = _originalGuidRepresentation;
-                }
-#pragma warning restore 618
-            }
         }
     }
 }

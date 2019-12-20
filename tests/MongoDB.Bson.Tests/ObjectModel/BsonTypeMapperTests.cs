@@ -414,45 +414,43 @@ namespace MongoDB.Bson.Tests
             Assert.Equal(value, bsonDouble.Value);
         }
 
-        [Fact]
-        public void TestMapGuid()
+        [Theory]
+        [ProtectGuidRepresentation]
+        [ClassData(typeof(TemporaryGuidRepresentationModeTestCases))]
+        public void TestMapGuid(TemporaryGuidRepresentationMode mode)
         {
+            mode.Set();
+
 #pragma warning disable 618
-            foreach (var mode in TemporaryGuidRepresentationModes.All)
+            var value = Guid.NewGuid();
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 && BsonDefaults.GuidRepresentation != GuidRepresentation.Unspecified)
             {
-                using (mode.Set())
+                var bsonValue = (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value);
+                byte[] expectedBytes;
+                BsonBinarySubType expectedSubType;
+                var guidRepresentation = BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 ? BsonDefaults.GuidRepresentation : GuidRepresentation.Unspecified;
+                if (guidRepresentation == GuidRepresentation.Unspecified)
                 {
-                    var value = Guid.NewGuid();
-                    if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 && BsonDefaults.GuidRepresentation != GuidRepresentation.Unspecified)
-                    {
-                        var bsonValue = (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value);
-                        byte[] expectedBytes;
-                        BsonBinarySubType expectedSubType;
-                        var guidRepresentation = BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2 ? BsonDefaults.GuidRepresentation : GuidRepresentation.Unspecified;
-                        if (guidRepresentation == GuidRepresentation.Unspecified)
-                        {
-                            expectedBytes = GuidConverter.ToBytes(value, GuidRepresentation.Standard);
-                            expectedSubType = BsonBinarySubType.UuidStandard;
-                        }
-                        else
-                        {
-                            expectedBytes = GuidConverter.ToBytes(value, guidRepresentation);
-                            expectedSubType = GuidConverter.GetSubType(guidRepresentation);
-                        }
-                        Assert.True(expectedBytes.SequenceEqual(bsonValue.Bytes));
-                        Assert.Equal(expectedSubType, bsonValue.SubType);
-                        var bsonBinary = (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value, BsonType.Binary);
-                        Assert.True(expectedBytes.SequenceEqual(bsonBinary.Bytes));
-                        Assert.Equal(expectedSubType, bsonBinary.SubType);
-                    }
-                    else
-                    {
-                        var exception = Record.Exception(() => (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value));
-                        exception.Should().BeOfType<InvalidOperationException>();
-                        exception = Record.Exception(() => (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value, BsonType.Binary));
-                        exception.Should().BeOfType<InvalidOperationException>();
-                    }
+                    expectedBytes = GuidConverter.ToBytes(value, GuidRepresentation.Standard);
+                    expectedSubType = BsonBinarySubType.UuidStandard;
                 }
+                else
+                {
+                    expectedBytes = GuidConverter.ToBytes(value, guidRepresentation);
+                    expectedSubType = GuidConverter.GetSubType(guidRepresentation);
+                }
+                Assert.True(expectedBytes.SequenceEqual(bsonValue.Bytes));
+                Assert.Equal(expectedSubType, bsonValue.SubType);
+                var bsonBinary = (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value, BsonType.Binary);
+                Assert.True(expectedBytes.SequenceEqual(bsonBinary.Bytes));
+                Assert.Equal(expectedSubType, bsonBinary.SubType);
+            }
+            else
+            {
+                var exception = Record.Exception(() => (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value));
+                exception.Should().BeOfType<InvalidOperationException>();
+                exception = Record.Exception(() => (BsonBinaryData)BsonTypeMapper.MapToBsonValue(value, BsonType.Binary));
+                exception.Should().BeOfType<InvalidOperationException>();
             }
 #pragma warning restore 618
         }

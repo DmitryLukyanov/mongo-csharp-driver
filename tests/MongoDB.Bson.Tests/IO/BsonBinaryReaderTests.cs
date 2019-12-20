@@ -242,90 +242,90 @@ namespace MongoDB.Bson.Tests.IO
         }
 
         [Theory]
-        [InlineData(GuidRepresentation.CSharpLegacy)]
-        [InlineData(GuidRepresentation.JavaLegacy)]
-        [InlineData(GuidRepresentation.PythonLegacy)]
-        [InlineData(GuidRepresentation.Unspecified)]
-        public void ReadBinaryData_subtype_3_should_use_GuidRepresentation_from_settings(GuidRepresentation guidRepresentation)
+        [ParameterAttributeData]
+        [ProtectGuidRepresentation]
+        public void ReadBinaryData_subtype_3_should_use_GuidRepresentation_from_settings(
+            [ClassDataValues(typeof(TemporaryGuidRepresentationModeTestCases))] TemporaryGuidRepresentationMode mode,
+            [Values(
+                GuidRepresentation.CSharpLegacy,
+                GuidRepresentation.JavaLegacy,
+                GuidRepresentation.PythonLegacy,
+                GuidRepresentation.Unspecified)] GuidRepresentation guidRepresentation)
         {
-#pragma warning disable 618
-            foreach (var mode in TemporaryGuidRepresentationModes.All)
-            {
-                using (mode.Set())
-                {
-                    var settings = new BsonBinaryReaderSettings();
-                    if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                    {
-                        settings.GuidRepresentation = guidRepresentation;
-                    }
-                    var bytes = new byte[] { 29, 0, 0, 0, 5, 120, 0, 16, 0, 0, 0, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0 };
-                    using (var stream = new MemoryStream(bytes))
-                    using (var reader = new BsonBinaryReader(stream, settings))
-                    {
-                        reader.ReadStartDocument();
-                        var type = reader.ReadBsonType();
-                        var name = reader.ReadName();
-                        var binaryData = reader.ReadBinaryData();
-                        var endOfDocument = reader.ReadBsonType();
-                        reader.ReadEndDocument();
+            mode.Set();
 
-                        name.Should().Be("x");
-                        type.Should().Be(BsonType.Binary);
-                        binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
-                        binaryData.Bytes.Should().Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
-                        if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                        {
-                            binaryData.GuidRepresentation.Should().Be(guidRepresentation);
-                        }
-                        endOfDocument.Should().Be(BsonType.EndOfDocument);
-                        stream.Position.Should().Be(stream.Length);
-                    }
+#pragma warning disable 618
+            var settings = new BsonBinaryReaderSettings();
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+            {
+                settings.GuidRepresentation = guidRepresentation;
+            }
+            var bytes = new byte[] { 29, 0, 0, 0, 5, 120, 0, 16, 0, 0, 0, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0 };
+            using (var stream = new MemoryStream(bytes))
+            using (var reader = new BsonBinaryReader(stream, settings))
+            {
+                reader.ReadStartDocument();
+                var type = reader.ReadBsonType();
+                var name = reader.ReadName();
+                var binaryData = reader.ReadBinaryData();
+                var endOfDocument = reader.ReadBsonType();
+                reader.ReadEndDocument();
+
+                name.Should().Be("x");
+                type.Should().Be(BsonType.Binary);
+                binaryData.SubType.Should().Be(BsonBinarySubType.UuidLegacy);
+                binaryData.Bytes.Should().Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
+                if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+                {
+                    binaryData.GuidRepresentation.Should().Be(guidRepresentation);
                 }
+                endOfDocument.Should().Be(BsonType.EndOfDocument);
+                stream.Position.Should().Be(stream.Length);
             }
 #pragma warning restore 618
         }
 
         [Theory]
-        [InlineData(GuidRepresentation.CSharpLegacy)]
-        [InlineData(GuidRepresentation.JavaLegacy)]
-        [InlineData(GuidRepresentation.PythonLegacy)]
-        [InlineData(GuidRepresentation.Standard)]
-        [InlineData(GuidRepresentation.Unspecified)]
-        public void ReadBinaryData_subtype_4_should_use_GuidRepresentation_Standard(GuidRepresentation guidRepresentation)
+        [ParameterAttributeData]
+        [ProtectGuidRepresentation]
+        public void ReadBinaryData_subtype_4_should_use_GuidRepresentation_Standard(
+            [ClassDataValues(typeof(TemporaryGuidRepresentationModeTestCases))] TemporaryGuidRepresentationMode mode,
+            [Values(
+                GuidRepresentation.CSharpLegacy,
+                GuidRepresentation.JavaLegacy,
+                GuidRepresentation.PythonLegacy,
+                GuidRepresentation.Standard,
+                GuidRepresentation.Unspecified)] GuidRepresentation guidRepresentation)
         {
-#pragma warning disable 618
-            foreach (var mode in TemporaryGuidRepresentationModes.All)
-            {
-                using (mode.Set())
-                {
-                    var settings = new BsonBinaryReaderSettings();
-                    if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                    {
-                        settings.GuidRepresentation = guidRepresentation;
-                    }
-                    var bytes = new byte[] { 29, 0, 0, 0, 5, 120, 0, 16, 0, 0, 0, 4, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0 };
-                    using (var stream = new MemoryStream(bytes))
-                    using (var reader = new BsonBinaryReader(stream, settings))
-                    {
-                        reader.ReadStartDocument();
-                        var type = reader.ReadBsonType();
-                        var name = reader.ReadName();
-                        var binaryData = reader.ReadBinaryData();
-                        var endOfDocument = reader.ReadBsonType();
-                        reader.ReadEndDocument();
+            mode.Set();
 
-                        name.Should().Be("x");
-                        type.Should().Be(BsonType.Binary);
-                        binaryData.SubType.Should().Be(BsonBinarySubType.UuidStandard);
-                        binaryData.Bytes.Should().Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
-                        if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                        {
-                            binaryData.GuidRepresentation.Should().Be(GuidRepresentation.Standard);
-                        }
-                        endOfDocument.Should().Be(BsonType.EndOfDocument);
-                        stream.Position.Should().Be(stream.Length);
-                    }
+#pragma warning disable 618
+            var settings = new BsonBinaryReaderSettings();
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+            {
+                settings.GuidRepresentation = guidRepresentation;
+            }
+            var bytes = new byte[] { 29, 0, 0, 0, 5, 120, 0, 16, 0, 0, 0, 4, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0 };
+            using (var stream = new MemoryStream(bytes))
+            using (var reader = new BsonBinaryReader(stream, settings))
+            {
+                reader.ReadStartDocument();
+                var type = reader.ReadBsonType();
+                var name = reader.ReadName();
+                var binaryData = reader.ReadBinaryData();
+                var endOfDocument = reader.ReadBsonType();
+                reader.ReadEndDocument();
+
+                name.Should().Be("x");
+                type.Should().Be(BsonType.Binary);
+                binaryData.SubType.Should().Be(BsonBinarySubType.UuidStandard);
+                binaryData.Bytes.Should().Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
+                if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+                {
+                    binaryData.GuidRepresentation.Should().Be(GuidRepresentation.Standard);
                 }
+                endOfDocument.Should().Be(BsonType.EndOfDocument);
+                stream.Position.Should().Be(stream.Length);
             }
 #pragma warning restore 618
         }
@@ -336,7 +336,7 @@ namespace MongoDB.Bson.Tests.IO
         private byte[] DecodeByteString(string byteString)
         {
             List<byte> bytes = new List<byte>(byteString.Length);
-            for (int i = 0; i < byteString.Length; )
+            for (int i = 0; i < byteString.Length;)
             {
                 char c = byteString[i++];
                 if (c == '\\' && ((c = byteString[i++]) != '\\'))

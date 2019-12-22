@@ -57,19 +57,16 @@ namespace MongoDB.Driver
         {
             get
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("MongoDatabaseSettings.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("MongoDatabaseSettings.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
+
                 return _guidRepresentation.Value;
             }
             set
             {
                 if (_isFrozen) { throw new InvalidOperationException("MongoDatabaseSettings is frozen."); }
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("MongoDatabaseSettings.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
-                }
+
+                GuidRepresentationMode.ThrowIfInvalidMode("MongoDatabaseSettings.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
+
                 _guidRepresentation.Value = value;
             }
         }

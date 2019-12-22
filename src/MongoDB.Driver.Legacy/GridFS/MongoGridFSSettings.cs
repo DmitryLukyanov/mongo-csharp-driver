@@ -159,19 +159,16 @@ namespace MongoDB.Driver.GridFS
         {
             get
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("MongoGridFSSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("MongoGridFSSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
+
                 return _guidRepresentation.Value;
             }
             set
             {
                 if (_isFrozen) { ThrowFrozen(); }
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("MongoGridFSSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-                }
+
+                GuidRepresentationMode.ThrowIfInvalidMode("MongoGridFSSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
+
                 _guidRepresentation.Value = value;
             }
         }

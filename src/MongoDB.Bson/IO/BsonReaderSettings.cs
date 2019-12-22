@@ -46,10 +46,8 @@ namespace MongoDB.Bson.IO
         [Obsolete("Configure serializers instead.")]
         protected BsonReaderSettings(GuidRepresentation guidRepresentation)
         {
-            if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-            {
-                throw new InvalidOperationException("BsonReaderSettings constructor with GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-            }
+            GuidRepresentationMode.ThrowIfInvalidMode("BsonReaderSettings constructor with GuidRepresentation can only be used when GuidRepresentationMode is V2.");
+
             _guidRepresentation = guidRepresentation;
         }
 
@@ -62,19 +60,15 @@ namespace MongoDB.Bson.IO
         {
             get
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("BsonReaderSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("BsonReaderSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
+
                 return _guidRepresentation;
             }
             set
             {
                 if (_isFrozen) { ThrowFrozenException(); }
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("BsonReaderSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-                }
+
+                GuidRepresentationMode.ThrowIfInvalidMode("BsonReaderSettings.GuidRepresentation can only be used when GuidRepresentationMode is V2.");
                 _guidRepresentation = value;
             }
         }

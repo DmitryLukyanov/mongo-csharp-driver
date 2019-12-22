@@ -77,10 +77,7 @@ namespace MongoDB.Bson
         public BsonBinaryData(byte[] bytes, BsonBinarySubType subType, GuidRepresentation guidRepresentation)
             : this(bytes, subType)
         {
-            if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-            {
-                throw new InvalidOperationException("BsonBinaryData constructor that takes a GuidRepresentation can only be used when GuidRepresentationMode is V2.");
-            }
+            GuidRepresentationMode.ThrowIfInvalidMode("BsonBinaryData constructor that takes a GuidRepresentation can only be used when GuidRepresentationMode is V2.");
 
             if (subType == BsonBinarySubType.UuidStandard || subType == BsonBinarySubType.UuidLegacy)
             {
@@ -179,10 +176,8 @@ namespace MongoDB.Bson
         {
             get
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("GuidRepresentation property can only be used when GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("GuidRepresentation property can only be used when GuidRepresentationMode is V2.");
+
                 return _guidRepresentation;
             }
         }
@@ -239,14 +234,9 @@ namespace MongoDB.Bson
         [Obsolete("Use the BsonBinaryData constructor instead and specify a Guid representation.")]
         public static implicit operator BsonBinaryData(Guid value)
         {
-            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-            {
-                return new BsonBinaryData(value);
-            }
-            else
-            {
-                throw new InvalidOperationException("Implicit conversion from Guid to BsonBinaryData is only valid when BsonDefaults.GuidRepresentationMode is V2.");
-            }
+            GuidRepresentationMode.ThrowIfInvalidMode("Implicit conversion from Guid to BsonBinaryData is only valid when BsonDefaults.GuidRepresentationMode is V2.");
+
+            return new BsonBinaryData(value);
         }
 
         /// <summary>

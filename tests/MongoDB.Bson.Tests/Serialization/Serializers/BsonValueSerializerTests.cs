@@ -542,7 +542,7 @@ namespace MongoDB.Bson.Tests.Serialization
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 foreach (var defaultGuidRepresentation in EnumHelper.GetValues<GuidRepresentation>())
                 {

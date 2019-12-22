@@ -44,9 +44,12 @@ namespace MongoDB.Bson
             }
 
             var testWithDefaultGuidRepresentationMode = Environment.GetEnvironmentVariable("TESTWITHDEFAULTGUIDREPRESENTATIONMODE");
-            if (testWithDefaultGuidRepresentationMode != null)
+            if (testWithDefaultGuidRepresentationMode != null && int.TryParse(testWithDefaultGuidRepresentationMode, out var mode))
             {
-                var _ = Enum.TryParse(testWithDefaultGuidRepresentationMode, out __guidRepresentationMode); // ignore errors
+                if (!GuidRepresentationMode.TryCreateGuidRepresentationMode(mode, out __guidRepresentationMode))
+                {
+                    __guidRepresentationMode = GuidRepresentationMode.V2;
+                }
             }
         }
 
@@ -101,18 +104,14 @@ namespace MongoDB.Bson
         {
             get
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("BsonDefaults.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("BsonDefaults.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
+
                 return __guidRepresentation;
             }
             set
             {
-                if (BsonDefaults.GuidRepresentationMode != GuidRepresentationMode.V2)
-                {
-                    throw new InvalidOperationException("BsonDefaults.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
-                }
+                GuidRepresentationMode.ThrowIfInvalidMode("BsonDefaults.GuidRepresentation can only be used when BsonDefaults.GuidRepresentationMode is V2.");
+
                 __guidRepresentation = value;
             }
         }

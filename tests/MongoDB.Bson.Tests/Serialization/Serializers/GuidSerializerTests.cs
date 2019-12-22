@@ -100,7 +100,7 @@ namespace MongoDB.Bson.Tests.Serialization.Serializers
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation, GuidRepresentation, GuidRepresentation>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 foreach (var defaultGuidRepresentation in EnumHelper.GetValues<GuidRepresentation>())
                 {
@@ -236,7 +236,7 @@ namespace MongoDB.Bson.Tests.Serialization.Serializers
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation?>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 foreach (var defaultGuidRepresentation in EnumHelper.GetValues<GuidRepresentation>())
                 {
@@ -300,7 +300,7 @@ namespace MongoDB.Bson.Tests.Serialization.Serializers
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation, GuidRepresentation?, BsonBinarySubType>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 if (defaultGuidRepresentationMode == GuidRepresentationMode.V2)
                 {
@@ -412,7 +412,7 @@ namespace MongoDB.Bson.Tests.Serialization.Serializers
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation, GuidRepresentation?, BsonBinarySubType, GuidRepresentation>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 foreach (var defaultGuidRepresentation in EnumHelper.GetValues<GuidRepresentation>())
                 {
@@ -498,7 +498,7 @@ namespace MongoDB.Bson.Tests.Serialization.Serializers
         {
             var data = new TheoryData<GuidRepresentationMode, GuidRepresentation, GuidRepresentation, GuidRepresentation?>();
 
-            foreach (var defaultGuidRepresentationMode in EnumHelper.GetValues<GuidRepresentationMode>())
+            foreach (var defaultGuidRepresentationMode in GuidRepresentationMode.All)
             {
                 foreach (var defaultGuidRepresentation in EnumHelper.GetValues<GuidRepresentation>())
                 {

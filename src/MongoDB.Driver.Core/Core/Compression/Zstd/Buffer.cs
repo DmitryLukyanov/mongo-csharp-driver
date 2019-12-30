@@ -19,11 +19,10 @@ using System.Runtime.InteropServices;
 
 namespace MongoDB.Driver.Core.Compression.Zstd
 {
-    // todo:
     [StructLayout(LayoutKind.Sequential)]
     internal class Buffer
     {
-        public IntPtr Data = IntPtr.Zero;
+        public IntPtr DataPointer = IntPtr.Zero;
         public UIntPtr Size = UIntPtr.Zero;
         public UIntPtr Position = UIntPtr.Zero;
     }

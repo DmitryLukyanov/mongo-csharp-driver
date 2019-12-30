@@ -17,37 +17,27 @@
 using System.IO;
 using System.IO.Compression;
 using MongoDB.Driver.Core.Compression.Zstd;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.Compression
 {
     internal class ZstandardCompressor : ICompressor
     {
-        public CompressorType Type => CompressorType.Zstandard;
+        public CompressorType Type => CompressorType.Zstd;
 
         public void Compress(Stream input, Stream output)
         {
-            using (var memoryStream = new MemoryStream())
+            using (var zstandardStream = new ZstandardStream(output, CompressionMode.Compress))
             {
-                input.CopyTo(memoryStream);
-                using (var compressionStream = new ZstandardStream(output, CompressionMode.Compress, leaveOpen: true))
-                {
-                    //compressionStream.CompressionLevel = 11;               // optional!!
-                    //compressionStream.CompressionDictionary = dictionary;  // optional!!
-                    compressionStream.Write(memoryStream.ToArray(), 0, (int)input.Length);
-                    compressionStream.Close();
-                }
+                input.EfficientCopyTo(zstandardStream);
             }
         }
 
         public void Decompress(Stream input, Stream output)
         {
-            //sing (var memoryStream = new MemoryStream(compressed))
-            using (var compressionStream = new ZstandardStream(input, CompressionMode.Decompress))
-            //using (var temp = new MemoryStream())
+            using (var zstandardStream = new ZstandardStream(input, CompressionMode.Decompress))
             {
-                //compressionStream.CompressionDictionary = dictionary;  // optional!!
-                compressionStream.CopyTo(output);
-                //output = temp.ToArray();
+                zstandardStream.CopyTo(output);
             }
         }
     }

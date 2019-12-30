@@ -43,9 +43,8 @@ namespace MongoDB.Driver.Core.Compression
             switch (compressorType)
             {
                 case CompressorType.Snappy:
-                    return true;
                 case CompressorType.Zlib:
-                    return true;
+                case CompressorType.Zstd:
                 case CompressorType.Noop: // This is realistically only used for testing
                     return true;
                 default:
@@ -86,7 +85,7 @@ namespace MongoDB.Driver.Core.Compression
 
                         return new ZlibCompressor(zlibCompressionLevel);
                     }
-                case CompressorType.Zstandard:
+                case CompressorType.Zstd:
                     return new ZstandardCompressor();
             }
 

@@ -452,6 +452,10 @@ axes:
         display_name: Snappy
         variables:
            COMPRESSOR: "snappy"
+      - id: "zstd"
+        display_name: Zstd
+        variables:
+           COMPRESSOR: "zstd"
 
 buildvariants:
 
@@ -485,6 +489,13 @@ buildvariants:
 
 - matrix_name: "tests-snappy-compression"
   matrix_spec: { compressor : "snappy", auth: "noauth", ssl: "nossl", version: ["3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "*" }
+  display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${os} "
+  tags: ["tests-variant"]
+  tasks:
+     - name: "test"
+     
+- matrix_name: "tests-zstd-compression"
+  matrix_spec: { compressor : "zstd", auth: "noauth", ssl: "nossl", version: ["3.6", "4.0", "4.2", "latest"], topology: "standalone", os: "*" }
   display_name: "${version} ${compressor} ${topology} ${auth} ${ssl} ${os} "
   tags: ["tests-variant"]
   tasks:

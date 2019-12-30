@@ -39,7 +39,7 @@ namespace MongoDB.Driver.Core.Compression
         /// <summary>
         /// The content of the message is compressed using zstandard. 
         /// </summary>
-        Zstandard = 3
+        Zstd = 3
     }
 
     /// <summary>

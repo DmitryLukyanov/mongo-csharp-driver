@@ -125,7 +125,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         public static UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer)
         {
-            var result = __ZSTD_endStream.Value(zcs, outputBuffer); ;
+            var result = __ZSTD_endStream.Value(zcs, outputBuffer);
             ThrowIfError(result);
             return result;
         }

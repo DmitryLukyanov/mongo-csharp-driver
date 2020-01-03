@@ -25,7 +25,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
     {
         private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
         private readonly Stream _compressedStream; // input for decompress and output for compress
-        private readonly bool _leaveOpen;
+        private readonly int _defaultCompressionLevel = 6;
 
         private readonly StreamReadHelper _streamReadHelper;
         private readonly StreamWriteHelper _streamWriteHelper;
@@ -37,12 +37,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         public ZstandardStream(
             Stream compressedStream,
             CompressionMode compressionMode,
-            bool leaveOpen = true,
             Optional<int> compressionLevel = default)
         {
             _compressedStream = Ensure.IsNotNull(compressedStream, nameof(compressedStream));
             _compressionMode = EnsureCompressionModeIsValid(compressionMode);
-            _leaveOpen = leaveOpen;
 
             _nativeWrapper = new NativeWrapper(_compressionMode, EnsureCompressionLevelIsValid(compressionLevel));
             switch (_compressionMode)
@@ -89,15 +87,15 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                     case CompressionMode.Compress:
                         try
                         {
-                            foreach (var outputBufferPosition in _nativeWrapper.RunFlushBySteps(_streamWriteHelper.DataBuffer))
+                            foreach (var outputBufferPosition in _nativeWrapper.FlushBySteps(_streamWriteHelper.DataBuffer))
                             {
-                                _streamWriteHelper.WriteBufferToCompressedStream(outputBufferPosition);
+                                _streamWriteHelper.WriteBufferToCompressedStream(count: outputBufferPosition);
                             }
+                            _compressedStream.Flush();
                         }
                         finally
                         {
                             _nativeWrapper.Dispose();
-                            _compressedStream.Flush();
                             _arrayPool.Return(_streamWriteHelper.DataBuffer);
                         }
                         break;
@@ -107,10 +105,6 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                         break;
                 }
 
-                if (!_leaveOpen)
-                {
-                    _compressedStream.Dispose();
-                }
                 _disposed = true;
             }
         }
@@ -120,21 +114,24 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             throw new NotSupportedException("Use Dispose instead.");
         }
 
-        public override int Read(byte[] uncompressedOutputBytes, int outputOffset, int count) // Decompress
+        public override int Read(byte[] outputBytes, int outputOffset, int count) // Decompress
         {
             if (!CanRead) throw new InvalidDataException("Read is not accessible.");
 
-            var internalDataBuffer = new BufferInfo(
-                _streamReadHelper.DataBuffer,
+            var compressedBuffer = new BufferInfo(
+                _streamReadHelper.DataBuffer,   // will be overwritten in the next steps if not empty
                 _streamReadHelper.StartDataBufferPosition);
-            var outputBuffer = new BufferInfo(uncompressedOutputBytes, outputOffset);
-            using (var operationContext = _nativeWrapper.InitializeOperation(internalDataBuffer, outputBuffer))
+            var uncompressedOutputBuffer = new BufferInfo(outputBytes, outputOffset);
+
+            using (var operationContext = _nativeWrapper.InitializeOperationContext(
+                internalDataInfo: compressedBuffer,
+                externalArgumentBufferInfo: uncompressedOutputBuffer)) // operation result
             {
                 var length = 0; // the result
 
                 while (count > 0)
                 {
-                    operationContext.InternalDataPinnedBuffer.Offset = 
+                    operationContext.InternalDataPinnedBuffer.Offset =
                         _streamReadHelper.TryReadCompressedStreamToBufferAndUpdatePosition(
                         currentDataPosition: operationContext.InternalDataPinnedBuffer.Offset, // 0 - if it's the first method call
                         _nativeWrapper.RecommendedInputSize,
@@ -167,16 +164,18 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             }
         }
 
-        public override void Write(byte[] uncompressedInputBytes, int inputOffset, int count) // Compress
+        public override void Write(byte[] inputBytes, int inputOffset, int count) // Compress
         {
             if (!CanWrite) throw new InvalidDataException("Write is not accessible.");
 
-            var dataBufferInfo = new BufferInfo(
+            var uncompressedInputInfo = new BufferInfo(inputBytes, inputOffset);
+            var compressedBuffer = new BufferInfo(
                 _streamWriteHelper.DataBuffer, // empty, since Write processes the whole message in one try
                 offset: 0);
-            var inputInfo = new BufferInfo(uncompressedInputBytes, inputOffset);
 
-            using (var operationContext = _nativeWrapper.InitializeOperation(dataBufferInfo, inputInfo))
+            using (var operationContext = _nativeWrapper.InitializeOperationContext(
+                internalDataInfo: compressedBuffer, // operation result
+                externalArgumentBufferInfo: uncompressedInputInfo))
             {
                 while (count > 0)
                 {
@@ -190,7 +189,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                         out var outputBufferPosition,
                         out var inputBufferPosition);
 
-                    _streamWriteHelper.WriteBufferToCompressedStream(offset: outputBufferPosition);
+                    _streamWriteHelper.WriteBufferToCompressedStream(count: outputBufferPosition);
 
                     // calculate progress in input buffer
                     count -= inputBufferPosition;
@@ -216,12 +215,12 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 throw new ArgumentException("Compression level can be specified only in Compress mode");
             }
 
-            if (compressionLevel.HasValue && compressionLevel.Value > NativeWrapper.MaxCompressionLevel) // add validation on min level
+            if (compressionLevel.HasValue && compressionLevel.Value > NativeWrapper.MaxCompressionLevel)
             {
                 throw new ArgumentOutOfRangeException(nameof(compressionLevel));
             }
 
-            return compressionLevel.WithDefault(6); // 6 - is default value
+            return compressionLevel.WithDefault(_defaultCompressionLevel);
         }
 
         private CompressionMode EnsureCompressionModeIsValid(CompressionMode compressionMode)
@@ -309,15 +308,15 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 /// </summary>
                 public bool IsDataDepleted { get; set; }
                 /// <summary>
-                /// The size of the last fetched data from stream.
+                /// The size of the last fetched data from the stream.
                 /// </summary>
                 public int LastReadDataSize { get; set; }
                 /// <summary>
-                /// Determinate whether _compressedStream.Read should be skipped until the internal buffer is depleted.
+                /// Determines whether stream.Read should be skipped until the internal buffer is depleted.
                 /// </summary>
                 public bool SkipDataReading { get; set; }
                 /// <summary>
-                /// Used to save position between different Read calls.
+                /// Saves a position between different Read calls.
                 /// </summary>
                 public int StartDataPosition { get; set; }
             }
@@ -336,9 +335,9 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             public byte[] DataBuffer => _dataBuffer; // will be implicitly updated via calls of native methods
 
-            public void WriteBufferToCompressedStream(int offset)
+            public void WriteBufferToCompressedStream(int count)
             {
-                _compressedStream.Write(_dataBuffer, 0, offset);
+                _compressedStream.Write(_dataBuffer, 0, count);
             }
         }
     }

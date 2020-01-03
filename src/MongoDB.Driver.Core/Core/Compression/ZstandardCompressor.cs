@@ -27,7 +27,9 @@ namespace MongoDB.Driver.Core.Compression
 
         public void Compress(Stream input, Stream output)
         {
-            using (var zstandardStream = new ZstandardStream(output, CompressionMode.Compress))
+            using (var zstandardStream = new ZstandardStream(
+                output, 
+                CompressionMode.Compress))
             {
                 input.EfficientCopyTo(zstandardStream);
             }

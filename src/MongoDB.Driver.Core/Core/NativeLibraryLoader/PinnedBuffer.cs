@@ -26,7 +26,7 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         private IntPtr _intPtr;
         private int _offset;
 
-        public PinnedBuffer(byte[] bytes, int offset = 0)
+        public PinnedBuffer(byte[] bytes, int offset)
         {
             _bytes = Ensure.IsNotNull(bytes, nameof(bytes));
             // The array must be pinned by using a GCHandle before it is passed to UnsafeAddrOfPinnedArrayElement.

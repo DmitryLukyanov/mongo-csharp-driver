@@ -78,7 +78,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
             using (var inputStream = new MemoryStream(data))
             using (var outputStream = new MemoryStream())
             {
-                using (var zstdStream = new ZstandardStream(outputStream, CompressionMode.Compress, true, compressionLevel))
+                using (var zstdStream = new ZstandardStream(outputStream, CompressionMode.Compress, compressionLevel))
                 {
                     inputStream.EfficientCopyTo(zstdStream);
                 }

@@ -2560,7 +2560,7 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void TestInsertWithWriteConcernError()
         {
-            RequireServer.Check().Supports(Feature.WriteCommands).ClusterType(ClusterType.ReplicaSet);
+            RequireServer.Check().ClusterType(ClusterType.ReplicaSet);
             _collection.Drop();
             var document = new BsonDocument { { "_id", 1 }, { "x", 1 } };
             var collectionSettings = new MongoCollectionSettings
@@ -3081,7 +3081,7 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void TestRemoveWithWriteConcernError()
         {
-            RequireServer.Check().Supports(Feature.WriteCommands).ClusterType(ClusterType.ReplicaSet);
+            RequireServer.Check().ClusterType(ClusterType.ReplicaSet);
             _collection.Drop();
             _collection.Insert(new BsonDocument { { "_id", 1 }, { "x", 1 } });
             var collectionSettings = new MongoCollectionSettings
@@ -3359,7 +3359,7 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void TestUpdateWithWriteConcernError()
         {
-            RequireServer.Check().Supports(Feature.WriteCommands).ClusterType(ClusterType.ReplicaSet);
+            RequireServer.Check().ClusterType(ClusterType.ReplicaSet);
             _collection.Drop();
             _collection.Insert(new BsonDocument { { "_id", 1 }, { "x", 1 } });
             var collectionSettings = new MongoCollectionSettings

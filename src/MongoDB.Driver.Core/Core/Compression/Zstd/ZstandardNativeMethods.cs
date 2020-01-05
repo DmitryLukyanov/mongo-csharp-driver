@@ -116,14 +116,14 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return __ZSTD_maxCLevel.Value();
         }
 
-        public static UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer)
+        public static UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
         {
             var result = __ZSTD_flushStream.Value(zcs, outputBuffer);
             ThrowIfError(result);
             return result;
         }
 
-        public static UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer)
+        public static UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
         {
             var result = __ZSTD_endStream.Value(zcs, outputBuffer);
             ThrowIfError(result);
@@ -145,7 +145,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return __ZSTD_initDStream.Value(zds);
         }
 
-        public static UIntPtr ZSTD_decompressStream(IntPtr zds, Buffer outputBuffer, Buffer inputBuffer)
+        public static UIntPtr ZSTD_decompressStream(IntPtr zds, NativeBufferInfo outputBuffer, NativeBufferInfo inputBuffer)
         {
             var result = __ZSTD_decompressStream.Value(zds, outputBuffer, inputBuffer);
             ThrowIfError(result);
@@ -159,7 +159,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return result;
         }
 
-        public static UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] Buffer inputBuffer)
+        public static UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
         {
             var result = __ZSTD_compressStream.Value(zcs, outputBuffer, inputBuffer);
             ThrowIfError(result);
@@ -205,18 +205,18 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             public delegate int ZSTD_maxCLevel();
 
-            public delegate UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer);
-            public delegate UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer);
+            public delegate UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
+            public delegate UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
             public delegate UIntPtr ZSTD_freeCStream(IntPtr zcs);
             public delegate UIntPtr ZSTD_freeDStream(IntPtr zds);
 
             public delegate UIntPtr ZSTD_initDStream(IntPtr zds);
 
-            public delegate UIntPtr ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] Buffer inputBuffer);
+            public delegate UIntPtr ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
 
             public delegate UIntPtr ZSTD_initCStream(IntPtr zcs, int compressionLevel);
 
-            public delegate UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] Buffer outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] Buffer inputBuffer);
+            public delegate UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
 
             public delegate bool ZSTD_isError(UIntPtr code);
             public delegate IntPtr ZSTD_getErrorName(UIntPtr code);

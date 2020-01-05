@@ -13,6 +13,8 @@
 * limitations under the License.
 */
 
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -28,24 +30,42 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
     public class ZstandardNativeTests
     {
         #region static
-        private static readonly string __testMessage;
+        // private constants
+        private const string __testMessagePortion = @"Two households, both alike in dignity,
+        In fair Verona, where we lay our scene,
+        From ancient grudge break to new mutiny,
+        Where civil blood makes civil hands unclean.
+            From forth the fatal loins of these two foes
+            A pair of star-cross'd lovers take their life;
+        Whose misadventured piteous overthrows
+        Do with their death bury their parents' strife.
+            The fearful passage of their death-mark'd love,
+        And the continuance of their parents' rage,
+        Which, but their children's end, nought could remove,
+        Is now the two hours' traffic of our stage;
+        The which if you with patient ears attend,
+        What here shall miss, our toil shall strive to mend.";
 
-        static ZstandardNativeTests()
-        {
-            __testMessage = CreateTestMessage();
-        }
+        // private static fields
+        private static readonly byte[] __bigMessageWithRandomBytes = GenerateBigMessage(135000); // bigger than recommended size for one native operation
+        private static readonly byte[] __bigMessageWithoutRandomBytes = GenerateBigMessage(135000, false); // bigger than recommended size for one native operation
 
-        private static string CreateTestMessage()
+        // private static methods
+        private static byte[] GenerateBigMessage(int size, bool useRandomBytes = true)
         {
-            var messagePortion = "abcdefghijklmnopqrstuvwxyz0123456789 ";
-            var stringBuilder = new StringBuilder();
-            for (int i = 0; i < 1000; i++)
+            var resultBytes = new List<byte>();
+            var messagePortionBytes = Encoding.ASCII.GetBytes(__testMessagePortion);
+            while (resultBytes.Count < size)
             {
-                stringBuilder.Append(messagePortion);
-                stringBuilder.Append(messagePortion.Reverse());
-                stringBuilder.Append(messagePortion.Insert(10, "!@#$%"));
+                resultBytes.AddRange(resultBytes.Count % 2 == 0 ? messagePortionBytes.Reverse() : messagePortionBytes);
+                if (useRandomBytes)
+                {
+                    var randomBytes = new byte[messagePortionBytes.Length + 1];
+                    new Random().NextBytes(randomBytes);
+                    resultBytes.AddRange(randomBytes);
+                }
             }
-            return stringBuilder.ToString();
+            return resultBytes.ToArray();
         }
         #endregion
 
@@ -53,23 +73,82 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
         [ParameterAttributeData]
         public void Compressor_should_decompress_the_previously_compressed_message([Range(1, 22)] int compressionLevel)
         {
-            var messageBytes = Encoding.ASCII.GetBytes(__testMessage).ToArray();
+            var messageBytes = __bigMessageWithoutRandomBytes;
 
             var compressedBytes = Compress(messageBytes, compressionLevel);
-            compressedBytes.Length.Should().BeLessThan(messageBytes.Length / 3);
+            compressedBytes.Length.Should().BeLessThan(messageBytes.Length / 2);
 
             var decompressedBytes = Decompress(compressedBytes);
             decompressedBytes.ShouldBeEquivalentTo(messageBytes);
         }
 
+        [Theory]
+        [InlineData(1, "40,181,47,253,0,72,108,1,0,84,2,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,32,1,0,53,132,170,39,1,0,0")]
+        [InlineData(4, "40,181,47,253,0,88,108,1,0,84,2,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,32,1,0,53,132,170,39,1,0,0")]
+        [InlineData(15, "40,181,47,253,0,96,108,1,0,84,2,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,32,1,0,53,132,170,39,1,0,0")]
+        [InlineData(21, "40,181,47,253,0,128,108,1,0,84,2,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,32,1,0,53,132,170,39,1,0,0")]
+        public void Compress_should_generate_expected_bytes_for_different_compression_levels(int compressionLevel, string expectedBytes)
+        {
+            var testMessage = "abcdefghijklmnopqrstuvwxyz0123456789 abcdefghijklmnopqrstuvwxyz0123456789 abcdefghijklmnopqrstuvwxyz0123456789";
+            var data = Encoding.ASCII.GetBytes(testMessage);
+
+            var resultBytes = Compress(data, compressionLevel);
+            string.Join(",", resultBytes).Should().Be(expectedBytes);
+        }
+
         [Fact]
         public void Compressed_size_with_low_compression_level_should_be_bigger_than_with_high()
         {
-            var data = Encoding.ASCII.GetBytes(__testMessage);
+            var lengths = new List<int>();
+            // note: some close compression levels can give the same results for not huge text sizes
+            foreach (var compressionLevel in new [] { 1, 5, 10, 15, 22 })
+            {
+                var compressedBytes = Compress(__bigMessageWithRandomBytes, compressionLevel);
+                lengths.Add(compressedBytes.Length);
+            }
+            lengths.Should().BeInDescendingOrder();
+        }
 
-            var compressedMin = Compress(data, 1);
-            var compressedMax = Compress(data, ZstandardStream.MaxCompressionLevel);
-            compressedMin.Length.Should().BeGreaterThan(compressedMax.Length);
+        [Fact]
+        public void Constructor_should_throw_when_compressionMode_is_incorrect()
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                var exception = Record.Exception(() => new ZstandardStream(memoryStream, (CompressionMode)2));
+                var e = exception.Should().BeOfType<ArgumentException>().Subject;
+                e.ParamName.Should().Be("compressionMode");
+            }
+        }
+
+        [Fact]
+        public void Constructor_should_throw_when_compressedStream_is_null()
+        {
+            var exception = Record.Exception(() => new ZstandardStream(null, CompressionMode.Compress));
+            var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            e.ParamName.Should().Be("compressedStream");
+        }
+
+        [Fact]
+        public void Constructor_should_throw_when_compressionLevel_has_been_set_for_Decompress_mode()
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                var exception = Record.Exception(() => new ZstandardStream(memoryStream, CompressionMode.Decompress, 1));
+                var e = exception.Should().BeOfType<ArgumentException>().Subject;
+                e.ParamName.Should().Be("compressionLevel");
+            }
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void Constructor_should_throw_when_compressionLevel_is_out_of_range([Values(0, 23)] int compressionLevel)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                var exception = Record.Exception(() => new ZstandardStream(memoryStream, CompressionMode.Compress, compressionLevel));
+                var e = exception.Should().BeOfType<ArgumentOutOfRangeException>().Subject;
+                e.ParamName.Should().Be(nameof(compressionLevel));
+            }
         }
 
         // private methods

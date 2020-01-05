@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 namespace MongoDB.Driver.Core.Compression.Zstd
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal class Buffer
+    internal class NativeBufferInfo
     {
         public IntPtr DataPointer = IntPtr.Zero;
         public UIntPtr Size = UIntPtr.Zero;

@@ -31,15 +31,13 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private readonly int _compressionLevel;
         private readonly CompressionMode _compressionMode;
 
-        private readonly Buffer _inputNativeBuffer = new Buffer();
-        private readonly Buffer _outputNativeBuffer = new Buffer();
+        private readonly NativeBufferInfo _inputNativeBuffer = new NativeBufferInfo();
+        private readonly NativeBufferInfo _outputNativeBuffer = new NativeBufferInfo();
 
         private bool _operationInitialized;
 
-        // calculate in constructor
         private readonly uint _recommendedZstreamInputSize;
         private readonly uint _recommendedZstreamOutputSize;
-        // initialize in constructor
         private IntPtr _zstreamPointer;
 
         public NativeWrapper(CompressionMode compressionMode, int compressionLevel)
@@ -76,10 +74,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         // public methods
         public void Compress(
             OperationContext operationContext,
-            int outputSize,
-            int inputSize,
-            out int outputBufferPosition,
-            out int inputBufferPosition)
+            int compressedSize,
+            int uncompressedSize,
+            out int compressedBufferPosition,
+            out int uncompressedBufferPosition)
         {
             Ensure.IsNotNull(operationContext, nameof(operationContext));
 
@@ -88,14 +86,14 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             // compressed data
             ConfigureNativeBuffer(
                 _outputNativeBuffer,
-                operationContext.InternalDataPinnedBuffer, // operation result
-                (uint)outputSize);
+                operationContext.CompressedPinnedBuffer, // operation result
+                (uint)compressedSize);
 
             // uncompressed data
             ConfigureNativeBuffer(
                 _inputNativeBuffer,
-                operationContext.ExternalArgumentPinnedBuffer,
-                (uint)inputSize);
+                operationContext.UncompressedPinnedBuffer,
+                (uint)uncompressedSize);
 
             // compress _inputNativeBuffer to _outputNativeBuffer
             ZstandardNativeMethods.ZSTD_compressStream(
@@ -103,19 +101,20 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 outputBuffer: _outputNativeBuffer,
                 inputBuffer: _inputNativeBuffer);
 
-            outputBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
+            compressedBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
 
             // calculate progress in _inputNativeBuffer
-            inputBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
-            operationContext.ExternalArgumentPinnedBuffer.Offset += inputBufferPosition;
+            uncompressedBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
+            operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
+            // CompressedPinnedBuffer.Offset is always 0
         }
 
         public void Decompress(
             OperationContext operationContext,
-            int inputSize,
-            int outputSize,
-            out int inputBufferPosition,
-            out int outputBufferPosition)
+            int compressedSize,
+            int uncompressedSize,
+            out int compressedBufferPosition,
+            out int uncompressedBufferPosition)
         {
             Ensure.IsNotNull(operationContext, nameof(operationContext));
 
@@ -124,14 +123,14 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             // compressed data
             ConfigureNativeBuffer(
                 _inputNativeBuffer,
-                inputSize <= 0 ? null : operationContext.InternalDataPinnedBuffer,
-                inputSize <= 0 ? 0 : (uint)inputSize);
+                compressedSize <= 0 ? null : operationContext.CompressedPinnedBuffer,
+                compressedSize <= 0 ? 0 : (uint)compressedSize);
 
             // uncompressed data
             ConfigureNativeBuffer(
                 _outputNativeBuffer,
-                operationContext.ExternalArgumentPinnedBuffer, // operation result
-                (uint)outputSize);
+                operationContext.UncompressedPinnedBuffer, // operation result
+                (uint)uncompressedSize);
 
             // decompress _inputNativeBuffer to _outputNativeBuffer
             ZstandardNativeMethods.ZSTD_decompressStream(
@@ -140,10 +139,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 inputBuffer: _inputNativeBuffer);
 
             // calculate progress in _outputNativeBuffer
-            outputBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
-            inputBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
+            uncompressedBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
+            compressedBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
 
-            operationContext.ExternalArgumentPinnedBuffer.Offset += outputBufferPosition;
+            operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
         }
 
         public void Dispose()
@@ -160,41 +159,41 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         }
 
         public OperationContext InitializeOperationContext(
-            BufferInfo internalDataInfo,
-            BufferInfo externalArgumentBufferInfo = null)
+            BufferInfo compressedBufferInfo,
+            BufferInfo uncompressedBufferInfo = null)
         {
-            var internalDataPinnedBuffer = new PinnedBuffer(internalDataInfo.Bytes, internalDataInfo.Offset);
-            PinnedBuffer externalArgumentPinnedBuffer = null;
-            if (externalArgumentBufferInfo != null)
+            var compressedPinnedBuffer = new PinnedBuffer(compressedBufferInfo.Bytes, compressedBufferInfo.Offset);
+            PinnedBuffer uncompressedPinnedBuffer = null;
+            if (uncompressedBufferInfo != null)
             {
-                externalArgumentPinnedBuffer = new PinnedBuffer(externalArgumentBufferInfo.Bytes, externalArgumentBufferInfo.Offset);
+                uncompressedPinnedBuffer = new PinnedBuffer(uncompressedBufferInfo.Bytes, uncompressedBufferInfo.Offset);
             }
 
-            return new OperationContext(externalArgumentPinnedBuffer, internalDataPinnedBuffer);
+            return new OperationContext(uncompressedPinnedBuffer, compressedPinnedBuffer);
         }
 
-        public IEnumerable<int> FlushBySteps(byte[] dataBytes)
+        public IEnumerable<int> FlushBySteps(BufferInfo compressedBufferInfo)
         {
             if (_compressionMode != CompressionMode.Compress)
             {
                 throw new InvalidDataException("FlushBySteps must be called only from Compress mode.");
             }
 
-            using (var operationContext = InitializeOperationContext(new BufferInfo(dataBytes, 0)))
+            using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
                 yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => ZstandardNativeMethods.ZSTD_flushStream(zcs, buffer));
             }
 
-            using (var operationContext = InitializeOperationContext(new BufferInfo(dataBytes, 0)))
+            using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
                 yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => ZstandardNativeMethods.ZSTD_endStream(zcs, buffer));
             }
 
-            int ProcessCompressedOutput(OperationContext context, Action<IntPtr, Buffer> outputAction)
+            int ProcessCompressedOutput(OperationContext context, Action<IntPtr, NativeBufferInfo> outputAction)
             {
                 ConfigureNativeBuffer(
                     _outputNativeBuffer,
-                    context.InternalDataPinnedBuffer,
+                    context.CompressedPinnedBuffer,
                     _recommendedZstreamOutputSize);
 
                 outputAction(_zstreamPointer, _outputNativeBuffer);
@@ -204,7 +203,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         }
 
         // private methods
-        private void ConfigureNativeBuffer(Buffer buffer, PinnedBuffer pinnedBuffer, uint size)
+        private void ConfigureNativeBuffer(NativeBufferInfo buffer, PinnedBuffer pinnedBuffer, uint size)
         {
             buffer.DataPointer = pinnedBuffer?.IntPtr ?? IntPtr.Zero;
             buffer.Size = new UIntPtr(size);
@@ -232,28 +231,28 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         // nested types
         internal class OperationContext : IDisposable
         {
-            private readonly PinnedBuffer _externalArgumentPinnedBuffer;
-            private readonly PinnedBuffer _internalDataPinnedBuffer;
+            private readonly PinnedBuffer _uncompressedPinnedBuffer;
+            private readonly PinnedBuffer _compressedPinnedBuffer;
 
-            public OperationContext(PinnedBuffer externalArgumentPinnedBuffer, PinnedBuffer internalDataPinnedBuffer)
+            public OperationContext(PinnedBuffer uncompressedPinnedBuffer, PinnedBuffer compressedPinnedBuffer)
             {
-                _externalArgumentPinnedBuffer = externalArgumentPinnedBuffer; // can be null
-                _internalDataPinnedBuffer = Ensure.IsNotNull(internalDataPinnedBuffer, nameof(internalDataPinnedBuffer));
+                _uncompressedPinnedBuffer = uncompressedPinnedBuffer; // can be null
+                _compressedPinnedBuffer = Ensure.IsNotNull(compressedPinnedBuffer, nameof(compressedPinnedBuffer));
             }
 
-            public PinnedBuffer ExternalArgumentPinnedBuffer => _externalArgumentPinnedBuffer;
-            public PinnedBuffer InternalDataPinnedBuffer => _internalDataPinnedBuffer;
+            public PinnedBuffer UncompressedPinnedBuffer => _uncompressedPinnedBuffer; // external data
+            public PinnedBuffer CompressedPinnedBuffer => _compressedPinnedBuffer; // internal data
 
             // public methods
             public void Dispose()
             {
                 try
                 {
-                    _externalArgumentPinnedBuffer?.Dispose();
+                    _uncompressedPinnedBuffer?.Dispose();
                 }
                 finally
                 {
-                    _internalDataPinnedBuffer.Dispose(); // ensure that both dispose methods were called
+                    _compressedPinnedBuffer.Dispose(); // ensure that both dispose methods were called
                 }
             }
         }
@@ -266,6 +265,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             Bytes = bytes;
             Offset = offset;
         }
+
         public byte[] Bytes { get; }
         public int Offset { get; }
     }

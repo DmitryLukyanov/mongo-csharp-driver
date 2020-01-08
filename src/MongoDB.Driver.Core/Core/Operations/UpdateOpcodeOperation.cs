@@ -29,6 +29,9 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents an update operation using the update opcode.
     /// </summary>
+    [Obsolete("Use ### instead.")]
+    //TODO: discuss with Robert, maybe we can replace the place when this class is used on using Emulator directly (And then emulator can be raenamed to not emulator)
+    //TODO 2: don't forget about RetryableWriteContext.Create
     public class UpdateOpcodeOperation : IWriteOperation<WriteConcernResult>, IExecutableInRetryableWriteContext<WriteConcernResult>
     {
         // fields
@@ -154,15 +157,15 @@ namespace MongoDB.Driver.Core.Operations
         {
             using (EventContext.BeginOperation())
             {
-                if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
+             //   if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
                 {
                     var emulator = CreateEmulator();
                     return emulator.Execute(context, cancellationToken);
                 }
-                else
-                {
-                    return ExecuteProtocol(context.Channel, cancellationToken);
-                }
+                //else
+                //{
+                //    return ExecuteProtocol(context.Channel, cancellationToken);
+                //}
             }
         }
 
@@ -182,15 +185,15 @@ namespace MongoDB.Driver.Core.Operations
         {
             using (EventContext.BeginOperation())
             {
-                if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
+                //if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
                 {
                     var emulator = CreateEmulator();
                     return await emulator.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
                 }
-                else
-                {
-                    return await ExecuteProtocolAsync(context.Channel, cancellationToken).ConfigureAwait(false);
-                }
+                //else
+                //{
+                //    return await ExecuteProtocolAsync(context.Channel, cancellationToken).ConfigureAwait(false);
+                //}
             }
         }
 
@@ -206,50 +209,50 @@ namespace MongoDB.Driver.Core.Operations
             };
         }
 
-        private WriteConcernResult ExecuteProtocol(IChannelHandle channel, CancellationToken cancellationToken)
-        {
-            if (_request.Collation != null)
-            {
-                throw new NotSupportedException("OP_UPDATE does not support collations.");
-            }
-            if (_request.ArrayFilters != null)
-            {
-                throw new NotSupportedException("OP_UPDATE does not support arrayFilters.");
-            }
+        //private WriteConcernResult ExecuteProtocol(IChannelHandle channel, CancellationToken cancellationToken)
+        //{
+        //    if (_request.Collation != null)
+        //    {
+        //        throw new NotSupportedException("OP_UPDATE does not support collations.");
+        //    }
+        //    if (_request.ArrayFilters != null)
+        //    {
+        //        throw new NotSupportedException("OP_UPDATE does not support arrayFilters.");
+        //    }
 
-            return channel.Update(
-                _collectionNamespace,
-                _messageEncoderSettings,
-                _writeConcern,
-                _request.Filter,
-                _request.Update.AsBsonDocument,
-                ElementNameValidatorFactory.ForUpdateType(_request.UpdateType),
-                _request.IsMulti,
-                _request.IsUpsert,
-                cancellationToken);
-        }
+        //    return channel.Update(
+        //        _collectionNamespace,
+        //        _messageEncoderSettings,
+        //        _writeConcern,
+        //        _request.Filter,
+        //        _request.Update.AsBsonDocument,
+        //        ElementNameValidatorFactory.ForUpdateType(_request.UpdateType),
+        //        _request.IsMulti,
+        //        _request.IsUpsert,
+        //        cancellationToken);
+        //}
 
-        private Task<WriteConcernResult> ExecuteProtocolAsync(IChannelHandle channel, CancellationToken cancellationToken)
-        {
-            if (_request.Collation != null)
-            {
-                throw new NotSupportedException("OP_UPDATE does not support collations.");
-            }
-            if (_request.ArrayFilters != null)
-            {
-                throw new NotSupportedException("OP_UPDATE does not support arrayFilters.");
-            }
+        //private Task<WriteConcernResult> ExecuteProtocolAsync(IChannelHandle channel, CancellationToken cancellationToken)
+        //{
+        //    if (_request.Collation != null)
+        //    {
+        //        throw new NotSupportedException("OP_UPDATE does not support collations.");
+        //    }
+        //    if (_request.ArrayFilters != null)
+        //    {
+        //        throw new NotSupportedException("OP_UPDATE does not support arrayFilters.");
+        //    }
 
-            return channel.UpdateAsync(
-                _collectionNamespace,
-                _messageEncoderSettings,
-                _writeConcern,
-                _request.Filter,
-                _request.Update.AsBsonDocument,
-                ElementNameValidatorFactory.ForUpdateType(_request.UpdateType),
-                _request.IsMulti,
-                _request.IsUpsert,
-                cancellationToken);
-        }
+        //    return channel.UpdateAsync(
+        //        _collectionNamespace,
+        //        _messageEncoderSettings,
+        //        _writeConcern,
+        //        _request.Filter,
+        //        _request.Update.AsBsonDocument,
+        //        ElementNameValidatorFactory.ForUpdateType(_request.UpdateType),
+        //        _request.IsMulti,
+        //        _request.IsUpsert,
+        //        cancellationToken);
+        //}
     }
 }

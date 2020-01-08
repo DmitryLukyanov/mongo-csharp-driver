@@ -78,8 +78,10 @@ namespace MongoDB.Driver.Core.Misc
         private static readonly Feature __shardedTransactions = new Feature("ShardedTransactions", new SemanticVersion(4, 1, 6));
         private static readonly Feature __tailableCursor = new Feature("TailableCursor", new SemanticVersion(3, 2, 0));
         private static readonly Feature __transactions = new Feature("Transactions", new SemanticVersion(4, 0, 0));
+        private static readonly Feature __userManagementCommands = new Feature("UserManagementCommands", new SemanticVersion(2, 6, 0));
         private static readonly Feature __views = new Feature("Views", new SemanticVersion(3, 3, 11));
         private static readonly Feature __wildcardIndexes = new Feature("WildcardIndexes", new SemanticVersion(4, 1, 6));
+        private static readonly Feature __writeCommands = new Feature("WriteCommands", new SemanticVersion(2, 6, 0));
 
         /// <summary>
         /// Gets the aggregate feature.
@@ -357,9 +359,19 @@ namespace MongoDB.Driver.Core.Misc
         public static Feature Transactions => __transactions;
 
         /// <summary>
+        /// Gets the user management commands feature.
+        /// </summary>
+        public static Feature UserManagementCommands => __userManagementCommands;
+
+        /// <summary>
         /// Gets the views feature.
         /// </summary>
         public static Feature Views => __views;
+
+        /// <summary>
+        /// Gets the write commands feature.
+        /// </summary>
+        public static Feature WriteCommands => __writeCommands;
 
         /// <summary>
         /// Gets the wildcard indexes feature.

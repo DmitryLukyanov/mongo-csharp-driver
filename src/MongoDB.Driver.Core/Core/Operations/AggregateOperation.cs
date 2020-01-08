@@ -281,7 +281,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var result = operation.Execute(context, cancellationToken);
-                return CreateCursorFromCursorResult(context.ChannelSource, operation.Command, result);
+                return CreateCursor(context.ChannelSource, context.Channel, operation.Command, result);
             }
         }
 
@@ -306,7 +306,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var result = await operation.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
-                return CreateCursorFromCursorResult(context.ChannelSource, operation.Command, result);
+                return CreateCursor(context.ChannelSource, context.Channel, operation.Command, result);
             }
         }
 
@@ -369,6 +369,18 @@ namespace MongoDB.Driver.Core.Operations
             };
         }
 
+        private AsyncCursor<TResult> CreateCursor(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument command, AggregateResult result)
+        {
+            if (result.CursorId.HasValue)
+            {
+                return CreateCursorFromCursorResult(channelSource, command, result);
+            }
+            else
+            {
+                return CreateCursorFromInlineResult(command, result);
+            }
+        }
+
         private AsyncCursor<TResult> CreateCursorFromCursorResult(IChannelSourceHandle channelSource, BsonDocument command, AggregateResult result)
         {
             var getMoreChannelSource = new ServerChannelSource(channelSource.Server, channelSource.Session.Fork());
@@ -380,6 +392,22 @@ namespace MongoDB.Driver.Core.Operations
                 result.CursorId.GetValueOrDefault(0),
                 result.PostBatchResumeToken,
                 _batchSize,
+                null, // limit
+                _resultSerializer,
+                MessageEncoderSettings,
+                _maxAwaitTime);
+        }
+
+        private AsyncCursor<TResult> CreateCursorFromInlineResult(BsonDocument command, AggregateResult result)
+        {
+            return new AsyncCursor<TResult>(
+                null, // channelSource
+                CollectionNamespace,
+                command,
+                result.Results,
+                0, // cursorId
+                null, // postBatchResumeToken
+                null, // batchSize
                 null, // limit
                 _resultSerializer,
                 MessageEncoderSettings,

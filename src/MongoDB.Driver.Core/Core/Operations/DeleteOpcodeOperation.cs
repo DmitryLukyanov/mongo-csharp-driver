@@ -127,7 +127,7 @@ namespace MongoDB.Driver.Core.Operations
 
             using (EventContext.BeginOperation())
             {
-                if (_writeConcern.IsAcknowledged)
+                if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
                 {
                     var emulator = CreateEmulator();
                     return emulator.Execute(context, cancellationToken);
@@ -157,7 +157,7 @@ namespace MongoDB.Driver.Core.Operations
 
             using (EventContext.BeginOperation())
             {
-                if (_writeConcern.IsAcknowledged)
+                if (Feature.WriteCommands.IsSupported(context.Channel.ConnectionDescription.ServerVersion) && _writeConcern.IsAcknowledged)
                 {
                     var emulator = CreateEmulator();
                     return await emulator.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);

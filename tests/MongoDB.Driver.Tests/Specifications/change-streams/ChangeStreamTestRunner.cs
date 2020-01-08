@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using FluentAssertions;
@@ -288,9 +289,9 @@ namespace MongoDB.Driver.Tests.Specifications.change_streams
             }
             int expectedNumberOfDocuments = successNode?.AsBsonArray.Count ?? 0;
 
-            while (async ? cursor.MoveNextAsync().GetAwaiter().GetResult() : cursor.MoveNext())
+            foreach (var current in ReliableMoveNext())
             {
-                result.AddRange(cursor.Current);
+                result.AddRange(current);
 
                 if (result.Count >= expectedNumberOfDocuments)
                 {
@@ -299,6 +300,20 @@ namespace MongoDB.Driver.Tests.Specifications.change_streams
             }
 
             return result;
+
+            IEnumerable<IEnumerable<ChangeStreamDocument<BsonDocument>>> ReliableMoveNext()
+            {
+                var stopwatch = Stopwatch.StartNew();
+                while (async ? cursor.MoveNextAsync().GetAwaiter().GetResult() : cursor.MoveNext())
+                {
+                    if (cursor.Current.Any() || stopwatch.Elapsed > TimeSpan.FromSeconds(10))
+                    {
+                        yield return cursor.Current;
+                    }
+
+                    Thread.Sleep(TimeSpan.FromMilliseconds(300)); // delay between attempts
+                }
+            }
         }
 
         private void AssertEvents(List<CommandStartedEvent> actualEvents, List<BsonDocument> expectedEvents)

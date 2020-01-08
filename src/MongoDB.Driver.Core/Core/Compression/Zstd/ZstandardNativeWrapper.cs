@@ -111,6 +111,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         public void Decompress(
             OperationContext operationContext,
+            int compressedOffset,
             int compressedSize,
             int uncompressedSize,
             out int compressedBufferPosition,
@@ -120,6 +121,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             InitializeIfNotAlreadyInitialized();
 
+            // apply reading progress on CompressedPinnedBuffer
+            operationContext.CompressedPinnedBuffer.Offset = compressedOffset;
             // compressed data
             ConfigureNativeBuffer(
                 _inputNativeBuffer,
@@ -143,6 +146,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             compressedBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
 
             operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
+            // CompressedPinnedBuffer.Offset will be calculated on stream side
         }
 
         public void Dispose()

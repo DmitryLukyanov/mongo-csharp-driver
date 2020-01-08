@@ -23,7 +23,7 @@ namespace MongoDB.Driver.Core.Compression
 {
     internal class ZstandardCompressor : ICompressor
     {
-        private readonly int _compressionLevel; // currently not used
+        private readonly int _compressionLevel;
         private readonly int _defaultCompressionLevel = 6;
 
         public ZstandardCompressor(Optional<int> compressionLevel = default)
@@ -35,10 +35,7 @@ namespace MongoDB.Driver.Core.Compression
 
         public void Compress(Stream input, Stream output)
         {
-            using (var zstandardStream = new ZstandardStream(
-                output, 
-                CompressionMode.Compress,
-                _compressionLevel))
+            using (var zstandardStream = new ZstandardStream(output, CompressionMode.Compress, _compressionLevel))
             {
                 input.EfficientCopyTo(zstandardStream);
             }

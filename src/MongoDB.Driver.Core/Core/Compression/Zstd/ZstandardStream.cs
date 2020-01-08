@@ -24,6 +24,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 {
     internal class ZstandardStream : Stream
     {
+        #region static
+        public static int MaxCompressionLevel => NativeWrapper.MaxCompressionLevel; // maximum compression level available
+        #endregion
+
         private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
         private readonly Stream _compressedStream; // input for decompress and output for compress
         private readonly int _defaultCompressionLevel = 6;
@@ -68,8 +72,6 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         public override bool CanSeek => false;
 
         public override long Length => throw new NotSupportedException();
-
-        public static int MaxCompressionLevel => NativeWrapper.MaxCompressionLevel; // maximum compression level available
 
         public override long Position
         {
@@ -129,25 +131,20 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
                 while (count > 0)
                 {
-                    if (_streamReadHelper.TryReadCompressedStreamToBuffer(
-                        currentPosition: operationContext.CompressedPinnedBuffer.Offset,
-                        _nativeWrapper.RecommendedInputSize,
-                        out int remainingBufferSize))
-                    {
-                        // reset current position
-                        operationContext.CompressedPinnedBuffer.Offset = 0;
-                    }
+                    var currentDataPosition = _streamReadHelper.ReadCompressedStreamToBufferIfAvailable(
+                        recommendedCompressedSize: _nativeWrapper.RecommendedInputSize,
+                        out int remainingCompressedBufferSize);
 
                     // decompress input to output
                     _nativeWrapper.Decompress(
                         operationContext,
-                        compressedSize: remainingBufferSize,
+                        compressedOffset: currentDataPosition,
+                        compressedSize: remainingCompressedBufferSize,
                         uncompressedSize: count,
                         out int compressedBufferPosition,
                         out int uncompressedBufferPosition);
 
                     if (!_streamReadHelper.TryPrepareDataForNextAttempt(
-                        compressedBuffer: operationContext.CompressedPinnedBuffer,
                         compressedBufferPosition,
                         uncompressedBufferPosition))
                     {
@@ -243,12 +240,27 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 _readingState = new ReadingState();
             }
 
-            public BufferInfo CompressedBufferInfo => new BufferInfo(_compressedDataBuffer, _readingState.StartDataPosition);
+            public BufferInfo CompressedBufferInfo => new BufferInfo(_compressedDataBuffer, _readingState.DataPosition);
 
             // public methods
-            public bool TryPrepareDataForNextAttempt(PinnedBuffer compressedBuffer, int inputBufferPosition, int outputBufferPosition)
+            public int ReadCompressedStreamToBufferIfAvailable(
+                int recommendedCompressedSize,
+                out int remainingSize)
             {
-                if (outputBufferPosition == 0) // 0 - when a frame is completely decoded and fully flushed
+                remainingSize = _readingState.LastReadDataSize - _readingState.DataPosition;
+
+                if (remainingSize <= 0 && !_readingState.IsDataDepleted && !_readingState.SkipDataReading)
+                {
+                    var readSize = _compressedStream.Read(_compressedDataBuffer, 0, recommendedCompressedSize);
+                    UpdateStateAfterReading(readSize, out remainingSize);
+                }
+
+                return _readingState.DataPosition;
+            }
+
+            public bool TryPrepareDataForNextAttempt(int compressedBufferPosition, int uncompressedBufferPosition)
+            {
+                if (uncompressedBufferPosition == 0) // 0 - when a frame is completely decoded and fully flushed
                 {
                     // the internal buffer is depleted, we're either done
                     if (_readingState.IsDataDepleted)
@@ -260,28 +272,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                     _readingState.SkipDataReading = false;
                 }
 
-                // calculate progress in compressed(input) buffer
-                compressedBuffer.Offset += inputBufferPosition;
-
-                // save the data position for next Read calls
-                _readingState.StartDataPosition = inputBufferPosition;
+                // 1.calculate progress in compressed(input) buffer
+                // 2. save the data position for next Read calls
+                _readingState.DataPosition += compressedBufferPosition;
                 return true;
-            }
-
-            public bool TryReadCompressedStreamToBuffer(
-                int currentPosition,
-                int recommendedInputSize,
-                out int remainingSize)
-            {
-                remainingSize = _readingState.LastReadDataSize - currentPosition;
-
-                if (remainingSize <= 0 && !_readingState.IsDataDepleted && !_readingState.SkipDataReading)
-                {
-                    var readSize = _compressedStream.Read(_compressedDataBuffer, 0, recommendedInputSize);
-                    UpdateStateAfterReading(readSize, out remainingSize);
-                    return true;
-                }
-                return false;
             }
 
             // private methods
@@ -289,6 +283,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             {
                 _readingState.LastReadDataSize = readSize;
                 _readingState.IsDataDepleted = readSize <= 0;
+                _readingState.DataPosition = 0;
 
                 // skip _compressedStream.Read until the internal buffer is depleted
                 // avoids a Read timeout for applications that know the exact number of bytes in the _compressedStream
@@ -299,6 +294,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             // nested types
             private class ReadingState
             {
+                /// <summary>
+                /// Saves a position between different Read calls.
+                /// </summary>
+                public int DataPosition { get; set; }
                 /// <summary>
                 /// Shows whether the last attempt to read data from the stream contained records or no. <c>false</c> if no.
                 /// </summary>
@@ -311,10 +310,6 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 /// Determines whether stream.Read should be skipped until the internal buffer is depleted.
                 /// </summary>
                 public bool SkipDataReading { get; set; }
-                /// <summary>
-                /// Saves a position between different Read calls.
-                /// </summary>
-                public int StartDataPosition { get; set; }
             }
         }
 

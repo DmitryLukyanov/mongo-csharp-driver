@@ -20,6 +20,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Authentication.Vendored;
 using MongoDB.Driver.Core.Connections;
@@ -174,8 +175,8 @@ namespace MongoDB.Driver.Core.Authentication
             private readonly H _h;
             private readonly Hi _hi;
             private readonly Hmac _hmac;
-            private int _baseThreadId;
-            private string _baseCulture;
+            private readonly int _originalThreadId;
+            private readonly string _originalCulture;
 
             public ClientFirst(
                 byte[] bytesToSendToServer, 
@@ -193,15 +194,15 @@ namespace MongoDB.Driver.Core.Authentication
                 _hi = hi;
                 _hmac = hmac;
                 _rPrefix = rPrefix;
-                _baseThreadId = Thread.CurrentThread.ManagedThreadId;
-                _baseCulture = CultureInfo.CurrentCulture.ToString();
+                _originalThreadId = Thread.CurrentThread.ManagedThreadId;
+                _originalCulture = CultureInfo.CurrentCulture.ToString();
             }
 
             public byte[] BytesToSendToServer => _bytesToSendToServer;
 
             public bool IsComplete => false;
 
-            string BuildErrorMessage(
+            private string BuildErrorMessage(
                 string baseMessage,
                 string connectionId,
                 byte[] bytesToSendToServer,
@@ -219,8 +220,10 @@ namespace MongoDB.Driver.Core.Authentication
 
                 builder.AppendLine("Base message:" + baseMessage);
                 builder.AppendLine($"{nameof(connectionId)}: {connectionId}");
-                builder.AppendLine($"{nameof(bytesToSendToServer)}: {string.Join(",",bytesToSendToServer)}");
-                builder.AppendLine($"{nameof(bytesReceivedFromServer)}: {string.Join(",", bytesReceivedFromServer)}");
+
+                builder.AppendLine($"Hex_{nameof(bytesToSendToServer)}: {BsonUtils.ToHexString(bytesToSendToServer)}");
+                builder.AppendLine($"Hex_{nameof(bytesReceivedFromServer)}: {BsonUtils.ToHexString(bytesReceivedFromServer)}");
+
                 builder.AppendLine($"{nameof(rPrefix)}: {rPrefix}");
                 builder.AppendLine($"{nameof(r)}: {r}");
                 builder.AppendLine($"{nameof(serverFirstMessage)}: {serverFirstMessage}");
@@ -228,7 +231,10 @@ namespace MongoDB.Driver.Core.Authentication
                 builder.AppendLine($"{nameof(currentThreadId)}: {currentThreadId}");
                 builder.AppendLine($"{nameof(originalCulture)}: {originalCulture}");
                 builder.AppendLine($"{nameof(currentCulture)}: {currentCulture}");
+
                 builder.AppendLine($"{nameof(clientFirstMessageBare)}: {clientFirstMessageBare}");
+                builder.AppendLine($"{nameof(bytesToSendToServer)}: {string.Join(",", bytesToSendToServer)}");
+                builder.AppendLine($"{nameof(bytesReceivedFromServer)}: {string.Join(",", bytesReceivedFromServer)}");
 
                 return builder.ToString();
             }
@@ -253,9 +259,9 @@ namespace MongoDB.Driver.Core.Authentication
                         serverFirstMessage: serverFirstMessage,
                         rPrefix: rPrefix,
                         r: r,
-                        originalThreadId: _baseThreadId.ToString(),
+                        originalThreadId: _originalThreadId.ToString(),
                         currentThreadId: Thread.CurrentThread.ManagedThreadId.ToString(),
-                        originalCulture: _baseCulture,
+                        originalCulture: _originalCulture,
                         currentCulture: CultureInfo.CurrentCulture.ToString(),
                         clientFirstMessageBare: _clientFirstMessageBare);
                     throw new MongoAuthenticationException(conversation.ConnectionId, message: message);

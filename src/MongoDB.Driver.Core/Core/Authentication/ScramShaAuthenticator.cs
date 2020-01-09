@@ -15,9 +15,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Authentication.Vendored;
 using MongoDB.Driver.Core.Connections;
@@ -172,6 +174,8 @@ namespace MongoDB.Driver.Core.Authentication
             private readonly H _h;
             private readonly Hi _hi;
             private readonly Hmac _hmac;
+            private int _baseThreadId;
+            private string _baseCulture;
 
             public ClientFirst(
                 byte[] bytesToSendToServer, 
@@ -189,11 +193,46 @@ namespace MongoDB.Driver.Core.Authentication
                 _hi = hi;
                 _hmac = hmac;
                 _rPrefix = rPrefix;
+                _baseThreadId = Thread.CurrentThread.ManagedThreadId;
+                _baseCulture = CultureInfo.CurrentCulture.ToString();
             }
 
             public byte[] BytesToSendToServer => _bytesToSendToServer;
 
             public bool IsComplete => false;
+
+            string BuildErrorMessage(
+                string baseMessage,
+                string connectionId,
+                byte[] bytesToSendToServer,
+                byte[] bytesReceivedFromServer,
+                string serverFirstMessage,
+                string rPrefix,
+                string r,
+                string originalThreadId,
+                string currentThreadId,
+                string originalCulture,
+                string currentCulture,
+                string clientFirstMessageBare)
+            {
+                var builder = new StringBuilder();
+
+                builder.AppendLine("Base message:" + baseMessage);
+                builder.AppendLine($"{nameof(connectionId)}: {connectionId}");
+                builder.AppendLine($"{nameof(bytesToSendToServer)}: {string.Join(",",bytesToSendToServer)}");
+                builder.AppendLine($"{nameof(bytesReceivedFromServer)}: {string.Join(",", bytesReceivedFromServer)}");
+                builder.AppendLine($"{nameof(rPrefix)}: {rPrefix}");
+                builder.AppendLine($"{nameof(r)}: {r}");
+                builder.AppendLine($"{nameof(serverFirstMessage)}: {serverFirstMessage}");
+                builder.AppendLine($"{nameof(originalThreadId)}: {originalThreadId}");
+                builder.AppendLine($"{nameof(currentThreadId)}: {currentThreadId}");
+                builder.AppendLine($"{nameof(originalCulture)}: {originalCulture}");
+                builder.AppendLine($"{nameof(currentCulture)}: {currentCulture}");
+                builder.AppendLine($"{nameof(clientFirstMessageBare)}: {clientFirstMessageBare}");
+
+                return builder.ToString();
+            }
+
 
             public ISaslStep Transition(SaslConversation conversation, byte[] bytesReceivedFromServer)
             {
@@ -202,9 +241,24 @@ namespace MongoDB.Driver.Core.Authentication
                 var map = SaslMapParser.Parse(serverFirstMessage);
 
                 var r = map['r'];
-                if (!r.StartsWith(_rPrefix))
+                var rPrefix = _rPrefix;
+
+                if (!r.StartsWith(rPrefix))
                 {
-                    throw new MongoAuthenticationException(conversation.ConnectionId, message: "Server sent an invalid nonce.");
+                    var message = BuildErrorMessage(
+                        baseMessage: "Server sent an invalid nonce.",
+                        connectionId: conversation?.ConnectionId?.ToString() ?? "<empty>",
+                        bytesToSendToServer: _bytesToSendToServer,
+                        bytesReceivedFromServer: bytesReceivedFromServer,
+                        serverFirstMessage: serverFirstMessage,
+                        rPrefix: rPrefix,
+                        r: r,
+                        originalThreadId: _baseThreadId.ToString(),
+                        currentThreadId: Thread.CurrentThread.ManagedThreadId.ToString(),
+                        originalCulture: _baseCulture,
+                        currentCulture: CultureInfo.CurrentCulture.ToString(),
+                        clientFirstMessageBare: _clientFirstMessageBare);
+                    throw new MongoAuthenticationException(conversation.ConnectionId, message: message);
                 }
                 var s = map['s'];
                 var i = map['i'];

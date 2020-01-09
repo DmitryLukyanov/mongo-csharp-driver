@@ -221,8 +221,8 @@ namespace MongoDB.Driver.Core.Authentication
                 builder.AppendLine("Base message:" + baseMessage);
                 builder.AppendLine($"{nameof(connectionId)}: {connectionId}");
 
-                builder.AppendLine($"Hex_{nameof(bytesToSendToServer)}: {BsonUtils.ToHexString(bytesToSendToServer)}");
-                builder.AppendLine($"Hex_{nameof(bytesReceivedFromServer)}: {BsonUtils.ToHexString(bytesReceivedFromServer)}");
+                builder.AppendLine($"{nameof(bytesToSendToServer)}: {BsonUtils.ToHexString(bytesToSendToServer)}");
+                builder.AppendLine($"{nameof(bytesReceivedFromServer)}: {BsonUtils.ToHexString(bytesReceivedFromServer)}");
 
                 builder.AppendLine($"{nameof(rPrefix)}: {rPrefix}");
                 builder.AppendLine($"{nameof(r)}: {r}");
@@ -233,8 +233,6 @@ namespace MongoDB.Driver.Core.Authentication
                 builder.AppendLine($"{nameof(currentCulture)}: {currentCulture}");
 
                 builder.AppendLine($"{nameof(clientFirstMessageBare)}: {clientFirstMessageBare}");
-                builder.AppendLine($"{nameof(bytesToSendToServer)}: {string.Join(",", bytesToSendToServer)}");
-                builder.AppendLine($"{nameof(bytesReceivedFromServer)}: {string.Join(",", bytesReceivedFromServer)}");
 
                 return builder.ToString();
             }

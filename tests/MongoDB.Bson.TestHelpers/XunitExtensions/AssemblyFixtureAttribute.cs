@@ -1,4 +1,4 @@
-/* Copyright 2010-present MongoDB Inc.
+﻿/* Copyright 2020-present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -13,11 +13,18 @@
 * limitations under the License.
 */
 
-using System.Runtime.InteropServices;
-using MongoDB.Bson.TestHelpers;
-using MongoDB.Bson.TestHelpers.XunitExtensions;
-using Xunit;
+using System;
 
-[assembly: ComVisible(false)]
-[assembly: TestFramework(XunitTestFrameworkWithAssemblyFixture.TypeName, XunitTestFrameworkWithAssemblyFixture.AssemblyName)]
-[assembly: AssemblyFixture(typeof(BsonDefaultsAssemblyFixture))]
+namespace MongoDB.Bson.TestHelpers.XunitExtensions
+{
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
+    public class AssemblyFixtureAttribute : Attribute
+    {
+        public AssemblyFixtureAttribute(Type fixtureType)
+        {
+            FixtureType = fixtureType;
+        }
+
+        public Type FixtureType { get; }
+    }
+}

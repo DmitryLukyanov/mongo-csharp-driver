@@ -34,22 +34,6 @@ namespace MongoDB.Bson
         private static int __maxDocumentSize = int.MaxValue;
         private static int __maxSerializationDepth = 100;
 
-        // static constructor
-        static BsonDefaults()
-        {
-            var testWithDefaultGuidRepresentation = Environment.GetEnvironmentVariable("TESTWITHDEFAULTGUIDREPRESENTATION");
-            if (testWithDefaultGuidRepresentation != null)
-            {
-                var _ = Enum.TryParse(testWithDefaultGuidRepresentation, out __guidRepresentation); // ignore errors
-            }
-
-            var testWithDefaultGuidRepresentationMode = Environment.GetEnvironmentVariable("TESTWITHDEFAULTGUIDREPRESENTATIONMODE");
-            if (testWithDefaultGuidRepresentationMode != null)
-            {
-                var _ = Enum.TryParse(testWithDefaultGuidRepresentationMode, out __guidRepresentationMode); // ignore errors
-            }
-        }
-
         // public static properties
         /// <summary>
         /// Gets or sets the dynamic array serializer.

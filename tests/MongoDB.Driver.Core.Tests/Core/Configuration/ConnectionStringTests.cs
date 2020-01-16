@@ -505,6 +505,17 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://localhost?connectTimeout=0ms")]
+        [InlineData("mongodb://localhost?connectTimeout=0")]
+        [InlineData("mongodb://localhost?connectTimeoutMS=0")]
+        public void When_no_connect_timeout_is_specified(string connectionString)
+        {
+            var subject = new ConnectionString(connectionString);
+
+            subject.ConnectTimeout.Should().NotHaveValue();
+        }
+
+        [Theory]
         [InlineData("mongodb://localhost/awesome", "awesome")]
         [InlineData("mongodb://localhost/awesome/", "awesome")]
         public void When_a_database_name_is_specified(string connectionString, string db)
@@ -604,6 +615,17 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://localhost?maxIdleTime=0ms")]
+        [InlineData("mongodb://localhost?maxIdleTime=0")]
+        [InlineData("mongodb://localhost?maxIdleTimeMS=0")]
+        public void When_no_maxIdleTime_is_specified(string connectionString)
+        {
+            var subject = new ConnectionString(connectionString);
+
+            subject.MaxIdleTime.Should().NotHaveValue();
+        }
+
+        [Theory]
         [InlineData("mongodb://localhost?maxLifeTime=15ms", 15)]
         [InlineData("mongodb://localhost?maxLifeTimeMS=15", 15)]
         [InlineData("mongodb://localhost?maxLifeTime=15", 1000 * 15)]
@@ -618,8 +640,8 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
-        [InlineData("mongodb://localhost?maxPoolSize=-1", -1)]
-        [InlineData("mongodb://localhost?maxPoolSize=0", 0)]
+        [InlineData("mongodb://localhost?maxPoolSize=-1", -1)] // -1 will trigger exception in further steps
+        [InlineData("mongodb://localhost?maxPoolSize=0", int.MaxValue)] // A value of 0 means there is no limit.
         [InlineData("mongodb://localhost?maxPoolSize=1", 1)]
         [InlineData("mongodb://localhost?maxPoolSize=20", 20)]
         public void When_maxPoolSize_is_specified(string connectionString, int maxPoolSize)
@@ -847,6 +869,17 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://localhost?socketTimeout=0ms")]
+        [InlineData("mongodb://localhost?socketTimeout=0")]
+        [InlineData("mongodb://localhost?socketTimeoutMS=0")]
+        public void When_no_socketTimeout_is_specified(string connectionString)
+        {
+            var subject = new ConnectionString(connectionString);
+
+            subject.SocketTimeout.Should().NotHaveValue();
+        }
+
+        [Theory]
         [InlineData("mongodb://localhost?ssl=true", true)]
         [InlineData("mongodb://localhost?ssl=false", false)]
         public void When_ssl_is_specified(string connectionString, bool ssl)
@@ -940,6 +973,17 @@ namespace MongoDB.Driver.Core.Configuration
             var subject = new ConnectionString(connectionString);
 
             subject.WTimeout.Should().Be(TimeSpan.FromMilliseconds(milliseconds));
+        }
+
+        [Theory]
+        [InlineData("mongodb://localhost?wtimeout=0ms")]
+        [InlineData("mongodb://localhost?wtimeout=0")]
+        [InlineData("mongodb://localhost?wtimeoutMS=0")]
+        public void When_no_wtimeout_is_specified(string connectionString)
+        {
+            var subject = new ConnectionString(connectionString);
+
+            subject.WTimeout.Should().NotHaveValue();
         }
 
         [Theory]

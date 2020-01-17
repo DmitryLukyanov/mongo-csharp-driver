@@ -98,10 +98,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 outputBuffer: _outputNativeBuffer,
                 inputBuffer: _inputNativeBuffer);
 
-            compressedBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
+            compressedBufferPosition = (int)_outputNativeBuffer.Position;
 
             // calculate progress in _inputNativeBuffer
-            uncompressedBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
+            uncompressedBufferPosition = (int)_inputNativeBuffer.Position;
             operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
             // CompressedPinnedBuffer.Offset is always 0
         }
@@ -139,8 +139,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 inputBuffer: _inputNativeBuffer);
 
             // calculate progress in _outputNativeBuffer
-            uncompressedBufferPosition = (int)_outputNativeBuffer.Position.ToUInt32();
-            compressedBufferPosition = (int)_inputNativeBuffer.Position.ToUInt32();
+            uncompressedBufferPosition = (int)_outputNativeBuffer.Position;
+            compressedBufferPosition = (int)_inputNativeBuffer.Position;
 
             operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
             // CompressedPinnedBuffer.Offset will be calculated on stream side
@@ -199,7 +199,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
                 outputAction(_zstreamPointer, _outputNativeBuffer);
 
-                return (int)_outputNativeBuffer.Position.ToUInt32();
+                return (int)_outputNativeBuffer.Position;
             }
         }
 
@@ -207,8 +207,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private void ConfigureNativeBuffer(NativeBufferInfo buffer, PinnedBuffer pinnedBuffer, uint size)
         {
             buffer.DataPointer = pinnedBuffer?.IntPtr ?? IntPtr.Zero;
-            buffer.Size = new UIntPtr(size);
-            buffer.Position = UIntPtr.Zero;
+            buffer.Size = size;
+            buffer.Position = 0;
         }
 
         private void InitializeIfNotAlreadyInitialized()

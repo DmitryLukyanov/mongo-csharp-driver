@@ -23,7 +23,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
     internal class NativeBufferInfo
     {
         public IntPtr DataPointer = IntPtr.Zero;
-        public UIntPtr Size = UIntPtr.Zero;
-        public UIntPtr Position = UIntPtr.Zero;
+        public ulong Size = 0;
+        public ulong Position = 0;
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2019–present MongoDB Inc.
+﻿/* Copyright 2020–present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,14 +18,13 @@ using System.Buffers;
 using System.IO;
 using System.IO.Compression;
 using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.Core.NativeLibraryLoader;
 
 namespace MongoDB.Driver.Core.Compression.Zstd
 {
     internal class ZstandardStream : Stream
     {
         #region static
-        public static int MaxCompressionLevel => NativeWrapper.MaxCompressionLevel; // maximum compression level available
+        public static int MaxCompressionLevel => ZstandardNativeWrapper.MaxCompressionLevel; // maximum compression level available
         #endregion
 
         private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
@@ -37,7 +36,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private readonly CompressionMode _compressionMode;
 
         private bool _disposed;
-        private readonly NativeWrapper _nativeWrapper;
+        private readonly ZstandardNativeWrapper _nativeWrapper;
 
         public ZstandardStream(
             Stream compressedStream,
@@ -47,7 +46,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             _compressedStream = Ensure.IsNotNull(compressedStream, nameof(compressedStream));
             _compressionMode = EnsureCompressionModeIsValid(compressionMode);
 
-            _nativeWrapper = new NativeWrapper(_compressionMode, EnsureCompressionLevelIsValid(compressionLevel));
+            _nativeWrapper = new ZstandardNativeWrapper(_compressionMode, EnsureCompressionLevelIsValid(compressionLevel));
             switch (_compressionMode)
             {
                 case CompressionMode.Compress:
@@ -207,7 +206,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 throw new ArgumentException("Compression level can be specified only in Compress mode", nameof(compressionLevel));
             }
 
-            if (compressionLevel.HasValue && (compressionLevel.Value <= 0 || compressionLevel.Value > NativeWrapper.MaxCompressionLevel))
+            if (compressionLevel.HasValue && (compressionLevel.Value <= 0 || compressionLevel.Value > ZstandardNativeWrapper.MaxCompressionLevel))
             {
                 throw new ArgumentOutOfRangeException(nameof(compressionLevel));
             }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2019–present MongoDB Inc.
+﻿/* Copyright 2020–present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -145,7 +145,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return __ZSTD_initDStream.Value(zds);
         }
 
-        public static UIntPtr ZSTD_decompressStream(IntPtr zds, NativeBufferInfo outputBuffer, NativeBufferInfo inputBuffer)
+        public static UIntPtr ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
         {
             var result = __ZSTD_decompressStream.Value(zds, outputBuffer, inputBuffer);
             ThrowIfError(result);

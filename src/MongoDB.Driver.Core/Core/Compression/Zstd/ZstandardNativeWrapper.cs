@@ -1,4 +1,4 @@
-﻿/* Copyright 2019–present MongoDB Inc.
+﻿/* Copyright 2020–present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ using MongoDB.Driver.Core.NativeLibraryLoader;
 
 namespace MongoDB.Driver.Core.Compression.Zstd
 {
-    internal class NativeWrapper : IDisposable
+    internal class ZstandardNativeWrapper : IDisposable
     {
         #region static
         public static int MaxCompressionLevel => ZstandardNativeMethods.ZSTD_maxCLevel();
@@ -30,17 +30,14 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         private readonly int _compressionLevel;
         private readonly CompressionMode _compressionMode;
-
         private readonly NativeBufferInfo _inputNativeBuffer = new NativeBufferInfo();
         private readonly NativeBufferInfo _outputNativeBuffer = new NativeBufferInfo();
-
         private bool _operationInitialized;
-
         private readonly uint _recommendedZstreamInputSize;
         private readonly uint _recommendedZstreamOutputSize;
         private IntPtr _zstreamPointer;
 
-        public NativeWrapper(CompressionMode compressionMode, int compressionLevel)
+        public ZstandardNativeWrapper(CompressionMode compressionMode, int compressionLevel)
         {
             _compressionLevel = compressionLevel;
             _compressionMode = compressionMode;
@@ -250,14 +247,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             // public methods
             public void Dispose()
             {
-                try
-                {
-                    _uncompressedPinnedBuffer?.Dispose();
-                }
-                finally
-                {
-                    _compressedPinnedBuffer.Dispose(); // ensure that both dispose methods were called
-                }
+                _uncompressedPinnedBuffer?.Dispose(); // PinnedBuffer.Dispose suppress all errors inside
+                _compressedPinnedBuffer.Dispose();
             }
         }
     }

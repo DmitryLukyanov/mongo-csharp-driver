@@ -25,7 +25,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
     internal class ZstandardNativeWrapper : IDisposable
     {
         #region static
-        public static int MaxCompressionLevel => ZstandardNativeMethods.ZSTD_maxCLevel();
+        public static int MaxCompressionLevel => Zstandard64NativeMethods.ZSTD_maxCLevel();
         #endregion
 
         private readonly int _compressionLevel;
@@ -45,22 +45,22 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             switch (_compressionMode)
             {
                 case CompressionMode.Compress:
-                    _recommendedZstreamInputSize = ZstandardNativeMethods
+                    _recommendedZstreamInputSize = Zstandard64NativeMethods
                         .ZSTD_CStreamInSize()  // calculate recommended size for input buffer
                         .ToUInt32();
-                    _recommendedZstreamOutputSize = ZstandardNativeMethods
+                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
                         .ZSTD_CStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete compressed block
                         .ToUInt32();
-                    _zstreamPointer = ZstandardNativeMethods.ZSTD_createCStream(); // create resource
+                    _zstreamPointer = Zstandard64NativeMethods.ZSTD_createCStream(); // create resource
                     break;
                 case CompressionMode.Decompress:
-                    _recommendedZstreamInputSize = ZstandardNativeMethods
+                    _recommendedZstreamInputSize = Zstandard64NativeMethods
                         .ZSTD_DStreamInSize()  // calculate recommended size for input buffer
                         .ToUInt32();
-                    _recommendedZstreamOutputSize = ZstandardNativeMethods
+                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
                         .ZSTD_DStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete block in all circumstances
                         .ToUInt32();
-                    _zstreamPointer = ZstandardNativeMethods.ZSTD_createDStream(); // create resource
+                    _zstreamPointer = Zstandard64NativeMethods.ZSTD_createDStream(); // create resource
                     break;
             }
         }
@@ -93,7 +93,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 (uint)uncompressedSize);
 
             // compress _inputNativeBuffer to _outputNativeBuffer
-            ZstandardNativeMethods.ZSTD_compressStream(
+            Zstandard64NativeMethods.ZSTD_compressStream(
                 _zstreamPointer,
                 outputBuffer: _outputNativeBuffer,
                 inputBuffer: _inputNativeBuffer);
@@ -133,7 +133,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 (uint)uncompressedSize);
 
             // decompress _inputNativeBuffer to _outputNativeBuffer
-            ZstandardNativeMethods.ZSTD_decompressStream(
+            Zstandard64NativeMethods.ZSTD_decompressStream(
                 _zstreamPointer,
                 outputBuffer: _outputNativeBuffer,
                 inputBuffer: _inputNativeBuffer);
@@ -151,10 +151,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             switch (_compressionMode)
             {
                 case CompressionMode.Compress:
-                    ZstandardNativeMethods.ZSTD_freeCStream(_zstreamPointer);
+                    Zstandard64NativeMethods.ZSTD_freeCStream(_zstreamPointer);
                     break;
                 case CompressionMode.Decompress:
-                    ZstandardNativeMethods.ZSTD_freeDStream(_zstreamPointer);
+                    Zstandard64NativeMethods.ZSTD_freeDStream(_zstreamPointer);
                     break;
             }
         }
@@ -182,12 +182,12 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
-                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => ZstandardNativeMethods.ZSTD_flushStream(zcs, buffer));
+                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => Zstandard64NativeMethods.ZSTD_flushStream(zcs, buffer));
             }
 
             using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
-                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => ZstandardNativeMethods.ZSTD_endStream(zcs, buffer));
+                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => Zstandard64NativeMethods.ZSTD_endStream(zcs, buffer));
             }
 
             int ProcessCompressedOutput(OperationContext context, Action<IntPtr, NativeBufferInfo> outputAction)
@@ -220,10 +220,10 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 switch (_compressionMode)
                 {
                     case CompressionMode.Compress:
-                        ZstandardNativeMethods.ZSTD_initCStream(_zstreamPointer, _compressionLevel); // start a new compression operation
+                        Zstandard64NativeMethods.ZSTD_initCStream(_zstreamPointer, _compressionLevel); // start a new compression operation
                         break;
                     case CompressionMode.Decompress:
-                        ZstandardNativeMethods.ZSTD_initDStream(_zstreamPointer); // start a new decompression operation
+                        Zstandard64NativeMethods.ZSTD_initDStream(_zstreamPointer); // start a new decompression operation
                         break;
                 }
             }

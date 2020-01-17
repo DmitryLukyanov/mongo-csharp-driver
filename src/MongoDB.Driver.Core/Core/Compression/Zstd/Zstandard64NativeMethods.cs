@@ -20,7 +20,7 @@ using MongoDB.Driver.Core.NativeLibraryLoader;
 
 namespace MongoDB.Driver.Core.Compression.Zstd
 {
-    internal class ZstandardNativeMethods
+    internal class Zstandard64NativeMethods
     {
         // private static fields
         private static readonly Lazy<LibraryLoader> __libraryLoader;
@@ -50,7 +50,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
 
         // static constructor
-        static ZstandardNativeMethods()
+        static Zstandard64NativeMethods()
         {
             var zstandardLocator = new ZstandardLocator();
             __libraryLoader = new Lazy<LibraryLoader>(() => new LibraryLoader(zstandardLocator), isThreadSafe: true);
@@ -166,16 +166,6 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return result;
         }
 
-        public static bool ZSTD_isError(UIntPtr code)
-        {
-            return __ZSTD_isError.Value(code);
-        }
-
-        public static IntPtr ZSTD_getErrorName(UIntPtr code)
-        {
-            return __ZSTD_getErrorName.Value(code);
-        }
-
         // private static methods
         private static Lazy<TDelegate> CreateLazyForDelegate<TDelegate>(string name)
         {
@@ -184,12 +174,22 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         private static void ThrowIfError(UIntPtr code)
         {
-            if (ZstandardNativeMethods.ZSTD_isError(code))
+            if (Zstandard64NativeMethods.ZSTD_isError(code))
             {
-                var errorPtr = ZstandardNativeMethods.ZSTD_getErrorName(code);
+                var errorPtr = Zstandard64NativeMethods.ZSTD_getErrorName(code);
                 var errorMsg = Marshal.PtrToStringAnsi(errorPtr);
                 throw new IOException(errorMsg);
             }
+        }
+
+        private static bool ZSTD_isError(UIntPtr code)
+        {
+            return __ZSTD_isError.Value(code);
+        }
+
+        private static IntPtr ZSTD_getErrorName(UIntPtr code)
+        {
+            return __ZSTD_getErrorName.Value(code);
         }
 
         // nested types

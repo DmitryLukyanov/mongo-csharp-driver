@@ -33,8 +33,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private readonly NativeBufferInfo _inputNativeBuffer = new NativeBufferInfo();
         private readonly NativeBufferInfo _outputNativeBuffer = new NativeBufferInfo();
         private bool _operationInitialized;
-        private readonly uint _recommendedZstreamInputSize;
-        private readonly uint _recommendedZstreamOutputSize;
+        private readonly int _recommendedZstreamInputSize;
+        private readonly int _recommendedZstreamOutputSize;
         private IntPtr _zstreamPointer;
 
         public ZstandardNativeWrapper(CompressionMode compressionMode, int compressionLevel)
@@ -45,28 +45,24 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             switch (_compressionMode)
             {
                 case CompressionMode.Compress:
-                    _recommendedZstreamInputSize = Zstandard64NativeMethods
-                        .ZSTD_CStreamInSize()  // calculate recommended size for input buffer
-                        .ToUInt32();
-                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
-                        .ZSTD_CStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete compressed block
-                        .ToUInt32();
+                    _recommendedZstreamInputSize = ZstandardNativeAdapter
+                        .ZSTD_CStreamInSize();  // calculate recommended size for input buffer;
+                    _recommendedZstreamOutputSize = ZstandardNativeAdapter
+                        .ZSTD_CStreamOutSize();  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete compressed block
                     _zstreamPointer = Zstandard64NativeMethods.ZSTD_createCStream(); // create resource
                     break;
                 case CompressionMode.Decompress:
-                    _recommendedZstreamInputSize = Zstandard64NativeMethods
-                        .ZSTD_DStreamInSize()  // calculate recommended size for input buffer
-                        .ToUInt32();
-                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
-                        .ZSTD_DStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete block in all circumstances
-                        .ToUInt32();
+                    _recommendedZstreamInputSize = ZstandardNativeAdapter
+                        .ZSTD_DStreamInSize();  // calculate recommended size for input buffer
+                    _recommendedZstreamOutputSize = ZstandardNativeAdapter
+                        .ZSTD_DStreamOutSize();  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete block in all circumstances
                     _zstreamPointer = Zstandard64NativeMethods.ZSTD_createDStream(); // create resource
                     break;
             }
         }
 
-        public int RecommendedInputSize => (int)_recommendedZstreamInputSize;
-        public int RecommendedOutputSize => (int)_recommendedZstreamOutputSize;
+        public int RecommendedInputSize => _recommendedZstreamInputSize;
+        public int RecommendedOutputSize => _recommendedZstreamOutputSize;
 
         // public methods
         public void Compress(
@@ -80,28 +76,18 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             InitializeIfNotAlreadyInitialized();
 
-            // compressed data
-            ConfigureNativeBuffer(
-                _outputNativeBuffer,
-                operationContext.CompressedPinnedBuffer, // operation result
-                (uint)compressedSize);
-
-            // uncompressed data
-            ConfigureNativeBuffer(
-                _inputNativeBuffer,
-                operationContext.UncompressedPinnedBuffer,
-                (uint)uncompressedSize);
-
-            // compress _inputNativeBuffer to _outputNativeBuffer
-            Zstandard64NativeMethods.ZSTD_compressStream(
-                _zstreamPointer,
+            ZstandardNativeAdapter.ZSTD_compressStream(
+                zstreamPointer: _zstreamPointer,
                 outputBuffer: _outputNativeBuffer,
-                inputBuffer: _inputNativeBuffer);
-
-            compressedBufferPosition = (int)_outputNativeBuffer.Position;
+                compressedPinnedBuffer: operationContext.CompressedPinnedBuffer,
+                compressedSize: compressedSize,
+                inputBuffer: _inputNativeBuffer,
+                uncompressedPinnedBuffer: operationContext.UncompressedPinnedBuffer,
+                uncompressedSize: uncompressedSize,
+                compressedBufferPosition: out compressedBufferPosition,
+                uncompressedBufferPosition: out uncompressedBufferPosition);
 
             // calculate progress in _inputNativeBuffer
-            uncompressedBufferPosition = (int)_inputNativeBuffer.Position;
             operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
             // CompressedPinnedBuffer.Offset is always 0
         }
@@ -120,27 +106,17 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             // apply reading progress on CompressedPinnedBuffer
             operationContext.CompressedPinnedBuffer.Offset = compressedOffset;
-            // compressed data
-            ConfigureNativeBuffer(
-                _inputNativeBuffer,
-                compressedSize <= 0 ? null : operationContext.CompressedPinnedBuffer,
-                compressedSize <= 0 ? 0 : (uint)compressedSize);
 
-            // uncompressed data
-            ConfigureNativeBuffer(
-                _outputNativeBuffer,
-                operationContext.UncompressedPinnedBuffer, // operation result
-                (uint)uncompressedSize);
-
-            // decompress _inputNativeBuffer to _outputNativeBuffer
-            Zstandard64NativeMethods.ZSTD_decompressStream(
-                _zstreamPointer,
+            ZstandardNativeAdapter.ZSTD_decompressStream(
+                zstreamPointer: _zstreamPointer,
+                inputBuffer: _inputNativeBuffer,
+                compressedPinnedBuffer: operationContext.CompressedPinnedBuffer,
+                compressedSize: compressedSize <= 0 ? 0 : compressedSize,
                 outputBuffer: _outputNativeBuffer,
-                inputBuffer: _inputNativeBuffer);
-
-            // calculate progress in _outputNativeBuffer
-            uncompressedBufferPosition = (int)_outputNativeBuffer.Position;
-            compressedBufferPosition = (int)_inputNativeBuffer.Position;
+                uncompressedPinnedBuffer: operationContext.UncompressedPinnedBuffer,
+                uncompressedSize: uncompressedSize,
+                uncompressedBufferPosition: out uncompressedBufferPosition,
+                compressedBufferPosition: out compressedBufferPosition);
 
             operationContext.UncompressedPinnedBuffer.Offset += uncompressedBufferPosition;
             // CompressedPinnedBuffer.Offset will be calculated on stream side
@@ -182,35 +158,24 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
             using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
-                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => Zstandard64NativeMethods.ZSTD_flushStream(zcs, buffer));
+                yield return ZstandardNativeAdapter.ZSTD_flushStream(
+                    _zstreamPointer,
+                    _outputNativeBuffer,
+                    operationContext.CompressedPinnedBuffer,
+                    _recommendedZstreamOutputSize);
             }
 
             using (var operationContext = InitializeOperationContext(compressedBufferInfo))
             {
-                yield return ProcessCompressedOutput(operationContext, (zcs, buffer) => Zstandard64NativeMethods.ZSTD_endStream(zcs, buffer));
-            }
-
-            int ProcessCompressedOutput(OperationContext context, Action<IntPtr, NativeBufferInfo> outputAction)
-            {
-                ConfigureNativeBuffer(
+                yield return ZstandardNativeAdapter.ZSTD_endStream(
+                    _zstreamPointer,
                     _outputNativeBuffer,
-                    context.CompressedPinnedBuffer,
+                    operationContext.CompressedPinnedBuffer,
                     _recommendedZstreamOutputSize);
-
-                outputAction(_zstreamPointer, _outputNativeBuffer);
-
-                return (int)_outputNativeBuffer.Position;
             }
         }
 
         // private methods
-        private void ConfigureNativeBuffer(NativeBufferInfo buffer, PinnedBuffer pinnedBuffer, uint size)
-        {
-            buffer.DataPointer = pinnedBuffer?.IntPtr ?? IntPtr.Zero;
-            buffer.Size = size;
-            buffer.Position = 0;
-        }
-
         private void InitializeIfNotAlreadyInitialized()
         {
             if (!_operationInitialized)

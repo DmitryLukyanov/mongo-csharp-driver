@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
@@ -47,23 +46,16 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
         What here shall miss, our toil shall strive to mend.";
 
         // private static fields
-        private static readonly byte[] __bigMessageWithRandomBytes = GenerateBigMessage(135000); // bigger than recommended size for one native operation
-        private static readonly byte[] __bigMessageWithoutRandomBytes = GenerateBigMessage(135000, false); // bigger than recommended size for one native operation
+        private static readonly byte[] __bigMessage = GenerateBigMessage(135000); // bigger than recommended size for one native operation
 
         // private static methods
-        private static byte[] GenerateBigMessage(int size, bool useRandomBytes = true)
+        private static byte[] GenerateBigMessage(int size)
         {
             var resultBytes = new List<byte>();
             var messagePortionBytes = Encoding.ASCII.GetBytes(__testMessagePortion);
             while (resultBytes.Count < size)
             {
-                resultBytes.AddRange(resultBytes.Count % 2 == 0 ? messagePortionBytes.Reverse() : messagePortionBytes);
-                if (useRandomBytes)
-                {
-                    var randomBytes = new byte[messagePortionBytes.Length + 1];
-                    new Random().NextBytes(randomBytes);
-                    resultBytes.AddRange(randomBytes);
-                }
+                resultBytes.AddRange(messagePortionBytes);
             }
             return resultBytes.ToArray();
         }
@@ -73,7 +65,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
         [ParameterAttributeData]
         public void Compressor_should_decompress_the_previously_compressed_message([Range(1, 22)] int compressionLevel)
         {
-            var messageBytes = __bigMessageWithoutRandomBytes;
+            var messageBytes = __bigMessage;
 
             var compressedBytes = Compress(messageBytes, compressionLevel);
             compressedBytes.Length.Should().BeLessThan(messageBytes.Length / 2);
@@ -103,7 +95,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
             // note: some close compression levels can give the same results for not huge text sizes
             foreach (var compressionLevel in new [] { 1, 5, 10, 15, 22 })
             {
-                var compressedBytes = Compress(__bigMessageWithRandomBytes, compressionLevel);
+                var compressedBytes = Compress(__bigMessage, compressionLevel);
                 lengths.Add(compressedBytes.Length);
             }
             lengths.Should().BeInDescendingOrder();
@@ -160,6 +152,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
                 using (var zstdStream = new ZstandardStream(outputStream, CompressionMode.Compress, compressionLevel))
                 {
                     inputStream.EfficientCopyTo(zstdStream);
+                    zstdStream.Flush();
                 }
                 return outputStream.ToArray();
             }

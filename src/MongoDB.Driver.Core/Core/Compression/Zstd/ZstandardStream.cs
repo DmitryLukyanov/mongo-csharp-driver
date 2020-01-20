@@ -36,6 +36,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private readonly CompressionMode _compressionMode;
 
         private bool _disposed;
+        private bool _flushed;
         private readonly ZstandardNativeWrapper _nativeWrapper;
 
         public ZstandardStream(
@@ -89,11 +90,17 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                     case CompressionMode.Compress:
                         try
                         {
-                            foreach (var outputBufferPosition in _nativeWrapper.FlushBySteps(_streamWriteHelper.CompressedBufferInfo))
+                            if (!_flushed)
                             {
-                                _streamWriteHelper.WriteBufferToCompressedStream(count: outputBufferPosition);
+                                try
+                                {
+                                    Flush();
+                                }
+                                catch
+                                {
+                                    // ignore exception
+                                }
                             }
-                            _compressedStream.Flush();
                         }
                         finally
                         {
@@ -113,7 +120,12 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         public override void Flush()
         {
-            throw new NotSupportedException("Use Dispose instead.");
+            foreach (var outputBufferPosition in _nativeWrapper.FlushBySteps(_streamWriteHelper.CompressedBufferInfo))
+            {
+                _streamWriteHelper.WriteBufferToCompressedStream(count: outputBufferPosition);
+            }
+            _compressedStream.Flush();
+            _flushed = true;
         }
 
         public override int Read(byte[] outputBytes, int outputOffset, int count) // Decompress

@@ -38,6 +38,7 @@ namespace MongoDB.Driver.Core.Compression
             using (var zstandardStream = new ZstandardStream(output, CompressionMode.Compress, _compressionLevel))
             {
                 input.EfficientCopyTo(zstandardStream);
+                zstandardStream.Flush();
             }
         }
 

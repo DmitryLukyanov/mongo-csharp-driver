@@ -183,8 +183,7 @@ namespace MongoDB.Driver.Examples
 
 ### Explicit Encryption and Decryption
 
-Explicit encryption and decryption is a **MongoDB community** feature and does not use the `mongocryptd` process. Explicit encryption is provided by the `ClientEncryption` class. 
-The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
+Explicit encryption and decryption is a **MongoDB community** feature and does not use the `mongocryptd` process. Explicit encryption is provided by the `ClientEncryption` class. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
 
 ```
 using System;
@@ -251,8 +250,7 @@ namespace MongoDB.Driver.Examples
 
 ### Explicit Encryption and Auto Decryption
 
-Although automatic encryption requires MongoDB 4.2 enterprise or a MongoDB 4.2 Atlas cluster, automatic decryption is supported for all 
-users. To configure automatic decryption without automatic encryption set `bypassAutoEncryption=true`. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
+Although automatic encryption requires MongoDB 4.2 enterprise or a MongoDB 4.2 Atlas cluster, automatic decryption is supported for all users. To configure automatic decryption without automatic encryption set `bypassAutoEncryption=true`. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
 
 ```
 using System;

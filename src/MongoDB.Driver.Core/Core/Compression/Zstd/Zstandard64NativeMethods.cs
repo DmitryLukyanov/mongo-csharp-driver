@@ -24,29 +24,29 @@ namespace MongoDB.Driver.Core.Compression.Zstd
     {
         // private static fields
         private static readonly Lazy<LibraryLoader> __libraryLoader;
-        private static readonly Lazy<Delegates.ZSTD_CStreamInSize> __ZSTD_CStreamInSize;
-        private static readonly Lazy<Delegates.ZSTD_CStreamOutSize> __ZSTD_CStreamOutSize;
-        private static readonly Lazy<Delegates.ZSTD_createCStream> __ZSTD_createCStream;
+        private static readonly Lazy<Delegates64.ZSTD_CStreamInSize> __ZSTD_CStreamInSize;
+        private static readonly Lazy<Delegates64.ZSTD_CStreamOutSize> __ZSTD_CStreamOutSize;
+        private static readonly Lazy<Delegates64.ZSTD_createCStream> __ZSTD_createCStream;
 
-        private static readonly Lazy<Delegates.ZSTD_DStreamInSize> __ZSTD_DStreamInSize;
-        private static readonly Lazy<Delegates.ZSTD_DStreamOutSize> __ZSTD_DStreamOutSize;
-        private static readonly Lazy<Delegates.ZSTD_createDStream> __ZSTD_createDStream;
+        private static readonly Lazy<Delegates64.ZSTD_DStreamInSize> __ZSTD_DStreamInSize;
+        private static readonly Lazy<Delegates64.ZSTD_DStreamOutSize> __ZSTD_DStreamOutSize;
+        private static readonly Lazy<Delegates64.ZSTD_createDStream> __ZSTD_createDStream;
 
-        private static readonly Lazy<Delegates.ZSTD_maxCLevel> __ZSTD_maxCLevel;
+        private static readonly Lazy<Delegates64.ZSTD_maxCLevel> __ZSTD_maxCLevel;
 
-        private static readonly Lazy<Delegates.ZSTD_flushStream> __ZSTD_flushStream;
-        private static readonly Lazy<Delegates.ZSTD_endStream> __ZSTD_endStream;
-        private static readonly Lazy<Delegates.ZSTD_freeCStream> __ZSTD_freeCStream;
-        private static readonly Lazy<Delegates.ZSTD_freeDStream> __ZSTD_freeDStream;
+        private static readonly Lazy<Delegates64.ZSTD_flushStream> __ZSTD_flushStream;
+        private static readonly Lazy<Delegates64.ZSTD_endStream> __ZSTD_endStream;
+        private static readonly Lazy<Delegates64.ZSTD_freeCStream> __ZSTD_freeCStream;
+        private static readonly Lazy<Delegates64.ZSTD_freeDStream> __ZSTD_freeDStream;
 
-        private static readonly Lazy<Delegates.ZSTD_initDStream> __ZSTD_initDStream;
-        private static readonly Lazy<Delegates.ZSTD_decompressStream> __ZSTD_decompressStream;
+        private static readonly Lazy<Delegates64.ZSTD_initDStream> __ZSTD_initDStream;
+        private static readonly Lazy<Delegates64.ZSTD_decompressStream> __ZSTD_decompressStream;
 
-        private static readonly Lazy<Delegates.ZSTD_initCStream> __ZSTD_initCStream;
-        private static readonly Lazy<Delegates.ZSTD_compressStream> __ZSTD_compressStream;
+        private static readonly Lazy<Delegates64.ZSTD_initCStream> __ZSTD_initCStream;
+        private static readonly Lazy<Delegates64.ZSTD_compressStream> __ZSTD_compressStream;
 
-        private static readonly Lazy<Delegates.ZSTD_isError> __ZSTD_isError;
-        private static readonly Lazy<Delegates.ZSTD_getErrorName> __ZSTD_getErrorName;
+        private static readonly Lazy<Delegates64.ZSTD_isError> __ZSTD_isError;
+        private static readonly Lazy<Delegates64.ZSTD_getErrorName> __ZSTD_getErrorName;
 
 
         // static constructor
@@ -55,38 +55,38 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             var zstandardLocator = new ZstandardLocator();
             __libraryLoader = new Lazy<LibraryLoader>(() => new LibraryLoader(zstandardLocator), isThreadSafe: true);
 
-            __ZSTD_CStreamInSize = CreateLazyForDelegate<Delegates.ZSTD_CStreamInSize>(nameof(ZSTD_CStreamInSize));
-            __ZSTD_CStreamOutSize = CreateLazyForDelegate<Delegates.ZSTD_CStreamOutSize>(nameof(ZSTD_CStreamOutSize));
-            __ZSTD_createCStream = CreateLazyForDelegate<Delegates.ZSTD_createCStream>(nameof(ZSTD_createCStream));
+            __ZSTD_CStreamInSize = CreateLazyForDelegate<Delegates64.ZSTD_CStreamInSize>(nameof(ZSTD_CStreamInSize));
+            __ZSTD_CStreamOutSize = CreateLazyForDelegate<Delegates64.ZSTD_CStreamOutSize>(nameof(ZSTD_CStreamOutSize));
+            __ZSTD_createCStream = CreateLazyForDelegate<Delegates64.ZSTD_createCStream>(nameof(ZSTD_createCStream));
 
-            __ZSTD_DStreamInSize = CreateLazyForDelegate<Delegates.ZSTD_DStreamInSize>(nameof(ZSTD_DStreamInSize));
-            __ZSTD_DStreamOutSize = CreateLazyForDelegate<Delegates.ZSTD_DStreamOutSize>(nameof(ZSTD_DStreamOutSize));
-            __ZSTD_createDStream = CreateLazyForDelegate<Delegates.ZSTD_createDStream>(nameof(ZSTD_createDStream));
+            __ZSTD_DStreamInSize = CreateLazyForDelegate<Delegates64.ZSTD_DStreamInSize>(nameof(ZSTD_DStreamInSize));
+            __ZSTD_DStreamOutSize = CreateLazyForDelegate<Delegates64.ZSTD_DStreamOutSize>(nameof(ZSTD_DStreamOutSize));
+            __ZSTD_createDStream = CreateLazyForDelegate<Delegates64.ZSTD_createDStream>(nameof(ZSTD_createDStream));
 
-            __ZSTD_maxCLevel = CreateLazyForDelegate<Delegates.ZSTD_maxCLevel>(nameof(ZSTD_maxCLevel));
+            __ZSTD_maxCLevel = CreateLazyForDelegate<Delegates64.ZSTD_maxCLevel>(nameof(ZSTD_maxCLevel));
 
-            __ZSTD_flushStream = CreateLazyForDelegate<Delegates.ZSTD_flushStream>(nameof(ZSTD_flushStream));
-            __ZSTD_endStream = CreateLazyForDelegate<Delegates.ZSTD_endStream>(nameof(ZSTD_endStream));
-            __ZSTD_freeCStream = CreateLazyForDelegate<Delegates.ZSTD_freeCStream>(nameof(ZSTD_freeCStream));
-            __ZSTD_freeDStream = CreateLazyForDelegate<Delegates.ZSTD_freeDStream>(nameof(ZSTD_freeDStream));
+            __ZSTD_flushStream = CreateLazyForDelegate<Delegates64.ZSTD_flushStream>(nameof(ZSTD_flushStream));
+            __ZSTD_endStream = CreateLazyForDelegate<Delegates64.ZSTD_endStream>(nameof(ZSTD_endStream));
+            __ZSTD_freeCStream = CreateLazyForDelegate<Delegates64.ZSTD_freeCStream>(nameof(ZSTD_freeCStream));
+            __ZSTD_freeDStream = CreateLazyForDelegate<Delegates64.ZSTD_freeDStream>(nameof(ZSTD_freeDStream));
 
-            __ZSTD_initDStream = CreateLazyForDelegate<Delegates.ZSTD_initDStream>(nameof(ZSTD_initDStream));
-            __ZSTD_decompressStream = CreateLazyForDelegate<Delegates.ZSTD_decompressStream>(nameof(ZSTD_decompressStream));
+            __ZSTD_initDStream = CreateLazyForDelegate<Delegates64.ZSTD_initDStream>(nameof(ZSTD_initDStream));
+            __ZSTD_decompressStream = CreateLazyForDelegate<Delegates64.ZSTD_decompressStream>(nameof(ZSTD_decompressStream));
 
-            __ZSTD_initCStream = CreateLazyForDelegate<Delegates.ZSTD_initCStream>(nameof(ZSTD_initCStream));
-            __ZSTD_compressStream = CreateLazyForDelegate<Delegates.ZSTD_compressStream>(nameof(ZSTD_compressStream));
+            __ZSTD_initCStream = CreateLazyForDelegate<Delegates64.ZSTD_initCStream>(nameof(ZSTD_initCStream));
+            __ZSTD_compressStream = CreateLazyForDelegate<Delegates64.ZSTD_compressStream>(nameof(ZSTD_compressStream));
 
-            __ZSTD_isError = CreateLazyForDelegate<Delegates.ZSTD_isError>(nameof(ZSTD_isError));
-            __ZSTD_getErrorName = CreateLazyForDelegate<Delegates.ZSTD_getErrorName>(nameof(ZSTD_getErrorName));
+            __ZSTD_isError = CreateLazyForDelegate<Delegates64.ZSTD_isError>(nameof(ZSTD_isError));
+            __ZSTD_getErrorName = CreateLazyForDelegate<Delegates64.ZSTD_getErrorName>(nameof(ZSTD_getErrorName));
         }
 
         // public static methods
-        public static UIntPtr ZSTD_CStreamInSize()
+        public static ulong ZSTD_CStreamInSize()
         {
             return __ZSTD_CStreamInSize.Value();
         }
 
-        public static UIntPtr ZSTD_CStreamOutSize()
+        public static ulong ZSTD_CStreamOutSize()
         {
             return __ZSTD_CStreamOutSize.Value();
         }
@@ -96,12 +96,12 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return __ZSTD_createCStream.Value();
         }
 
-        public static UIntPtr ZSTD_DStreamInSize()
+        public static ulong ZSTD_DStreamInSize()
         {
             return __ZSTD_DStreamInSize.Value();
         }
 
-        public static UIntPtr ZSTD_DStreamOutSize()
+        public static ulong ZSTD_DStreamOutSize()
         {
             return __ZSTD_DStreamOutSize.Value();
         }
@@ -116,50 +116,50 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return __ZSTD_maxCLevel.Value();
         }
 
-        public static UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
+        public static ulong ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
         {
             var result = __ZSTD_flushStream.Value(zcs, outputBuffer);
             ThrowIfError(result);
             return result;
         }
 
-        public static UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
+        public static ulong ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer)
         {
             var result = __ZSTD_endStream.Value(zcs, outputBuffer);
             ThrowIfError(result);
             return result;
         }
 
-        public static UIntPtr ZSTD_freeCStream(IntPtr zcs)
+        public static ulong ZSTD_freeCStream(IntPtr zcs)
         {
             return __ZSTD_freeCStream.Value(zcs);
         }
 
-        public static UIntPtr ZSTD_freeDStream(IntPtr zds)
+        public static ulong ZSTD_freeDStream(IntPtr zds)
         {
             return __ZSTD_freeDStream.Value(zds);
         }
 
-        public static UIntPtr ZSTD_initDStream(IntPtr zds)
+        public static ulong ZSTD_initDStream(IntPtr zds)
         {
             return __ZSTD_initDStream.Value(zds);
         }
 
-        public static UIntPtr ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
+        public static ulong ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
         {
             var result = __ZSTD_decompressStream.Value(zds, outputBuffer, inputBuffer);
             ThrowIfError(result);
             return result;
         }
 
-        public static UIntPtr ZSTD_initCStream(IntPtr zcs, int compressionLevel)
+        public static ulong ZSTD_initCStream(IntPtr zcs, int compressionLevel)
         {
             var result = __ZSTD_initCStream.Value(zcs, compressionLevel);
             ThrowIfError(result);
             return result;
         }
 
-        public static UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
+        public static ulong ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer)
         {
             var result = __ZSTD_compressStream.Value(zcs, outputBuffer, inputBuffer);
             ThrowIfError(result);
@@ -172,7 +172,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return new Lazy<TDelegate>(() => __libraryLoader.Value.GetDelegate<TDelegate>(name), isThreadSafe: true);
         }
 
-        private static void ThrowIfError(UIntPtr code)
+        private static void ThrowIfError(ulong code)
         {
             if (Zstandard64NativeMethods.ZSTD_isError(code))
             {
@@ -182,44 +182,44 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             }
         }
 
-        private static bool ZSTD_isError(UIntPtr code)
+        private static bool ZSTD_isError(ulong code)
         {
             return __ZSTD_isError.Value(code);
         }
 
-        private static IntPtr ZSTD_getErrorName(UIntPtr code)
+        private static IntPtr ZSTD_getErrorName(ulong code)
         {
             return __ZSTD_getErrorName.Value(code);
         }
 
         // nested types
-        private class Delegates
+        private class Delegates64
         {
-            public delegate UIntPtr ZSTD_CStreamInSize();
-            public delegate UIntPtr ZSTD_CStreamOutSize();
+            public delegate ulong ZSTD_CStreamInSize();
+            public delegate ulong ZSTD_CStreamOutSize();
             public delegate IntPtr ZSTD_createCStream();
 
-            public delegate UIntPtr ZSTD_DStreamInSize();
-            public delegate UIntPtr ZSTD_DStreamOutSize();
+            public delegate ulong ZSTD_DStreamInSize();
+            public delegate ulong ZSTD_DStreamOutSize();
             public delegate IntPtr ZSTD_createDStream();
 
             public delegate int ZSTD_maxCLevel();
 
-            public delegate UIntPtr ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
-            public delegate UIntPtr ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
-            public delegate UIntPtr ZSTD_freeCStream(IntPtr zcs);
-            public delegate UIntPtr ZSTD_freeDStream(IntPtr zds);
+            public delegate ulong ZSTD_flushStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
+            public delegate ulong ZSTD_endStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer);
+            public delegate ulong ZSTD_freeCStream(IntPtr zcs);
+            public delegate ulong ZSTD_freeDStream(IntPtr zds);
 
-            public delegate UIntPtr ZSTD_initDStream(IntPtr zds);
+            public delegate ulong ZSTD_initDStream(IntPtr zds);
 
-            public delegate UIntPtr ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
+            public delegate ulong ZSTD_decompressStream(IntPtr zds, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
 
-            public delegate UIntPtr ZSTD_initCStream(IntPtr zcs, int compressionLevel);
+            public delegate ulong ZSTD_initCStream(IntPtr zcs, int compressionLevel);
 
-            public delegate UIntPtr ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
+            public delegate ulong ZSTD_compressStream(IntPtr zcs, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo outputBuffer, [MarshalAs(UnmanagedType.LPStruct)] NativeBufferInfo inputBuffer);
 
-            public delegate bool ZSTD_isError(UIntPtr code);
-            public delegate IntPtr ZSTD_getErrorName(UIntPtr code);
+            public delegate bool ZSTD_isError(ulong code);
+            public delegate IntPtr ZSTD_getErrorName(ulong code);
         }
 
         private class ZstandardLocator : RelativeLibraryLocatorBase

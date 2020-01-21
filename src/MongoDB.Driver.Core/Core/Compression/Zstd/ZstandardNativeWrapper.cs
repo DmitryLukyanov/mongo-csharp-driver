@@ -33,8 +33,8 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         private readonly NativeBufferInfo _inputNativeBuffer = new NativeBufferInfo();
         private readonly NativeBufferInfo _outputNativeBuffer = new NativeBufferInfo();
         private bool _operationInitialized;
-        private readonly uint _recommendedZstreamInputSize;
-        private readonly uint _recommendedZstreamOutputSize;
+        private readonly ulong _recommendedZstreamInputSize;
+        private readonly ulong _recommendedZstreamOutputSize;
         private IntPtr _zstreamPointer;
 
         public ZstandardNativeWrapper(CompressionMode compressionMode, int compressionLevel)
@@ -45,21 +45,17 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             switch (_compressionMode)
             {
                 case CompressionMode.Compress:
-                    _recommendedZstreamInputSize = Zstandard64NativeMethods
-                        .ZSTD_CStreamInSize()  // calculate recommended size for input buffer
-                        .ToUInt32();
-                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
-                        .ZSTD_CStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete compressed block
-                        .ToUInt32();
+                    // calculate recommended size for input buffer
+                    _recommendedZstreamInputSize = Zstandard64NativeMethods.ZSTD_CStreamInSize();
+                    // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete compressed block
+                    _recommendedZstreamOutputSize = Zstandard64NativeMethods.ZSTD_CStreamOutSize();
                     _zstreamPointer = Zstandard64NativeMethods.ZSTD_createCStream(); // create resource
                     break;
                 case CompressionMode.Decompress:
-                    _recommendedZstreamInputSize = Zstandard64NativeMethods
-                        .ZSTD_DStreamInSize()  // calculate recommended size for input buffer
-                        .ToUInt32();
-                    _recommendedZstreamOutputSize = Zstandard64NativeMethods
-                        .ZSTD_DStreamOutSize()  // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete block in all circumstances
-                        .ToUInt32();
+                    // calculate recommended size for input buffer
+                    _recommendedZstreamInputSize = Zstandard64NativeMethods.ZSTD_DStreamInSize();
+                    // calculate recommended size for output buffer. Guarantee to successfully flush at least one complete block in all circumstances
+                    _recommendedZstreamOutputSize = Zstandard64NativeMethods.ZSTD_DStreamOutSize();
                     _zstreamPointer = Zstandard64NativeMethods.ZSTD_createDStream(); // create resource
                     break;
             }
@@ -204,7 +200,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
         }
 
         // private methods
-        private void ConfigureNativeBuffer(NativeBufferInfo buffer, PinnedBuffer pinnedBuffer, uint size)
+        private void ConfigureNativeBuffer(NativeBufferInfo buffer, PinnedBuffer pinnedBuffer, ulong size)
         {
             buffer.DataPointer = pinnedBuffer?.IntPtr ?? IntPtr.Zero;
             buffer.Size = size;

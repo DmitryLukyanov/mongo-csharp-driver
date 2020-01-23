@@ -134,11 +134,13 @@ namespace MongoDB.Driver.Examples
                 keyVaultNamespace,
                 kmsProviders);
 
-            var clientEncryption = new ClientEncryption(clientEncryptionSettings);
-            var dataKeyId = clientEncryption.CreateDataKey("local", new DataKeyOptions(), CancellationToken.None);
-            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
-            clientEncryption.Dispose();
+            Guid dataKeyId;
+            using (var clientEncryption = new ClientEncryption(clientEncryptionSettings))
+            {
+                dataKeyId = clientEncryption.CreateDataKey("local", new DataKeyOptions(), CancellationToken.None);
+            }
 
+            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
             var collectionNamespace = CollectionNamespace.FromFullName("test.coll");
 
             var schemaMap = $@"{{
@@ -185,9 +187,9 @@ namespace MongoDB.Driver.Examples
 
 ### Explicit Encryption and Decryption
 
-Explicit encryption and decryption is a **MongoDB community** feature and does not use the `mongocryptd` process. Explicit encryption is provided by the `ClientEncryption` class. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
+Explicit encryption and decryption is a **MongoDB Community Server** feature and does not use the `mongocryptd` process. Explicit encryption is provided by the `ClientEncryption` class. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
 
-```
+```csharp
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -220,31 +222,30 @@ namespace MongoDB.Driver.Examples
                 keyVaultClient,
                 keyVaultNamespace,
                 kmsProviders);
-            var clientEncryption = new ClientEncryption(clientEncryptionSettings);
+            using (var clientEncryption = new ClientEncryption(clientEncryptionSettings))
+            {
+                var dataKeyId = clientEncryption.CreateDataKey(
+                    "local",
+                    new DataKeyOptions(),
+                    CancellationToken.None);
 
-            var dataKeyId = clientEncryption.CreateDataKey(
-                "local",
-                new DataKeyOptions(),
-                CancellationToken.None);
+                var originalString = "123456789";
+                Console.WriteLine($"Original string {originalString}.");
 
-            var originalString = "123456789";
-            Console.WriteLine($"Original string {originalString}.");
+                // Explicitly encrypt a field
+                var encryptOptions = new EncryptOptions(
+                    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                    keyId: dataKeyId);
+                var encryptedFieldValue = clientEncryption.Encrypt(
+                    originalString,
+                    encryptOptions,
+                    CancellationToken.None);
+                Console.WriteLine($"Encrypted value {encryptedFieldValue}.");
 
-            // Explicitly encrypt a field
-            var encryptOptions = new EncryptOptions(
-                EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                keyId: dataKeyId);
-            var encryptedFieldValue = clientEncryption.Encrypt(
-                originalString,
-                encryptOptions,
-                CancellationToken.None);
-            Console.WriteLine($"Encrypted value {encryptedFieldValue}.");
-
-            // Explicitly decrypt the field
-            var decryptedValue = clientEncryption.Decrypt(encryptedFieldValue, CancellationToken.None);
-            Console.WriteLine($"Decrypted value {decryptedValue}.");
-
-            clientEncryption.Dispose();
+                // Explicitly decrypt the field
+                var decryptedValue = clientEncryption.Decrypt(encryptedFieldValue, CancellationToken.None);
+                Console.WriteLine($"Decrypted value {decryptedValue}.");
+            }
         }
     }
 }
@@ -252,9 +253,9 @@ namespace MongoDB.Driver.Examples
 
 ### Explicit Encryption and Auto Decryption
 
-Although automatic encryption requires MongoDB 4.2 enterprise or a MongoDB 4.2 Atlas cluster, automatic decryption is supported for all users. To configure automatic decryption without automatic encryption set `bypassAutoEncryption=true`. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
+Although automatic encryption requires MongoDB 4.2 Enterprise Server or a MongoDB 4.2 Atlas cluster, automatic decryption is supported for all users. To configure automatic decryption without automatic encryption set `bypassAutoEncryption=true`. The following example has been adapted from [`ExplicitEncryptionExamples.cs`](https://github.com/mongodb/mongo-csharp-driver/blob/master/tests/MongoDB.Driver.Examples/ExplicitEncryptionExamples.cs):
 
-```
+```csharp
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -300,33 +301,32 @@ namespace MongoDB.Driver.Examples
                 keyVaultClient,
                 keyVaultNamespace,
                 kmsProviders);
-            var clientEncryption = new ClientEncryption(clientEncryptionSettings);
+            using (var clientEncryption = new ClientEncryption(clientEncryptionSettings))
+            {
+                var dataKeyId = clientEncryption.CreateDataKey(
+                    "local",
+                    new DataKeyOptions(),
+                    CancellationToken.None);
 
-            var dataKeyId = clientEncryption.CreateDataKey(
-                "local",
-                new DataKeyOptions(),
-                CancellationToken.None);
+                var originalString = "123456789";
+                Console.WriteLine($"Original string {originalString}.");
 
-            var originalString = "123456789";
-            Console.WriteLine($"Original string {originalString}.");
+                // Explicitly encrypt a field
+                var encryptOptions = new EncryptOptions(
+                    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                    keyId: dataKeyId);
+                var encryptedFieldValue = clientEncryption.Encrypt(
+                    originalString,
+                    encryptOptions,
+                    CancellationToken.None);
+                Console.WriteLine($"Encrypted value {encryptedFieldValue}.");
 
-            // Explicitly encrypt a field
-            var encryptOptions = new EncryptOptions(
-                EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                keyId: dataKeyId);
-            var encryptedFieldValue = clientEncryption.Encrypt(
-                originalString,
-                encryptOptions,
-                CancellationToken.None);
-            Console.WriteLine($"Encrypted value {encryptedFieldValue}.");
+                collection.InsertOne(new BsonDocument("encryptedField", encryptedFieldValue));
 
-            collection.InsertOne(new BsonDocument("encryptedField", encryptedFieldValue));
-
-            // Automatically decrypts the encrypted field.
-            var decryptedValue = collection.Find(FilterDefinition<BsonDocument>.Empty).First();
-            Console.WriteLine($"Decrypted document {decryptedValue.ToJson()}.");
-
-            clientEncryption.Dispose();
+                // Automatically decrypts the encrypted field.
+                var decryptedValue = collection.Find(FilterDefinition<BsonDocument>.Empty).First();
+                Console.WriteLine($"Decrypted document {decryptedValue.ToJson()}.");
+            }
         }
     }
 }

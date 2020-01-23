@@ -61,31 +61,30 @@ namespace MongoDB.Driver.Examples
                 keyVaultClient,
                 keyVaultNamespace,
                 kmsProviders);
-            var clientEncryption = new ClientEncryption(clientEncryptionSettings);
+            using (var clientEncryption = new ClientEncryption(clientEncryptionSettings))
+            {
+                var dataKeyId = clientEncryption.CreateDataKey(
+                    "local",
+                    new DataKeyOptions(),
+                    CancellationToken.None);
 
-            var dataKeyId = clientEncryption.CreateDataKey(
-                "local",
-                new DataKeyOptions(),
-                CancellationToken.None);
+                var originalString = "123456789";
+                _output.WriteLine($"Original string {originalString}.");
 
-            var originalString = "123456789";
-            _output.WriteLine($"Original string {originalString}.");
+                // Explicitly encrypt a field
+                var encryptOptions = new EncryptOptions(
+                    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                    keyId: dataKeyId);
+                var encryptedFieldValue = clientEncryption.Encrypt(
+                    originalString,
+                    encryptOptions,
+                    CancellationToken.None);
+                _output.WriteLine($"Encrypted value {encryptedFieldValue}.");
 
-            // Explicitly encrypt a field
-            var encryptOptions = new EncryptOptions(
-                EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                keyId: dataKeyId);
-            var encryptedFieldValue = clientEncryption.Encrypt(
-                originalString,
-                encryptOptions,
-                CancellationToken.None);
-            _output.WriteLine($"Encrypted value {encryptedFieldValue}.");
-
-            // Explicitly decrypt the field
-            var decryptedValue = clientEncryption.Decrypt(encryptedFieldValue, CancellationToken.None);
-            _output.WriteLine($"Decrypted value {decryptedValue}.");
-
-            clientEncryption.Dispose();
+                // Explicitly decrypt the field
+                var decryptedValue = clientEncryption.Decrypt(encryptedFieldValue, CancellationToken.None);
+                _output.WriteLine($"Decrypted value {decryptedValue}.");
+            }
         }
 
         [Fact]
@@ -124,33 +123,32 @@ namespace MongoDB.Driver.Examples
                 keyVaultClient,
                 keyVaultNamespace,
                 kmsProviders);
-            var clientEncryption = new ClientEncryption(clientEncryptionSettings);
+            using (var clientEncryption = new ClientEncryption(clientEncryptionSettings))
+            {
+                var dataKeyId = clientEncryption.CreateDataKey(
+                    "local",
+                    new DataKeyOptions(),
+                    CancellationToken.None);
 
-            var dataKeyId = clientEncryption.CreateDataKey(
-                "local",
-                new DataKeyOptions(),
-                CancellationToken.None);
+                var originalString = "123456789";
+                _output.WriteLine($"Original string {originalString}.");
 
-            var originalString = "123456789";
-            _output.WriteLine($"Original string {originalString}.");
+                // Explicitly encrypt a field
+                var encryptOptions = new EncryptOptions(
+                    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                    keyId: dataKeyId);
+                var encryptedFieldValue = clientEncryption.Encrypt(
+                    originalString,
+                    encryptOptions,
+                    CancellationToken.None);
+                _output.WriteLine($"Encrypted value {encryptedFieldValue}.");
 
-            // Explicitly encrypt a field
-            var encryptOptions = new EncryptOptions(
-                EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                keyId: dataKeyId);
-            var encryptedFieldValue = clientEncryption.Encrypt(
-                originalString,
-                encryptOptions,
-                CancellationToken.None);
-            _output.WriteLine($"Encrypted value {encryptedFieldValue}.");
+                collection.InsertOne(new BsonDocument("encryptedField", encryptedFieldValue));
 
-            collection.InsertOne(new BsonDocument("encryptedField", encryptedFieldValue));
-
-            // Automatically decrypts the encrypted field.
-            var decryptedValue = collection.Find(FilterDefinition<BsonDocument>.Empty).First();
-            _output.WriteLine($"Decrypted document {decryptedValue.ToJson()}.");
-
-            clientEncryption.Dispose();
+                // Automatically decrypts the encrypted field.
+                var decryptedValue = collection.Find(FilterDefinition<BsonDocument>.Empty).First();
+                _output.WriteLine($"Decrypted document {decryptedValue.ToJson()}.");
+            }
         }
     }
 }

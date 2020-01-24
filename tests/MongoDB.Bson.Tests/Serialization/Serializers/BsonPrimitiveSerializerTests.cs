@@ -43,12 +43,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private bool _b;
-
-            public TestClassWithPrivate(bool b)
-            {
-                _b = b;
-            }
+#pragma warning restore CS0649
 
             public bool GetPrivateB() => _b;
         }
@@ -89,9 +86,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public void TestPrivateFieldWithBsonRepresentation()
         {
             var testValue = true;
-            var serializedDocument = BsonDocument.Parse($"{{ _b : '{testValue}' }}");
+            var json = $"{{ _b : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateB());
         }
     }
@@ -120,12 +117,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivateField
         {
             [BsonDateTimeOptions(Representation = BsonType.String)]
+#pragma warning disable CS0649
             private DateTime _d;
-
-            public TestClassWithPrivateField(DateTime d)
-            {
-                _d = d;
-            }
+#pragma warning restore CS0649
 
             public DateTime GetPrivateD() => _d;
         }
@@ -583,9 +577,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public void TestPrivateFieldWithBsonRepresentation()
         {
             var testValue = new DateTime(2020, 01, 01);
-            var serializedDocument = BsonDocument.Parse($"{{ '_d' : '{testValue:yyyy-MM-ddTHH:mm:ss.FFFZ}' }}");
+            var json = $"{{ '_d' : '{testValue:yyyy-MM-ddTHH:mm:ss.FFFZ}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivateField>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivateField>(json);
             Assert.Equal(testValue, deserialized.GetPrivateD());
         }
     }
@@ -606,12 +600,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivateField
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private double _d;
-
-            public TestClassWithPrivateField(double d)
-            {
-                _d = d;
-            }
+#pragma warning restore CS0649
 
             public double GetPrivateD() => _d;
         }
@@ -801,9 +792,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public void TestPrivateFieldWithBsonRepresentation()
         {
             var testValue = 5;
-            var serializedDocument = $"{{ '_d' : '{testValue}' }}";
+            var json = $"{{ '_d' : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivateField>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivateField>(json);
             Assert.Equal(testValue, deserialized.GetPrivateD());
         }
     }
@@ -820,12 +811,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private Guid _b;
-
-            public TestClassWithPrivate(Guid b)
-            {
-                _b = b;
-            }
+#pragma warning restore CS0649
 
             public Guid GetPrivateB() => _b;
         }
@@ -877,9 +865,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public void TestPrivateFieldWithBsonRepresentation()
         {
             var testValue = new Guid("01020304-0506-0708-090a-0b0c0d0e0f10");
-            var serializedDocument = BsonDocument.Parse($"{{ '_b' : '{testValue}' }}");
+            var json = $"{{ '_b' : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateB());
         }
     }
@@ -903,12 +891,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private int _i;
-
-            public TestClassWithPrivate(int i)
-            {
-                _i = i;
-            }
+#pragma warning restore CS0649
 
             public int GetPrivateI() => _i;
         }
@@ -1020,10 +1005,10 @@ namespace MongoDB.Bson.Tests.Serialization
         [Fact]
         public void TestPrivateFieldWithBsonRepresentation()
         {
-            int testValue = 3;
-            var serializedDocument = BsonDocument.Parse($"{{ '_i' : '{testValue}' }}");
+            var testValue = 3;
+            var json = $"{{ '_i' : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateI());
         }
     }
@@ -1047,14 +1032,11 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-            private int _i;
+#pragma warning disable CS0649
+            private long _i;
+#pragma warning restore CS0649
 
-            public TestClassWithPrivate(int i)
-            {
-                _i = i;
-            }
-
-            public int GetPrivateI() => _i;
+            public long GetPrivateI() => _i;
         }
 
         [Fact]
@@ -1164,10 +1146,10 @@ namespace MongoDB.Bson.Tests.Serialization
         [Fact]
         public void TestPrivateFieldWithBsonRepresentation()
         {
-            int testValue = 3;
-            var serializedDocument = BsonDocument.Parse($"{{ '_i' : '{testValue}' }}");
+            var testValue = long.MaxValue;
+            var json = $"{{ '_i' : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateI());
         }
     }
@@ -1184,12 +1166,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private ObjectId _o;
-
-            public TestClassWithPrivate(ObjectId o)
-            {
-                _o = o;
-            }
+#pragma warning restore CS0649
 
             public ObjectId GetPrivateO() => _o;
         }
@@ -1223,9 +1202,9 @@ namespace MongoDB.Bson.Tests.Serialization
 #pragma warning disable 618
             var testValue = new ObjectId(1, 2, 3, 4);
 #pragma warning restore 618
-            var serializedDocument = BsonDocument.Parse("{ '_o' : '000000010000020003000004' }");
+            var json = "{ '_o' : '000000010000020003000004' }";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateO());
         }
     }
@@ -1240,12 +1219,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
+#pragma warning disable CS0649
             private string _s;
-
-            public TestClassWithPrivate(string s)
-            {
-                _s = s;
-            }
+#pragma warning restore CS0649
 
             public string GetPrivateS() => _s;
         }
@@ -1302,9 +1278,9 @@ namespace MongoDB.Bson.Tests.Serialization
         public void TestPrivateFieldWithBsonRepresentation()
         {
             var testValue = "test";
-            var serializedDocument = BsonDocument.Parse($"{{ '_s' : '{testValue}' }}");
+            var json = $"{{ '_s' : '{testValue}' }}";
 
-            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(serializedDocument);
+            var deserialized = BsonSerializer.Deserialize<TestClassWithPrivate>(json);
             Assert.Equal(testValue, deserialized.GetPrivateS());
         }
     }

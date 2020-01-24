@@ -583,9 +583,9 @@ namespace MongoDB.Bson.Serialization
             var valueParameter = Expression.Parameter(typeof(object), "value");
             var field = Expression.Field(Expression.Convert(objParameter, fieldInfo.DeclaringType), fieldInfo);
             var value = Expression.Convert(valueParameter, fieldInfo.FieldType);
-            var assigned = Expression.Assign(field, value);
+            var body = Expression.Assign(field, value);
 
-            var lambda = Expression.Lambda<Action<object, object>>(assigned, objParameter, valueParameter);
+            var lambda = Expression.Lambda<Action<object, object>>(body, objParameter, valueParameter);
             return lambda.Compile();
         }
 

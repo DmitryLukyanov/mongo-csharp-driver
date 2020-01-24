@@ -23,9 +23,9 @@ namespace MongoDB.Driver.Tests
         [Fact]
         public void TargetFramework_should_be_valid()
         {
-            var actual = MongoDB.Driver.TargetFramework.Moniker;
-            var expected = GetExpectedTargetFramework();
-            actual.Should().Be(expected);
+            var actualFramework = MongoDB.Driver.TargetFramework.Moniker;
+            var expectedFramework = GetExpectedTargetFramework();
+            actualFramework.Should().Be(expectedFramework);
         }
 
         // private methods

@@ -43,9 +43,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private bool _b;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(bool b)
+            {
+                _b = b;
+            }
 
             public bool GetPrivateB() => _b;
         }
@@ -117,9 +120,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivateField
         {
             [BsonDateTimeOptions(Representation = BsonType.String)]
-#pragma warning disable CS0649
             private DateTime _d;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivateField(DateTime d)
+            {
+                _d = d;
+            }
 
             public DateTime GetPrivateD() => _d;
         }
@@ -600,9 +606,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivateField
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private double _d;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivateField(double d)
+            {
+                _d = d;
+            }
 
             public double GetPrivateD() => _d;
         }
@@ -811,9 +820,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private Guid _b;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(Guid b)
+            {
+                _b = b;
+            }
 
             public Guid GetPrivateB() => _b;
         }
@@ -891,9 +903,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private int _i;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(int i)
+            {
+                _i = i;
+            }
 
             public int GetPrivateI() => _i;
         }
@@ -1032,9 +1047,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private long _i;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(long i)
+            {
+                _i = i;
+            }
 
             public long GetPrivateI() => _i;
         }
@@ -1166,9 +1184,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private ObjectId _o;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(ObjectId o)
+            {
+                _o = o;
+            }
 
             public ObjectId GetPrivateO() => _o;
         }
@@ -1219,9 +1240,12 @@ namespace MongoDB.Bson.Tests.Serialization
         public class TestClassWithPrivate
         {
             [BsonRepresentation(BsonType.String)]
-#pragma warning disable CS0649
             private string _s;
-#pragma warning restore CS0649
+
+            public TestClassWithPrivate(string s)
+            {
+                _s = s;
+            }
 
             public string GetPrivateS() => _s;
         }

@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-
 using System.IO;
 using System.IO.Compression;
 using MongoDB.Driver.Core.Compression.Zstd;

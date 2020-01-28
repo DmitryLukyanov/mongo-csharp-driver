@@ -1880,6 +1880,11 @@ namespace MongoDB.Driver
                 return new BsonDocument(element.Name, new BsonDocument("$not", element.Value));
             }
 
+            if (element.Value is BsonBoolean booleanValue)
+            {
+                return new BsonDocument(element.Name, !booleanValue.Value);
+            }
+
             return new BsonDocument(element.Name, new BsonDocument("$ne", element.Value));
         }
 

@@ -60,17 +60,21 @@ namespace MongoDB.Bson.IO
         bool IsAtEndOfFile();
 
         /// <summary>
-        /// Reads BSON binary data from the reader.
+        /// Pops the settings.
         /// </summary>
-        /// <returns>A BsonBinaryData.</returns>
-        BsonBinaryData ReadBinaryData();
+        void PopSettings();
+
+        /// <summary>
+        /// Pushes new settings for the reader.
+        /// </summary>
+        /// <param name="configurator">The settings configurator.</param>
+        void PushSettings(Action<BsonReaderSettings> configurator);
 
         /// <summary>
         /// Reads BSON binary data from the reader.
         /// </summary>
         /// <returns>A BsonBinaryData.</returns>
-        [Obsolete("Use ReadBinaryData instead once you have transitioned to GuidRepresentationMode V3.")]
-        BsonBinaryData ReadBinaryDataIgnoringGuidRepresentation();
+        BsonBinaryData ReadBinaryData();
 
         /// <summary>
         /// Reads a BSON boolean from the reader.

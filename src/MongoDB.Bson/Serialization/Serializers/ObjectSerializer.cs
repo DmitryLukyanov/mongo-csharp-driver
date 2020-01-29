@@ -114,14 +114,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     }
                     else
                     {
-                        var binaryDataBookMark = bsonReader.GetBookmark();
-                        var binaryData = bsonReader.ReadBinaryDataIgnoringGuidRepresentation();
-                        var subType = binaryData.SubType;
-                        if (subType == BsonBinarySubType.UuidStandard || subType == BsonBinarySubType.UuidLegacy)
-                        {
-                            bsonReader.ReturnToBookmark(binaryDataBookMark);
-                            return _guidSerializer.Deserialize(context);
-                        }
+                        return _guidSerializer.Deserialize(context);
                     }
 #pragma warning restore 618
                     goto default;

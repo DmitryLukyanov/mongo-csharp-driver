@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MongoDB.Bson.Serialization;
@@ -32,6 +33,7 @@ namespace MongoDB.Bson.IO
         private BsonReaderState _state;
         private BsonType _currentBsonType;
         private string _currentName;
+        private readonly Stack<BsonReaderSettings> _settingsStack = new Stack<BsonReaderSettings>();
 
         // constructors
         /// <summary>
@@ -143,18 +145,27 @@ namespace MongoDB.Bson.IO
         /// </returns>
         public abstract bool IsAtEndOfFile();
 
-        /// <summary>
-        /// Reads BSON binary data from the reader.
-        /// </summary>
-        /// <returns>A BsonBinaryData.</returns>
-        public abstract BsonBinaryData ReadBinaryData();
+        /// <inherited/>
+        public void PopSettings()
+        {
+            _settings = _settingsStack.Pop();
+        }
+
+        /// <inherited/>
+        public void PushSettings(Action<BsonReaderSettings> configurator)
+        {
+            var newSettings = _settings.Clone();
+            configurator(newSettings);
+            newSettings.Freeze();
+            _settingsStack.Push(_settings);
+            _settings = newSettings;
+        }
 
         /// <summary>
         /// Reads BSON binary data from the reader.
         /// </summary>
         /// <returns>A BsonBinaryData.</returns>
-        [Obsolete("Use ReadBinaryData instead once you have transitioned to GuidRepresentationMode V3.")]
-        public abstract BsonBinaryData ReadBinaryDataIgnoringGuidRepresentation();
+        public abstract BsonBinaryData ReadBinaryData();
 
         /// <summary>
         /// Reads a BSON boolean from the reader.

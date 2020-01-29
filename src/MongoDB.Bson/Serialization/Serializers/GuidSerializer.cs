@@ -14,7 +14,6 @@
 */
 
 using System;
-using MongoDB.Bson.IO;
 
 namespace MongoDB.Bson.Serialization.Serializers
 {
@@ -108,7 +107,24 @@ namespace MongoDB.Bson.Serialization.Serializers
                     }
                     else
                     {
-                        binaryData = bsonReader.ReadBinaryDataIgnoringGuidRepresentation();
+                        bsonReader.PushSettings(s =>
+                        {
+                            // 1. Mode 3 will ignore GuidRepresentation in the next step by design
+                            // 2. Without this condition we will trigger an error
+                            // because will try to set GuidRepresentation value in Mode 3
+                            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+                            {
+                                s.GuidRepresentation = GuidRepresentation.Unspecified;
+                            }
+                        });
+                        try
+                        {
+                            binaryData = bsonReader.ReadBinaryData();
+                        }
+                        finally
+                        {
+                            bsonReader.PopSettings();
+                        }
                     }
                     var bytes = binaryData.Bytes;
                     var subType = binaryData.SubType;

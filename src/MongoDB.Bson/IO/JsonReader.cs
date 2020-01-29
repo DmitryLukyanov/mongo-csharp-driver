@@ -164,15 +164,6 @@ namespace MongoDB.Bson.IO
         /// <returns>A BsonBinaryData.</returns>
         public override BsonBinaryData ReadBinaryData()
         {
-#pragma warning disable 618
-            return ReadBinaryDataIgnoringGuidRepresentation();
-#pragma warning restore 618
-        }
-
-        /// <inheritdoc/>
-        [Obsolete("Use ReadBinaryData instead once you have transitioned to GuidRepresentationMode V3.")]
-        public override BsonBinaryData ReadBinaryDataIgnoringGuidRepresentation()
-        {
             if (Disposed) { ThrowObjectDisposedException(); }
             VerifyBsonType("ReadBinaryData", BsonType.Binary);
             State = GetNextState();

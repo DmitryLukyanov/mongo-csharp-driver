@@ -198,11 +198,11 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             return new OperationContext(uncompressedPinnedBuffer, compressedPinnedBuffer);
         }
 
-        public IEnumerable<int> FlushBySteps(BufferInfo compressedBufferInfo)
+        public IEnumerable<int> StepwiseFlush(BufferInfo compressedBufferInfo)
         {
             if (_compressionMode != CompressionMode.Compress)
             {
-                throw new InvalidDataException("FlushBySteps must be called only from Compress mode.");
+                throw new InvalidDataException($"{nameof(StepwiseFlush)} must be called only from Compress mode.");
             }
 
             using (var operationContext = InitializeOperationContext(compressedBufferInfo))
@@ -272,7 +272,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
             // public methods
             public void Dispose()
             {
-                _uncompressedPinnedBuffer?.Dispose(); // PinnedBuffer.Dispose suppress all errors inside
+                _uncompressedPinnedBuffer?.Dispose(); // PinnedBuffer.Dispose suppresses all errors
                 _compressedPinnedBuffer.Dispose();
             }
         }

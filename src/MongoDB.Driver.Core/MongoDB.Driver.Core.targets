@@ -7,4 +7,11 @@
             <Link>snappy64.dll</Link>
         </Content>
     </ItemGroup>
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Windows'))">
+        <Content Include="$(MSBuildThisFileDirectory)../x64/native/windows/libzstd.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>libzstd.dll</Link>
+        </Content>
+    </ItemGroup>
 </Project>

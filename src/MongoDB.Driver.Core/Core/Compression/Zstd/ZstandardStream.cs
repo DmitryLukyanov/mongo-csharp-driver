@@ -149,7 +149,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
 
         public override void Flush()
         {
-            foreach (var outputBufferPosition in _nativeWrapper.FlushBySteps(_streamWriteHelper.CompressedBufferInfo))
+            foreach (var outputBufferPosition in _nativeWrapper.StepwiseFlush(_streamWriteHelper.CompressedBufferInfo))
             {
                 _streamWriteHelper.WriteBufferToCompressedStream(count: outputBufferPosition);
             }
@@ -312,7 +312,7 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                     _readingState.SkipDataReading = false;
                 }
 
-                // 1.calculate progress in compressed(input) buffer
+                // 1. calculate progress in compressed(input) buffer
                 // 2. save the data position for next Read calls
                 _readingState.DataPosition += compressedBufferPosition;
                 return true;

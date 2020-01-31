@@ -50,6 +50,12 @@
     <None Remove="snappy64.dll" />
   </ItemGroup>
 
+  <!--Compression-->
+  <PropertyGroup>
+    <CompressionRuntimesPath>runtimes/win-x64/native</CompressionRuntimesPath>
+  </PropertyGroup>
+
+  <!--Snappy-->
   <PropertyGroup>
     <SnappyBinaries>Core/Compression/Snappy/lib/win</SnappyBinaries>
   </PropertyGroup>
@@ -57,7 +63,8 @@
   <ItemGroup>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <Pack>true</Pack>
-      <PackagePath>x64/native/windows</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
+      <Visible>false</Visible>
     </Content>
   </ItemGroup>
 
@@ -68,6 +75,7 @@
     </Content>
   </ItemGroup>
 
+  <!--Zstd-->
   <PropertyGroup>
     <ZstdBinaries>Core/Compression/Zstd/lib/win</ZstdBinaries>
   </PropertyGroup>
@@ -75,7 +83,7 @@
   <ItemGroup>
     <Content Include="$(ZstdBinaries)/libzstd.dll">
       <Pack>true</Pack>
-      <PackagePath>x64/native/windows</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
     </Content>
   </ItemGroup>
 
@@ -128,5 +136,4 @@
     <None Include="..\..\License.txt" Pack="true" PackagePath="$(PackageLicenseFile)" />
     <None Include="..\..\THIRD-PARTY-NOTICES" Pack="true" PackagePath="\" />
   </ItemGroup>
-
 </Project>

@@ -18,7 +18,7 @@ The C# driver supports compression of messages to and from MongoDB servers. The 
 
 The driver will negotiate which, if any, compression algorithm is used based on capabilities advertised by the server in the [ismaster]({{<docsref "reference/command/isMaster/">}}) command response. 
 
-### Specify compression via `URI`
+### Specify compression via `Connection String`
 
 ```c#
 using MongoDB.Driver;
@@ -51,6 +51,13 @@ var client = new MongoClient(mongoUrl);
 to configure multiple compressors.
 
 In all cases the driver will use the first compressor in the list for which the server advertises support. 
+
+Additionally, zlib compression allows specifying a compression level with supported values between -1 and 9:
+
+```c#
+var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=zlib;zlibcompressionlevel=6");
+var client = new MongoClient(mongoUrl);
+```
 
 ### Specify compression via `MongoClientSettings`
 
@@ -105,4 +112,12 @@ var client = new MongoClient(mongoClientSettings);
 ```
 to configure multiple compressors. 
 
-As with configuration with a URI, the driver will use the first compressor in the list for which the server advertises support.
+As with configuration via connection string, the driver will use the first compressor in the list for which the server advertises support. Also, the driver allows specifying a compression level option for zlib compression:
+
+```c#
+	var mongoClientSettings = new MongoClientSettings();
+	var compressorConfiguration = new CompressorConfiguration(CompressorType.Zlib);
+	compressorConfiguration.Properties.Add("Level", 6);
+	mongoClientSettings.Compressors = new List<CompressorConfiguration>() { compressorConfiguration };
+	var client = new MongoClient(mongoClientSettings);
+```

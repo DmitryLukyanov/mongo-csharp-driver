@@ -62,7 +62,8 @@ namespace MongoDB.Driver.Core.Operations
 
             __retryableWriteErrorCodes = new HashSet<ServerErrorCode>(resumableAndRetryableErrorCodes)
             {
-                ServerErrorCode.WriteConcernFailed
+                ServerErrorCode.WriteConcernFailed,
+                ServerErrorCode.ExceededTimeLimit
             };
 
             __notResumableChangeStreamErrorCodes = new HashSet<ServerErrorCode>()
@@ -153,6 +154,7 @@ namespace MongoDB.Driver.Core.Operations
                         case ServerErrorCode.HostUnreachable:
                         case ServerErrorCode.NetworkTimeout:
                         case ServerErrorCode.SocketException:
+                        case ServerErrorCode.ExceededTimeLimit:
                             return true;
                     }
 

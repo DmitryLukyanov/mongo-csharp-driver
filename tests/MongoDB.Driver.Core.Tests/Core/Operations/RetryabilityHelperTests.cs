@@ -78,6 +78,7 @@ namespace MongoDB.Driver.Core.Operations
         [InlineData(ServerErrorCode.NetworkTimeout, true)]
         [InlineData(ServerErrorCode.SocketException, true)]
         [InlineData(ServerErrorCode.WriteConcernFailed, true)]
+        [InlineData(ServerErrorCode.ExceededTimeLimit, true)]
         public void IsRetryableWriteException_should_return_expected_result_using_code(int code, bool expectedResult)
         {
             var exception = CoreExceptionHelper.CreateMongoCommandException(code);

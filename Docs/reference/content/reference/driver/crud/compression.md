@@ -27,26 +27,26 @@ using MongoDB.Driver;
 To specify compression with [`ConnectionString`]({{<apiref "T_MongoDB_Driver_Core_Configuration_ConnectionString">}}), just add `compressors` into the connection string, as in:
 
 ```c#
-var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=snappy");
-var client = new MongoClient(mongoUrl);
+var connectionString = "mongodb://localhost/?compressors=snappy";
+var client = new MongoClient(connectionString);
 ```
 for Snappy compression, or
 
 ```c#
-var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=zlib");
-var client = new MongoClient(mongoUrl);
+var connectionString = "mongodb://localhost/?compressors=zlib";
+var client = new MongoClient(connectionString);
 ```
 for zlib compression, or 
 
 ```c#
-var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=zstd");
-var client = new MongoClient(mongoUrl);
+var connectionString = "mongodb://localhost/?compressors=zstd";
+var client = new MongoClient(connectionString);
 ```
 for Zstandard compression, or 
 
 ```c#
-var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=snappy,zlib,zstd");
-var client = new MongoClient(mongoUrl);
+var connectionString = "mongodb://localhost/?compressors=snappy,zlib,zstd";
+var client = new MongoClient(connectionString);
 ```
 to configure multiple compressors.
 
@@ -55,8 +55,8 @@ In all cases the driver will use the first compressor in the list for which the 
 Additionally, zlib compression allows specifying a compression level with supported values between -1 and 9:
 
 ```c#
-var mongoUrl = new MongoUrl("mongodb://localhost/?compressors=zlib;zlibcompressionlevel=6");
-var client = new MongoClient(mongoUrl);
+var connectionString = "mongodb://localhost/?compressors=zlib;zlibcompressionlevel=6";
+var client = new MongoClient(connectionString);
 ```
 
 ### Specify compression via `MongoClientSettings`

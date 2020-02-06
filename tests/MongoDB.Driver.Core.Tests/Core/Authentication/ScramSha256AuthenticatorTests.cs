@@ -32,8 +32,14 @@ namespace MongoDB.Driver.Core.Authentication
 {
     public class ScramSha256AuthenticatorTests
     {
-        private static readonly UsernamePasswordCredential __credential
-            = new UsernamePasswordCredential("source", "user", "pencil");
+        // private constants
+        private const string _clientNonce = "rOprNGfwEbeRWgbNEkqO";
+        private const int _iterationCount = 4096;
+        private const string _serverNonce = "%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0";
+        private const string _serverSalt = "W22ZaJ0SNY7soEsUEjb6gQ==";
+
+        // private static
+        private static readonly UsernamePasswordCredential __credential = new UsernamePasswordCredential("source", "user", "pencil");
         private static readonly ClusterId __clusterId = new ClusterId();
         private static readonly ServerId __serverId = new ServerId(__clusterId, new DnsEndPoint("localhost", 27017));
         private static readonly ConnectionDescription __description = new ConnectionDescription(
@@ -49,11 +55,6 @@ namespace MongoDB.Driver.Core.Authentication
          * C: c=biws,r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=
          * S: v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4=
         */
-
-        private const string _clientNonce = "rOprNGfwEbeRWgbNEkqO";
-        private const int _iterationCount = 4096;
-        private const string _serverNonce = "%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0";
-        private const string _serverSalt = "W22ZaJ0SNY7soEsUEjb6gQ==";
 
         private static readonly string _clientRequest1 = $"n,,n=user,r={_clientNonce}";
         private static readonly string _serverResponse1 =
@@ -316,7 +317,7 @@ namespace MongoDB.Driver.Core.Authentication
             [Values("da-DK", "en-US")] string name,
             [Values(false, true)] bool async)
         {
-            SetCultureAndRefreshAfterTest(name, () =>
+            SetCultureAndResetAfterTest(name, () =>
             {
                 var randomStringGenerator = new ConstantRandomStringGenerator("a");
 
@@ -340,7 +341,7 @@ namespace MongoDB.Driver.Core.Authentication
                 Authenticate(subject, mockConnection, async);
             });
 
-            void SetCultureAndRefreshAfterTest(string cultureName, Action test)
+            void SetCultureAndResetAfterTest(string cultureName, Action test)
             {
                 var originalCulture = Thread.CurrentThread.CurrentCulture;
                 Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo(cultureName);

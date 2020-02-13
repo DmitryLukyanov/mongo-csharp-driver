@@ -90,7 +90,7 @@ namespace MongoDB.Driver.Core.Compression.Snappy
                 switch (currentPlatform)
                 {
                     case SupportedPlatform.Windows:
-                        return @"..\..\x64\native\windows\snappy64.dll";
+                        return @"runtimes\win-x64\native\snappy64.dll";
                     case SupportedPlatform.Linux: // TODO: add support for Linux and MacOS later
                     case SupportedPlatform.MacOS:
                     default:

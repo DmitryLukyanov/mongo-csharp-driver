@@ -46,28 +46,44 @@
     <NoWarn>NU5100</NoWarn>
   </PropertyGroup>
 
+  <!--Compression-->
   <ItemGroup>
+    <None Remove="snappy32.dll" />
     <None Remove="snappy64.dll" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <Compressionx86RuntimesPath>runtimes/win-x86/native</Compressionx86RuntimesPath>
+    <Compressionx64RuntimesPath>runtimes/win-x64/native</Compressionx64RuntimesPath>
+  </PropertyGroup>
+
+  <!--snappy-->
   <PropertyGroup>
     <SnappyBinaries>Core/Compression/Snappy/lib/win</SnappyBinaries>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy32.dll">
+      <Pack>true</Pack>
+      <PackagePath>$(Compressionx86RuntimesPath)</PackagePath>
+    </Content>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <Pack>true</Pack>
-      <PackagePath>x64/native/windows</PackagePath>
+      <PackagePath>$(Compressionx64RuntimesPath)</PackagePath>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy32.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>snappy32.dll</Link>
+    </Content>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>snappy64.dll</Link>
     </Content>
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="MongoDB.Driver.Core.targets">
       <Pack>true</Pack>

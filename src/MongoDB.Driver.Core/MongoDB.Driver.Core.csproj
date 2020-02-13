@@ -53,8 +53,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Compressionx86RuntimesPath>runtimes/win-x86/native</Compressionx86RuntimesPath>
-    <Compressionx64RuntimesPath>runtimes/win-x64/native</Compressionx64RuntimesPath>
+    <CompressionRuntimesPath>runtimes/win/native</CompressionRuntimesPath>
   </PropertyGroup>
 
   <!--snappy-->
@@ -65,11 +64,11 @@
   <ItemGroup>
     <Content Include="$(SnappyBinaries)/snappy32.dll">
       <Pack>true</Pack>
-      <PackagePath>$(Compressionx86RuntimesPath)</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
     </Content>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <Pack>true</Pack>
-      <PackagePath>$(Compressionx64RuntimesPath)</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
     </Content>
   </ItemGroup>
 

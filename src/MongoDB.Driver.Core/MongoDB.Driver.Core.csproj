@@ -123,6 +123,7 @@
 
   <ItemGroup>
     <None Include="..\..\License.txt" Pack="true" PackagePath="$(PackageLicenseFile)" />
+    <None Include="..\..\THIRD-PARTY-NOTICES" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

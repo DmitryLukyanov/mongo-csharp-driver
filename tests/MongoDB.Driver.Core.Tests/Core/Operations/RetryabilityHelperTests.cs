@@ -16,6 +16,7 @@
 using System;
 using System.IO;
 using FluentAssertions;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.TestHelpers;
 using Xunit;
 
@@ -23,6 +24,61 @@ namespace MongoDB.Driver.Core.Operations
 {
     public class RetryabilityHelperTests
     {
+        [Theory]
+        [InlineData(1, false)]
+        [InlineData(ServerErrorCode.InterruptedAtShutdown, true)]
+        [InlineData(ServerErrorCode.InterruptedDueToReplStateChange, true)]
+        [InlineData(ServerErrorCode.NotMaster, true)]
+        [InlineData(ServerErrorCode.NotMasterNoSlaveOk, true)]
+        [InlineData(ServerErrorCode.NotMasterOrSecondary, true)]
+        [InlineData(ServerErrorCode.PrimarySteppedDown, true)]
+        [InlineData(ServerErrorCode.ShutdownInProgress, true)]
+        [InlineData(ServerErrorCode.HostNotFound, true)]
+        [InlineData(ServerErrorCode.HostUnreachable, true)]
+        [InlineData(ServerErrorCode.NetworkTimeout, true)]
+        [InlineData(ServerErrorCode.SocketException, true)]
+        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
+        [InlineData(ServerErrorCode.ExceededTimeLimit, true)]
+        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_MongoWriteConcernException_when_required(int errorCode, bool shouldAddErrorLabel)
+        {
+            var exception = CoreExceptionHelper.CreateMongoWriteConcernException(BsonDocument.Parse($"{{ writeConcernError : {{ code : {errorCode} }} }}"));
+
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+
+            var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
+            hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
+        }
+
+        [Theory]
+        [InlineData(1, false)]
+        [InlineData(typeof(MongoCursorNotFoundException), false)]
+        [InlineData(typeof(MongoConnectionException), true)]
+        [InlineData(typeof(MongoNodeIsRecoveringException), true)]
+        [InlineData(typeof(MongoNotPrimaryException), true)]
+        [InlineData(ServerErrorCode.HostNotFound, true)]
+        [InlineData(ServerErrorCode.HostUnreachable, true)]
+        [InlineData(ServerErrorCode.NetworkTimeout, true)]
+        [InlineData(ServerErrorCode.SocketException, true)]
+        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
+        [InlineData(ServerErrorCode.ExceededTimeLimit, true)]
+        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_when_required(object exceptionDescription, bool shouldAddErrorLabel)
+        {
+            MongoException exception;
+            if (exceptionDescription is Type exceptionType)
+            {
+                exception = (MongoException)CoreExceptionHelper.CreateException(exceptionType);
+            }
+            else
+            {
+                exception = CoreExceptionHelper.CreateMongoCommandException((int)exceptionDescription);
+            }
+
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+
+            var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
+            hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
+        }
+
         [Theory]
         [InlineData(1, true)]
         [InlineData(ServerErrorCode.HostNotFound, true)]
@@ -77,7 +133,7 @@ namespace MongoDB.Driver.Core.Operations
         [InlineData(ServerErrorCode.HostUnreachable, true)]
         [InlineData(ServerErrorCode.NetworkTimeout, true)]
         [InlineData(ServerErrorCode.SocketException, true)]
-        [InlineData(ServerErrorCode.WriteConcernFailed, true)]
+        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
         public void IsRetryableWriteException_should_return_expected_result_using_code(int code, bool expectedResult)
         {
             var exception = CoreExceptionHelper.CreateMongoCommandException(code);

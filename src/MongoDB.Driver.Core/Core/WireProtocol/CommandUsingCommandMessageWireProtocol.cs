@@ -122,10 +122,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
             catch (Exception exception)
             {
-                if (exception is MongoException mongoException && ShouldAddTransientTransactionError(mongoException))
-                {
-                    mongoException.AddErrorLabel("TransientTransactionError");
-                }
+                AddErrorLabelIfRequired(exception, connection.Description.ServerVersion);
                 TransactionHelper.UnpinServerIfNeededOnCommandException(_session, exception);
                 throw;
             }
@@ -164,16 +161,27 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
             catch (Exception exception)
             {
-                if (exception is MongoException mongoException && ShouldAddTransientTransactionError(mongoException))
-                {
-                    mongoException.AddErrorLabel("TransientTransactionError");
-                }
+                AddErrorLabelIfRequired(exception, connection.Description.ServerVersion);
                 TransactionHelper.UnpinServerIfNeededOnCommandException(_session, exception);
                 throw;
             }
         }
 
         // private methods
+        private void AddErrorLabelIfRequired(Exception exception, SemanticVersion serverVersion)
+        {
+            if (exception is MongoException mongoException && ShouldAddTransientTransactionError(mongoException))
+            {
+                mongoException.AddErrorLabel("TransientTransactionError");
+            }
+
+            if (!Feature.ServerReturnsRetryableWriteErrorLabelFeature.IsSupported(serverVersion) &&
+                Feature.RetryableWrites.IsSupported(serverVersion))
+            {
+                RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+            }
+        }
+
         private CommandResponseMessage AutoDecryptFieldsIfNecessary(CommandResponseMessage encryptedResponseMessage, CancellationToken cancellationToken)
         {
             if (_documentFieldDecryptor == null)

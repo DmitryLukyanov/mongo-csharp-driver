@@ -84,7 +84,7 @@ namespace MongoDB.Driver.Core.Operations
         // public static methods
         public static void AddRetryableWriteErrorLabelIfRequired(Exception exception)
         {
-            if (IsRetryableWriteException(exception) && exception is MongoException mongoException)
+            if (ShouldRetryableWriteExceptionLabelBeAdded(exception) && exception is MongoException mongoException)
             {
                 mongoException.AddErrorLabel(RetryableWriteErrorLabel);
             }
@@ -129,6 +129,12 @@ namespace MongoDB.Driver.Core.Operations
 
         public static bool IsRetryableWriteException(Exception exception)
         {
+            return exception is MongoException mongoException ? mongoException.HasErrorLabel(RetryableWriteErrorLabel) : false;
+        }
+
+        // private static methods
+        private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception)
+        {
             if (__retryableWriteExceptions.Contains(exception.GetType()))
             {
                 return true;
@@ -137,11 +143,6 @@ namespace MongoDB.Driver.Core.Operations
             var commandException = exception as MongoCommandException;
             if (commandException != null)
             {
-                if (commandException.HasErrorLabel(RetryableWriteErrorLabel))
-                {
-                    return true;
-                }
-
                 var code = (ServerErrorCode)commandException.Code;
                 if (__retryableWriteErrorCodes.Contains(code))
                 {

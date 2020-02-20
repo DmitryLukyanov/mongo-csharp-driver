@@ -17,6 +17,7 @@ using System;
 using System.IO;
 using FluentAssertions;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.TestHelpers;
 using Xunit;
 
@@ -47,6 +48,17 @@ namespace MongoDB.Driver.Core.Operations
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
+        }
+
+        [Fact]
+        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_network_errors()
+        {
+            var exception = (MongoException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
+
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+
+            var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
+            hasRetryableWriteErrorLabel.Should().BeTrue();
         }
 
         [Theory]
@@ -128,22 +140,6 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         [Theory]
-        [InlineData(1, false)]
-        [InlineData(ServerErrorCode.HostNotFound, true)]
-        [InlineData(ServerErrorCode.HostUnreachable, true)]
-        [InlineData(ServerErrorCode.NetworkTimeout, true)]
-        [InlineData(ServerErrorCode.SocketException, true)]
-        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
-        public void IsRetryableWriteException_should_return_expected_result_using_code(int code, bool expectedResult)
-        {
-            var exception = CoreExceptionHelper.CreateMongoCommandException(code);
-
-            var result = RetryabilityHelper.IsRetryableWriteException(exception);
-
-            result.Should().Be(expectedResult);
-        }
-
-        [Theory]
         [InlineData(typeof(IOException), false)]
         [InlineData(typeof(MongoCursorNotFoundException), false)]
         [InlineData(typeof(MongoConnectionException), true)]
@@ -174,18 +170,18 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         [Theory]
-        [InlineData(typeof(IOException), false)]
-        [InlineData(typeof(MongoCursorNotFoundException), false)]
-        [InlineData(typeof(MongoConnectionException), true)]
-        [InlineData(typeof(MongoNodeIsRecoveringException), true)]
-        [InlineData(typeof(MongoNotPrimaryException), true)]
-        public void IsRetryableWriteException_should_return_expected_result_using_exception_type(Type exceptionType, bool expectedResult)
+        [ParameterAttributeData]
+        public void IsRetryableWriteException_should_work_as_expected([Values(false, true)] bool hasRetryableWriteLabel)
         {
-            var exception = CoreExceptionHelper.CreateException(exceptionType);
+            var exception = CoreExceptionHelper.CreateMongoCommandException(-1);
+            if (hasRetryableWriteLabel)
+            {
+                exception.AddErrorLabel("RetryableWriteError");
+            }
 
             var result = RetryabilityHelper.IsRetryableWriteException(exception);
 
-            result.Should().Be(expectedResult);
+            result.Should().Be(hasRetryableWriteLabel);
         }
     }
 }

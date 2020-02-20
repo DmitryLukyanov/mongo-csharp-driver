@@ -123,6 +123,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             catch (Exception exception)
             {
                 AddErrorLabelIfRequired(exception, connection.Description.ServerVersion);
+
                 TransactionHelper.UnpinServerIfNeededOnCommandException(_session, exception);
                 throw;
             }
@@ -162,6 +163,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             catch (Exception exception)
             {
                 AddErrorLabelIfRequired(exception, connection.Description.ServerVersion);
+
                 TransactionHelper.UnpinServerIfNeededOnCommandException(_session, exception);
                 throw;
             }
@@ -170,15 +172,19 @@ namespace MongoDB.Driver.Core.WireProtocol
         // private methods
         private void AddErrorLabelIfRequired(Exception exception, SemanticVersion serverVersion)
         {
-            if (exception is MongoException mongoException && ShouldAddTransientTransactionError(mongoException))
+            if (exception is MongoException mongoException)
             {
-                mongoException.AddErrorLabel("TransientTransactionError");
-            }
+                if (ShouldAddTransientTransactionError(mongoException))
+                {
+                    mongoException.AddErrorLabel("TransientTransactionError");
+                }
 
-            if (!Feature.ServerReturnsRetryableWriteErrorLabelFeature.IsSupported(serverVersion) &&
-                Feature.RetryableWrites.IsSupported(serverVersion))
-            {
-                RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+                if ((exception is MongoConnectionException) || // network error
+                    (Feature.RetryableWrites.IsSupported(serverVersion) &&
+                    !Feature.ServerReturnsRetryableWriteErrorLabelFeature.IsSupported(serverVersion)))
+                {
+                    RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(mongoException);
+                }
             }
         }
 

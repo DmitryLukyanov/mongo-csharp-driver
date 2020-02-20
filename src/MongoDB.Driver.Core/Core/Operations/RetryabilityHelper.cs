@@ -82,11 +82,11 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // public static methods
-        public static void AddRetryableWriteErrorLabelIfRequired(Exception exception)
+        public static void AddRetryableWriteErrorLabelIfRequired(MongoException exception)
         {
-            if (ShouldRetryableWriteExceptionLabelBeAdded(exception) && exception is MongoException mongoException)
+            if (ShouldRetryableWriteExceptionLabelBeAdded(exception))
             {
-                mongoException.AddErrorLabel(RetryableWriteErrorLabel);
+                exception.AddErrorLabel(RetryableWriteErrorLabel);
             }
         }
 
@@ -172,16 +172,6 @@ namespace MongoDB.Driver.Core.Operations
                         case ServerErrorCode.SocketException:
                         case ServerErrorCode.ExceededTimeLimit:
                             return true;
-                    }
-
-                    if (writeConcernError.TryGetValue("errmsg", out var bsonMessage))
-                    {
-                        var message = bsonMessage.ToString();
-                        if (message.IndexOf("not master", StringComparison.OrdinalIgnoreCase) != -1 ||
-                            message.IndexOf("node is recovering", StringComparison.OrdinalIgnoreCase) != -1)
-                        {
-                            return true;
-                        }
                     }
                 }
             }

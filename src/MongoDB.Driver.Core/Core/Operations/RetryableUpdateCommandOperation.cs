@@ -108,7 +108,7 @@ namespace MongoDB.Driver.Core.Operations
                     throw new NotSupportedException($"Server version {serverVersion} does not support arrayFilters.");
                 }
             }
-            if (Feature.HintForWriteOperations.ShouldThrowIfNeeded(serverVersion))
+            if (!Feature.HintForWriteOperations.IsSupported(serverVersion, out var allowThrowingException) && allowThrowingException)
             {
                 if (_updates.Items.Skip(_updates.Offset).Take(_updates.Count).Any(u => u.Hint != null))
                 {

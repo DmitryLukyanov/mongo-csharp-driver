@@ -217,13 +217,16 @@ namespace MongoDB.Driver.Core.Operations
 
             var exception = Record.Exception(() => ExecuteOperation(subject, async));
 
-            if (Feature.HintForWriteOperations.IsSupported(CoreTestConfiguration.ServerVersion))
+            if (Feature.HintForWriteOperations.IsSupported(CoreTestConfiguration.ServerVersion, out var allowThrowingException))
             {
-                exception.Should().BeNull();
-            }
-            else if (Feature.HintForWriteOperations.ShouldThrowIfNeeded(CoreTestConfiguration.ServerVersion))
-            {
-                exception.Should().BeOfType<NotSupportedException>();
+                if (allowThrowingException)
+                {
+                    exception.Should().BeOfType<NotSupportedException>();
+                }
+                else
+                {
+                    exception.Should().BeNull();
+                }
             }
             else
             {

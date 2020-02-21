@@ -314,7 +314,8 @@ namespace MongoDB.Driver.Core.Operations
         private void EnsureHintIsSupportedIfAnyRequestHasHint(RetryableWriteContext context)
         {
             var serverVersion = context.Channel.ConnectionDescription.ServerVersion;
-            if (!Feature.HintForWriteOperations.IsSupported(serverVersion, out var allowThrowingException) && allowThrowingException)
+            if (!Feature.HintForWriteOperations.IsSupported(serverVersion, out var allowThrowingException) &&
+                (allowThrowingException || !_writeConcern.IsAcknowledged))
             {
                 foreach (var request in _requests)
                 {

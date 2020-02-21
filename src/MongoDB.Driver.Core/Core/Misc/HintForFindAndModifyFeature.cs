@@ -13,14 +13,16 @@
 * limitations under the License.
 */
 
+using System;
+using MongoDB.Bson;
+
 namespace MongoDB.Driver.Core.Misc
 {
     /// <summary>
-    /// Represents the hint for write operations feature.
+    /// TODO.
     /// </summary>
     /// <seealso cref="MongoDB.Driver.Core.Misc.Feature" />
-    //TODO: it looks like we need to specify in the name that this feature inly for update/replace
-    public class HintForWriteOperationsFeature : Feature
+    public class HintForFindAndModifyFeature : Feature
     {
         private readonly SemanticVersion _lastNotSupportedVersionThatThrows;
 
@@ -30,7 +32,7 @@ namespace MongoDB.Driver.Core.Misc
         /// <param name="name">The name of the feature.</param>
         /// <param name="firstSupportedVersion">The first server version that supports the feature.</param>
         /// <param name="lastNotSupportedVersionThatThrows">The last not supported server version that throws the exception.</param>
-        public HintForWriteOperationsFeature(string name, SemanticVersion firstSupportedVersion, SemanticVersion lastNotSupportedVersionThatThrows)
+        public HintForFindAndModifyFeature(string name, SemanticVersion firstSupportedVersion, SemanticVersion lastNotSupportedVersionThatThrows)
             : base(name, firstSupportedVersion)
         {
             _lastNotSupportedVersionThatThrows = lastNotSupportedVersionThatThrows;
@@ -45,6 +47,21 @@ namespace MongoDB.Driver.Core.Misc
         {
             allowThrowingException = serverVersion < _lastNotSupportedVersionThatThrows;
             return base.IsSupported(serverVersion);
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="serverVersion">TODO</param>
+        /// <param name="hint">TODO</param>
+        public void ThrowIfNotSupportedAndAllowed(SemanticVersion serverVersion, BsonValue hint)
+        {
+            if (hint != null &&
+                !IsSupported(serverVersion, out var allowThrowingException) &&
+                allowThrowingException)
+            {
+                throw new NotSupportedException($"Server version {serverVersion} does not support collations.");
+            }
         }
     }
 }

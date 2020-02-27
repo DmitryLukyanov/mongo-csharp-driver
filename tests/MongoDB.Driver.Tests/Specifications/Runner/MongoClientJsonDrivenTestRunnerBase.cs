@@ -62,7 +62,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         private string DatabaseName { get; set; }
         private string CollectionName { get; set; }
 
-        private Dictionary<string, object> _objectMap;
+        private IDictionary<string, object> _objectMap = null;
 
         // Protected
         // Virtual properties
@@ -90,7 +90,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
 
         protected virtual bool ShouldEventsBeChecked => _shouldEventsBeChecked;
 
-        protected Dictionary<string, object> ObjectMap => _objectMap;
+        protected IDictionary<string, object> ObjectMap => _objectMap;
 
         // Virtual methods
         protected virtual void AssertEvent(object actualEvent, BsonDocument expectedEvent)
@@ -152,7 +152,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     switch (aspect.Name)
                     {
                         case "collection":
-                            VerifyCollectionOutcome(aspect.Value.AsBsonDocument, DatabaseName, CollectionName);
+                            VerifyCollectionOutcome(aspect.Value.AsBsonDocument);
                             break;
 
                         default:
@@ -206,9 +206,11 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             database.DropCollection(collectionName);
         }
 
-        protected virtual void ExecuteOperations(IMongoClient client, BsonDocument test, EventCapturer eventCapturer = null)
+        protected virtual void ExecuteOperations(IMongoClient client, Dictionary<string, object> objectMap, BsonDocument test, EventCapturer eventCapturer = null)
         {
-            var factory = new JsonDrivenTestFactory(client, DatabaseName, CollectionName, bucketName: null, _objectMap, eventCapturer);
+            _objectMap = objectMap;
+
+            var factory = new JsonDrivenTestFactory(client, DatabaseName, CollectionName, bucketName: null, objectMap, eventCapturer);
 
             foreach (var operation in test[OperationsKey].AsBsonArray.Cast<BsonDocument>())
             {
@@ -253,7 +255,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         {
             using (var client = CreateDisposableClient(test, eventCapturer))
             {
-                ExecuteOperations(client, test);
+                ExecuteOperations(client, null, test);
             }
         }
 
@@ -297,14 +299,30 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             return true;
         }
 
-        protected virtual void VerifyCollectionOutcome(BsonDocument outcome, string databaseName, string collectionName)
+        protected virtual void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments)
         {
+            VerifyCollectionData(expectedDocuments, DatabaseName, CollectionName);
+        }
+
+        protected virtual void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments, string databaseName, string collectionName)
+        {
+            VerifyCollectionData(expectedDocuments, databaseName, collectionName, prepareExpectedResult: null);
+        }
+
+        protected virtual void VerifyCollectionOutcome(BsonDocument outcome)
+        {
+            var collectionName = CollectionName;
+
             foreach (var aspect in outcome)
             {
                 switch (aspect.Name)
                 {
+                    case "name":
+                        collectionName = aspect.Value.AsString;
+                        break;
+
                     case "data":
-                        VerifyCollectionData(aspect.Value.AsBsonArray.Cast<BsonDocument>(), databaseName, collectionName);
+                        VerifyCollectionData(aspect.Value.AsBsonArray.Cast<BsonDocument>(), DatabaseName, collectionName);
                         break;
 
                     default:
@@ -349,28 +367,13 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             SetupAndRunTest(testCase.Shared, testCase.Test);
         }
 
-        protected virtual void VerifyCollectionData(
-            IEnumerable<BsonDocument> expectedDocuments,
-            string databaseName,
-            string collectionName,
-            ReadConcern readConcern = null)
-        {
-            VerifyCollectionData(expectedDocuments, databaseName, collectionName, readConcern: readConcern, prepareExpectedResult: null);
-        }
-
         protected void VerifyCollectionData(
             IEnumerable<BsonDocument> expectedDocuments,
             string databaseName,
             string collectionName,
-            ReadConcern readConcern,
             Action<BsonDocument, BsonDocument> prepareExpectedResult)
         {
-            if (readConcern == null)
-            {
-                readConcern = ReadConcern.Local;
-            }
-
-            var database = DriverTestConfiguration.Client.GetDatabase(databaseName).WithReadConcern(readConcern);
+            var database = DriverTestConfiguration.Client.GetDatabase(databaseName).WithReadConcern(ReadConcern.Default);
             var collection = database.GetCollection<BsonDocument>(collectionName);
             var actualDocuments = collection.Find("{}").ToList();
             if (prepareExpectedResult != null)
@@ -443,7 +446,6 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
                 }
 
-                _objectMap = new Dictionary<string, object>();
                 RunTest(shared, test, eventCapturer);
                 if (ShouldEventsBeChecked)
                 {

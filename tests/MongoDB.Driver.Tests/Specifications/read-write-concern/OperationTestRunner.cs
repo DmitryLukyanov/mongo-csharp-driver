@@ -26,24 +26,12 @@ namespace MongoDB.Driver.Tests.Specifications.read_write_concern
 {
     public class OperationTestRunner : MongoClientJsonDrivenTestRunnerBase
     {
-        private HashSet<string> _defaultCommandsToNotCapture;
-
-        protected override HashSet<string> DefaultCommandsToNotCapture
-        {
-            get
-            {
-                if (_defaultCommandsToNotCapture == null)
-                {
-                    var defaultCommandsToNotCapture = base.DefaultCommandsToNotCapture;
-                    defaultCommandsToNotCapture.Add("find");
-                    _defaultCommandsToNotCapture = defaultCommandsToNotCapture;
-                }
-
-                return _defaultCommandsToNotCapture;
-            }
-        }
-
         protected override string[] ExpectedTestColumns => new[] { "description", "operations", "outcome", "expectations", "async" };
+
+        public OperationTestRunner()
+        {
+            DefaultCommandsToNotCapture.Add("find");
+        }
 
         // public methods
         [SkippableTheory]
@@ -51,37 +39,6 @@ namespace MongoDB.Driver.Tests.Specifications.read_write_concern
         public void Run(JsonDrivenTestCase testCase)
         {
             SetupAndRunTest(testCase);
-        }
-
-        protected override void VerifyCollectionOutcome(BsonDocument outcome, string database, string inputCollectionName)
-        {
-            // check whether $out/$merge changed the outcome collection which should be asserted
-            if (!ObjectMap.TryGetValue("$out", out var collectionName) &&
-                !ObjectMap.TryGetValue("$merge", out collectionName))
-            {
-                collectionName = inputCollectionName;
-            }
-
-            foreach (var aspect in outcome)
-            {
-                switch (aspect.Name)
-                {
-                    case "data":
-                        VerifyCollectionData(
-                            aspect.Value.AsBsonArray.Cast<BsonDocument>(),
-                            database,
-                            collectionName.ToString(),
-                            readConcern: ReadConcern.Default);
-                        break;
-
-                    case "name":
-                        aspect.Value.ToString().Should().Be(collectionName.ToString());
-                        break;
-
-                    default:
-                        throw new FormatException($"Unexpected collection outcome aspect: {aspect.Name}.");
-                }
-            }
         }
 
         // nested types

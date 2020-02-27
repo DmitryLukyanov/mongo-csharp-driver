@@ -58,10 +58,10 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 });
         }
 
-        protected override void ExecuteOperations(IMongoClient client, BsonDocument test, EventCapturer eventCapturer = null)
+        protected override void ExecuteOperations(IMongoClient client, Dictionary<string, object> objectMap, BsonDocument test, EventCapturer eventCapturer = null)
         {
             var newItems = new Dictionary<string, object>();
-            foreach (var mapItem in ObjectMap)
+            foreach (var mapItem in objectMap)
             {
                 // Save session ids to have their values when the session will be disposed.
                 if (mapItem.Value is IClientSessionHandle clientSessionHandle)
@@ -72,10 +72,10 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
 
             foreach (var newItem in newItems)
             {
-                ObjectMap.Add(newItem.Key, newItem.Value);
+                objectMap.Add(newItem.Key, newItem.Value);
             }
 
-            base.ExecuteOperations(client, test, eventCapturer);
+            base.ExecuteOperations(client, objectMap, test, eventCapturer);
         }
 
         protected void KillAllSessions()

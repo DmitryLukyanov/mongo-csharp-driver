@@ -36,8 +36,12 @@ namespace MongoDB.Driver.Tests.Specifications.transactions_convenient_api
             using (var client = CreateDisposableClient(test, eventCapturer))
             using (var session0 = StartSession(client, test, "session0"))
             {
-                ObjectMap.Add("session0", session0);
-                ExecuteOperations(client, test);
+                var objectMap = new Dictionary<string, object>
+                {
+                    { "session0", session0 },
+                };
+
+                ExecuteOperations(client, objectMap, test);
             }
         }
 

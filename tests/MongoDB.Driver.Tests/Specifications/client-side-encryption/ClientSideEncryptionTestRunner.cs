@@ -151,18 +151,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
             return true;
         }
 
-        protected override void VerifyCollectionData(
-            IEnumerable<BsonDocument> expectedDocuments,
-            string databaseName,
-            string collectionName,
-            ReadConcern readConcern = null)
+        protected override void VerifyCollectionData(IEnumerable<BsonDocument> expectedDocuments, string databaseName, string collectionName)
         {
-            base.VerifyCollectionData(
-                expectedDocuments,
-                databaseName,
-                collectionName,
-                readConcern,
-                ReplaceTypeAssertionWithActual);
+            base.VerifyCollectionData(expectedDocuments, databaseName, collectionName, ReplaceTypeAssertionWithActual);
         }
 
         // private methods

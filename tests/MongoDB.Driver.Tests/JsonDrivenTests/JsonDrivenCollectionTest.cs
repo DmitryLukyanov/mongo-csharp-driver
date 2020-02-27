@@ -38,8 +38,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
             if (document.TryGetValue("databaseOptions", out var databaseOptions))
             {
-                ParseDatabaseOptions(databaseOptions.AsBsonDocument, out var database);
-                _collection = GetCollectionFromAnotherDatabaseInstance(database, _collection);
+                ParseDatabaseOptions(databaseOptions.AsBsonDocument);
             }
 
             if (document.TryGetValue("collectionOptions", out var collectionOptions))
@@ -51,13 +50,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         }
 
         // private methods
-        private IMongoCollection<BsonDocument> GetCollectionFromAnotherDatabaseInstance(IMongoDatabase database, IMongoCollection<BsonDocument> collection)
-        {
-            return database.GetCollection<BsonDocument>(
-                collection.CollectionNamespace.CollectionName,
-                collection.Settings);
-        }
-
         private void ParseCollectionOptions(BsonDocument document)
         {
             JsonDrivenHelper.EnsureAllFieldsAreValid(document, "readConcern", "readPreference", "writeConcern");
@@ -81,11 +73,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             }
         }
 
-        private void ParseDatabaseOptions(BsonDocument document, out IMongoDatabase database)
+        private void ParseDatabaseOptions(BsonDocument document)
         {
             JsonDrivenHelper.EnsureAllFieldsAreValid(document, "readConcern", "readPreference", "writeConcern");
 
-            database = _collection.Database;
+            var database = _collection.Database;
             if (document.Contains("readConcern"))
             {
                 var readConcern = ReadConcern.FromBsonDocument(document["readConcern"].AsBsonDocument);
@@ -103,6 +95,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 var writeConcern = WriteConcern.FromBsonDocument(document["writeConcern"].AsBsonDocument);
                 database = database.WithWriteConcern(writeConcern);
             }
+
+            // update _collection to be associated with the reconfigured database
+            _collection = database.GetCollection<BsonDocument>(
+                _collection.CollectionNamespace.CollectionName,
+                _collection.Settings);
         }
     }
 }

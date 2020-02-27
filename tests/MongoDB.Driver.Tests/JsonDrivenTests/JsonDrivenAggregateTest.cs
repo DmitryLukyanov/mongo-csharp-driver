@@ -59,7 +59,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 cursor = _collection.Aggregate(_pipeline, _options, cancellationToken);
             }
             else
-            { 
+            {
                 cursor = _collection.Aggregate(_session, _pipeline, _options, cancellationToken);
             }
             _result = cursor.ToList();
@@ -88,9 +88,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                     return;
 
                 case "pipeline":
-                    var pipelineStages = value.AsBsonArray.Cast<BsonDocument>();
-                    _pipeline = new BsonDocumentStagePipelineDefinition<BsonDocument, BsonDocument>(pipelineStages);
-                    ReplaceCollectionForAssertingtIfRequired(pipelineStages);
+                    _pipeline = new BsonDocumentStagePipelineDefinition<BsonDocument, BsonDocument>(value.AsBsonArray.Cast<BsonDocument>());
                     return;
 
                 case "session":
@@ -103,23 +101,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             }
 
             base.SetArgument(name, value);
-        }
-
-        // private methods
-        private void ReplaceCollectionForAssertingtIfRequired(IEnumerable<BsonDocument> pipelineStages)
-        {
-            // assuming that only one _objectMap item will be added for each call
-            foreach (var stage in pipelineStages)
-            {
-                if (stage.TryGetElement("$out", out var outElement))
-                {
-                    _objectMap.Add(outElement.Name, outElement.Value);
-                }
-                if (stage.TryGetElement("$merge", out var mergeElement))
-                {
-                    _objectMap.Add(mergeElement.Name, mergeElement.Value["into"].ToString());
-                }
-            }
         }
     }
 }

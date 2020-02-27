@@ -171,7 +171,7 @@ namespace MongoDB.Driver.Core.Operations
 
         [Theory]
         [ParameterAttributeData]
-        public void IsRetryableWriteException_should_work_as_expected([Values(false, true)] bool hasRetryableWriteLabel)
+        public void IsRetryableWriteException_should_return_expected_result([Values(false, true)] bool hasRetryableWriteLabel)
         {
             var exception = CoreExceptionHelper.CreateMongoCommandException(-1);
             if (hasRetryableWriteLabel)

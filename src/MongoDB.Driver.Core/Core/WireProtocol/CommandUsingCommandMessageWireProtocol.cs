@@ -181,7 +181,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
                 if ((exception is MongoConnectionException) || // network error
                     (Feature.RetryableWrites.IsSupported(serverVersion) &&
-                    !Feature.ServerReturnsRetryableWriteErrorLabelFeature.IsSupported(serverVersion)))
+                    !Feature.ServerReturnsRetryableWriteErrorLabel.IsSupported(serverVersion)))
                 {
                     RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(mongoException);
                 }

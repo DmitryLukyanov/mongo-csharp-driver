@@ -26,16 +26,16 @@ namespace MongoDB.Driver.Tests
     {
         [Theory]
         [ParameterAttributeData]
-        public void List_should_work_as_expected(
+        public void List_should_return_expected_result(
             [Values("{ singleIndex : 1 }", "{ compoundIndex1 : 1, compoundIndex2 : 1 }")] string key,
-            [Values(false, true)] bool uniqueArgument,
+            [Values(false, true)] bool unique,
             [Values(false, true)] bool async)
         {
             var indexKeyDocument = BsonDocument.Parse(key);
             var collection = GetEmptyCollection();
             var subject = collection.Indexes;
 
-            subject.CreateOne(new CreateIndexModel<BsonDocument>(indexKeyDocument, new CreateIndexOptions() { Unique = uniqueArgument }));
+            subject.CreateOne(new CreateIndexModel<BsonDocument>(indexKeyDocument, new CreateIndexOptions() { Unique = unique }));
 
             var indexesCursor =
                 async
@@ -46,13 +46,13 @@ namespace MongoDB.Driver.Tests
             indexes.Count.Should().Be(2);
             AssertIndex(collection.CollectionNamespace, indexes[0], "_id_");
             var indexName = IndexNameHelper.GetIndexName(indexKeyDocument);
-            AssertIndex(collection.CollectionNamespace, indexes[1], indexName, unique : uniqueArgument);
+            AssertIndex(collection.CollectionNamespace, indexes[1], indexName, expectedUnique: unique);
 
-            void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string nameValue, bool unique = false)
+            void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string expectedName, bool expectedUnique = false)
             {
-                index["name"].Should().Be(BsonValue.Create(nameValue));
+                index["name"].AsString.Should().Be(expectedName);
 
-                if (unique)
+                if (expectedUnique)
                 {
                     index["unique"].AsBoolean.Should().BeTrue();
                 }
@@ -63,7 +63,7 @@ namespace MongoDB.Driver.Tests
 
                 if (CoreTestConfiguration.ServerVersion < new SemanticVersion(4, 3, 0))
                 {
-                    index["ns"].Should().Be(BsonValue.Create(collectionNamespace.ToString()));
+                    index["ns"].AsString.Should().Be(collectionNamespace.ToString());
                 }
                 else
                 {

@@ -84,7 +84,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the duration.
         /// </summary>
-        [Obsolete("Duration is not available on server versions 4.3.1 and newer.")]
+        [Obsolete("Duration is not available on server versions 4.4.0 and newer.")]
         public TimeSpan Duration
         {
             get { return TimeSpan.FromMilliseconds(Response["timeMillis"].ToInt32()); }
@@ -93,7 +93,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the emit count.
         /// </summary>
-        [Obsolete("EmitCount is not available on server versions 4.3.1 and newer.")]
+        [Obsolete("EmitCount is not available on server versions 4.4.0 and newer.")]
         public long EmitCount
         {
             get { return Response["counts"]["emit"].ToInt64(); }
@@ -102,7 +102,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the output count.
         /// </summary>
-        [Obsolete("OutputCount is not available on server versions 4.3.1 and newer.")]
+        [Obsolete("OutputCount is not available on server versions 4.4.0 and newer.")]
         public long OutputCount
         {
             get { return Response["counts"]["output"].ToInt64(); }
@@ -119,7 +119,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the input count.
         /// </summary>
-        [Obsolete("InputCount is not available on server versions 4.3.1 and newer.")]
+        [Obsolete("InputCount is not available on server versions 4.4.0 and newer.")]
         public long InputCount
         {
             get { return Response["counts"]["input"].ToInt64(); }

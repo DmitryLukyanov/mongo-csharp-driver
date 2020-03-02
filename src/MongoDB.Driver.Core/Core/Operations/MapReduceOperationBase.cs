@@ -117,7 +117,7 @@ namespace MongoDB.Driver.Core.Operations
         /// </remarks>
         ///   <c>true</c> if objects emitted by the map function remain as JavaScript objects; otherwise, <c>false</c>.
         /// </value>
-        [Obsolete("JavaScriptMode is ignored by server versions 4.3.1 and newer.")]
+        [Obsolete("JavaScriptMode is ignored by server versions 4.4.0 and newer.")]
         public bool? JavaScriptMode
         {
             get { return _javaScriptMode; }

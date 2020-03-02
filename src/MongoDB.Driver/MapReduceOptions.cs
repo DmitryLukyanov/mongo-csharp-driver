@@ -81,7 +81,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets the java script mode.
         /// </summary>
-        [Obsolete("JavaScriptMode is ignored by server versions 4.3.1 and newer.")]
+        [Obsolete("JavaScriptMode is ignored by server versions 4.4.0 and newer.")]
         public bool? JavaScriptMode
         {
             get { return _javaScriptMode; }
@@ -283,7 +283,7 @@ namespace MongoDB.Driver
                 get { return _databaseName; }
             }
 
-            [Obsolete("NonAtomic is rejected by server versions 4.3.1 and newer.")]
+            [Obsolete("NonAtomic is rejected by server versions 4.4.0 and newer.")]
             public bool? NonAtomic
             {
                 get { return _nonAtomic; }
@@ -294,7 +294,7 @@ namespace MongoDB.Driver
                 get { return _outputMode; }
             }
 
-            [Obsolete("Sharded is rejected by server versions 4.3.1 and newer.")]
+            [Obsolete("Sharded is rejected by server versions 4.4.0 and newer.")]
             public bool? Sharded
             {
                 get { return _sharded; }

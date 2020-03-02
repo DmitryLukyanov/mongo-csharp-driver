@@ -842,7 +842,12 @@ namespace MongoDB.Driver.Core.Configuration
                     break;
                 case "connecttimeout":
                 case "connecttimeoutms":
-                    _connectTimeout = ParseTimeSpan(name, value);
+                    // 0 means "no timeout"
+                    _connectTimeout = ParseTimeSpanAndReplaceIfNeeded(
+                        name,
+                        value,
+                        replacedValue: TimeSpan.Zero,
+                        newValue: Timeout.InfiniteTimeSpan);
                     break;
                 case "fsync":
                     _fsync = ParseBoolean(name, value);
@@ -869,7 +874,12 @@ namespace MongoDB.Driver.Core.Configuration
                     break;
                 case "maxidletime":
                 case "maxidletimems":
-                    _maxIdleTime = ParseTimeSpan(name, value);
+                    // A value of 0 means there is no limit.
+                    _maxIdleTime = ParseTimeSpanAndReplaceIfNeeded(
+                        name,
+                        value,
+                        replacedValue: TimeSpan.Zero,
+                        newValue: Timeout.InfiniteTimeSpan);
                     break;
                 case "maxlifetime":
                 case "maxlifetimems":
@@ -880,11 +890,12 @@ namespace MongoDB.Driver.Core.Configuration
                     break;
                 case "maxstaleness":
                 case "maxstalenessseconds":
-                    _maxStaleness = ParseTimeSpan(name, value);
-                    if (_maxStaleness.Value == TimeSpan.FromSeconds(-1))
-                    {
-                        _maxStaleness = null;
-                    }
+                    // -1 no max staleness check
+                    _maxStaleness = ParseTimeSpanAndReplaceIfNeeded(
+                        name,
+                        value,
+                        replacedValue: TimeSpan.FromSeconds(-1),
+                        newValue: null);
                     break;
                 case "minpoolsize":
                     _minPoolSize = ParseInt32(name, value);
@@ -942,7 +953,7 @@ namespace MongoDB.Driver.Core.Configuration
                 case "localthresholdms":
                 case "secondaryacceptablelatency":
                 case "secondaryacceptablelatencyms":
-                    _localThreshold = ParseTimeSpan(name, value);
+                    _localThreshold = ParseTimeSpan(name, value); // 0 means 0
                     break;
                 case "slaveok":
                     if (_readPreference != null)
@@ -959,7 +970,12 @@ namespace MongoDB.Driver.Core.Configuration
                     break;
                 case "sockettimeout":
                 case "sockettimeoutms":
-                    _socketTimeout = ParseTimeSpan(name, value);
+                    // 0 means no timeout
+                    _socketTimeout = ParseTimeSpanAndReplaceIfNeeded(
+                        name,
+                        value,
+                        replacedValue: TimeSpan.Zero,
+                        newValue: Timeout.InfiniteTimeSpan);
                     break;
                 case "ssl": // Obsolete
                 case "tls":
@@ -987,8 +1003,13 @@ namespace MongoDB.Driver.Core.Configuration
                     break;
                 case "wtimeout":
                 case "wtimeoutms":
-                    _wTimeout = ParseTimeSpan(name, value);
-                    if (_wTimeout < TimeSpan.Zero)
+                    // 0 means no timeout
+                    _wTimeout = ParseTimeSpanAndReplaceIfNeeded(
+                        name,
+                        value,
+                        replacedValue: TimeSpan.Zero,
+                        newValue:Timeout.InfiniteTimeSpan);
+                    if (_wTimeout < TimeSpan.Zero && _wTimeout != Timeout.InfiniteTimeSpan)
                     {
                         throw new MongoConfigurationException($"{name} must be greater than or equal to 0.");
                     }
@@ -1156,6 +1177,12 @@ namespace MongoDB.Driver.Core.Configuration
             {
                 throw new MongoConfigurationException(string.Format("{0} has an invalid TimeSpan value of {1}.", name, value), ex);
             }
+        }
+
+        private static TimeSpan? ParseTimeSpanAndReplaceIfNeeded(string name, string value, TimeSpan replacedValue, TimeSpan? newValue)
+        {
+            var timeSpan = ParseTimeSpan(name, value);
+            return timeSpan == replacedValue ? newValue : timeSpan;
         }
 
         private bool EnsureTlsInsecureIsValid(bool value)

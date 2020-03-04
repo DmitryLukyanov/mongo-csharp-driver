@@ -33,6 +33,7 @@ namespace MongoDB.Bson.Tests.Jira
         [InlineData(typeof(DerivedWithoutSetterAndWithoutBsonElement_AbstractBaseWithoutSetterAndWithProtectedConstructor))]
         [InlineData(typeof(DerivedWithoutSetterAndWithoutBsonElement_AbstractBaseWithoutSetter))]
         [InlineData(typeof(DerivedWithPrivateSetterAndWithBsonElement_BaseWithoutSetter))]
+        [InlineData(typeof(BaseWithSetterAndWithPrivateConstructor))]
         public void Serialization_should_work_as_expected(Type testCaseType)
         {
             var testCase = Activator.CreateInstance(testCaseType, 1, 2);
@@ -232,6 +233,22 @@ namespace MongoDB.Bson.Tests.Jira
                 Y = y;
             }
 
+            public int Y { get; }
+        }
+
+        public class BaseWithSetterAndWithPrivateConstructor
+        {
+            private BaseWithSetterAndWithPrivateConstructor()
+            {
+            }
+
+            public BaseWithSetterAndWithPrivateConstructor(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            public int? X { get; }
             public int Y { get; }
         }
     }

@@ -13,10 +13,12 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Misc;
+using static MongoDB.Bson.Serialization.BsonDeserializationContext;
 
 namespace MongoDB.Driver
 {
@@ -28,6 +30,7 @@ namespace MongoDB.Driver
     public class ChangeStreamDocumentSerializer<TDocument> : BsonDocumentBackedClassSerializer<ChangeStreamDocument<TDocument>>
     {
         // private fields
+        private readonly Action<Builder> _deserializationContextBuilderWithAllowedDubplicateElements = (dcb) => dcb.AllowDuplicateElementNames = true;
         private readonly IBsonSerializer<TDocument> _documentSerializer;
 
         // constructors
@@ -43,7 +46,11 @@ namespace MongoDB.Driver
             RegisterMember("ClusterTime", "clusterTime", BsonTimestampSerializer.Instance);
             RegisterMember("CollectionNamespace", "ns", ChangeStreamDocumentCollectionNamespaceSerializer.Instance);
             RegisterMember("DocumentKey", "documentKey", BsonDocumentSerializer.Instance);
-            RegisterMember("FullDocument", "fullDocument", _documentSerializer);
+            RegisterMember(
+                "FullDocument",
+                "fullDocument",
+                _documentSerializer,
+                _deserializationContextBuilderWithAllowedDubplicateElements);
             RegisterMember("OperationType", "operationType", ChangeStreamOperationTypeSerializer.Instance);
             RegisterMember("RenameTo", "to", ChangeStreamDocumentCollectionNamespaceSerializer.Instance);
             RegisterMember("ResumeToken", "_id", BsonDocumentSerializer.Instance);
@@ -54,7 +61,7 @@ namespace MongoDB.Driver
         /// <inheritdoc />
         public override ChangeStreamDocument<TDocument> Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
-            context = context.With(b => b.AllowDuplicateElementNames = true);
+            context = context.With(_deserializationContextBuilderWithAllowedDubplicateElements);
             return base.Deserialize(context, args);
         }
 

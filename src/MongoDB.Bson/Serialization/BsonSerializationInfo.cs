@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using MongoDB.Bson.IO;
+using static MongoDB.Bson.Serialization.BsonDeserializationContext;
 
 namespace MongoDB.Bson.Serialization
 {
@@ -25,6 +26,7 @@ namespace MongoDB.Bson.Serialization
     public class BsonSerializationInfo
     {
         // private fields
+        private Action<Builder> _deserializationContextBuilder;
         private string _elementName;
         private IBsonSerializer _serializer;
         private Type _nominalType;
@@ -36,8 +38,10 @@ namespace MongoDB.Bson.Serialization
         /// <param name="elementName">The element name.</param>
         /// <param name="serializer">The serializer.</param>
         /// <param name="nominalType">The nominal type.</param>
-        public BsonSerializationInfo(string elementName, IBsonSerializer serializer, Type nominalType)
+        /// <param name="deserializationContextBuilder">TODO</param>
+        public BsonSerializationInfo(string elementName, IBsonSerializer serializer, Type nominalType, Action<Builder> deserializationContextBuilder = null)
         {
+            _deserializationContextBuilder = deserializationContextBuilder;
             _elementName = elementName;
             _serializer = serializer;
             _nominalType = nominalType;
@@ -78,7 +82,7 @@ namespace MongoDB.Bson.Serialization
             var tempDocument = new BsonDocument("value", value);
             using (var reader = new BsonDocumentReader(tempDocument))
             {
-                var context = BsonDeserializationContext.CreateRoot(reader);
+                var context = BsonDeserializationContext.CreateRoot(reader, _deserializationContextBuilder);
                 reader.ReadStartDocument();
                 reader.ReadName("value");
                 var deserializedValue = _serializer.Deserialize(context);

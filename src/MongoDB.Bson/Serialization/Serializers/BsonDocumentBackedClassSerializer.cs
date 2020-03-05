@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Serializers;
+using static MongoDB.Bson.Serialization.BsonDeserializationContext;
 
 namespace MongoDB.Bson.Serialization
 {
@@ -66,7 +67,8 @@ namespace MongoDB.Bson.Serialization
         /// <param name="memberName">The member name.</param>
         /// <param name="elementName">The element name.</param>
         /// <param name="serializer">The serializer.</param>
-        protected void RegisterMember(string memberName, string elementName, IBsonSerializer serializer)
+        /// <param name="deserializationContextBuilder">TODO</param>
+        protected void RegisterMember(string memberName, string elementName, IBsonSerializer serializer, Action<Builder> deserializationContextBuilder = null)
         {
             if (memberName == null)
             {
@@ -81,7 +83,7 @@ namespace MongoDB.Bson.Serialization
                 throw new ArgumentNullException("serializer");
             }
 
-            var info = new BsonSerializationInfo(elementName, serializer, serializer.ValueType);
+            var info = new BsonSerializationInfo(elementName, serializer, serializer.ValueType, deserializationContextBuilder);
             _memberSerializationInfo.Add(memberName, info);
         }
 

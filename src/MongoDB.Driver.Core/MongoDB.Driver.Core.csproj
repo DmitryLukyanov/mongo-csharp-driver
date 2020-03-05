@@ -46,16 +46,16 @@
     <NoWarn>NU5100</NoWarn>
   </PropertyGroup>
 
+  <!--Compression-->
+  <PropertyGroup>
+    <CompressionRuntimesPath>runtimes/win/native</CompressionRuntimesPath>
+  </PropertyGroup>
+
+  <!--Snappy-->
   <ItemGroup>
     <None Remove="snappy64.dll" />
   </ItemGroup>
 
-  <!--Compression-->
-  <PropertyGroup>
-    <CompressionRuntimesPath>runtimes/win-x64/native</CompressionRuntimesPath>
-  </PropertyGroup>
-
-  <!--Snappy-->
   <PropertyGroup>
     <SnappyBinaries>Core/Compression/Snappy/lib/win</SnappyBinaries>
   </PropertyGroup>
@@ -64,7 +64,6 @@
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <Pack>true</Pack>
       <PackagePath>$(CompressionRuntimesPath)</PackagePath>
-      <Visible>false</Visible>
     </Content>
   </ItemGroup>
 
@@ -76,6 +75,10 @@
   </ItemGroup>
 
   <!--Zstd-->
+  <ItemGroup>
+    <None Remove="libzstd.dll" />
+  </ItemGroup>
+
   <PropertyGroup>
     <ZstdBinaries>Core/Compression/Zstd/lib/win</ZstdBinaries>
   </PropertyGroup>

@@ -105,7 +105,7 @@
       <Link>libzstd.dll</Link>
     </Content>
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="MongoDB.Driver.Core.targets">
       <Pack>true</Pack>

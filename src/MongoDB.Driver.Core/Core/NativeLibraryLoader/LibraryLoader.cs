@@ -94,5 +94,18 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
 
             throw new InvalidOperationException("Current platform is not supported by LibraryLoader.");
         }
+
+        private void ThrowIfNot64BitProcess()
+        {
+#if NET452 || NETSTANDARD2_0
+            var is64Bit = Environment.Is64BitProcess;
+#else
+            var is64Bit = IntPtr.Size == 8;
+#endif
+            if (!is64Bit)
+            {
+                throw new PlatformNotSupportedException("Native libraries can be loaded only in a 64-bit process.");
+            }
+        }
     }
 }

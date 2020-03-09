@@ -45,6 +45,7 @@ namespace MongoDB.Driver.Core.Misc
 
     internal interface IDnsResolver
     {
+        string GetCanonicalizedHostName(string hostNameOrAddress);
         List<SrvRecord> ResolveSrvRecords(string service, CancellationToken cancellation);
         Task<List<SrvRecord>> ResolveSrvRecordsAsync(string service, CancellationToken cancellation);
         List<TxtRecord> ResolveTxtRecords(string domainName, CancellationToken cancellation);

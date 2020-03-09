@@ -33,6 +33,28 @@ namespace MongoDB.Driver.Core.Clusters
             subject.LookupClient.Should().NotBeNull();
         }
 
+        [Theory]
+        [InlineData("54.225.237.121", "ldaptest.10gen.cc")]
+        [InlineData("ec2-54-225-237-121.compute-1.amazonaws.com", "ldaptest.10gen.cc")]
+        [InlineData("ldaptest.10gen.cc", "ldaptest.10gen.cc")]
+        [InlineData("azure.microsoft.com", "l-0007.l-msedge.net")]
+        public void GetCanonicalizedHostName_should_return_expected_result(string host, string expectedHost)
+        {
+            var subject = new DnsClientWrapper();
+
+            var result = subject.GetCanonicalizedHostName(host);
+            result.Should().Be(expectedHost);
+        }
+
+        [Fact]
+        public void GetCanonicalizedHostName_should_throw_when_host_is_null()
+        {
+            var subject = new DnsClientWrapper();
+
+            var exception = Record.Exception(() => subject.GetCanonicalizedHostName(null));
+            exception.Should().BeOfType<ArgumentNullException>();
+        }
+
         [Fact]
         public void LookupClient_should_return_expected_result()
         {

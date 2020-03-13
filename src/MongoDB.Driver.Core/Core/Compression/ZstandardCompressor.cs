@@ -15,15 +15,18 @@
 
 using System.IO;
 using System.IO.Compression;
-using MongoDB.Driver.Core.Compression.Zstd;
+using MongoDB.Driver.Core.Compression.Zstandard;
 using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.Compression
 {
     internal class ZstandardCompressor : ICompressor
     {
+        // private constants
+        private const int _defaultCompressionLevel = 6;
+
+        // private fields
         private readonly int _compressionLevel;
-        private readonly int _defaultCompressionLevel = 6;
 
         public ZstandardCompressor(Optional<int> compressionLevel = default)
         {

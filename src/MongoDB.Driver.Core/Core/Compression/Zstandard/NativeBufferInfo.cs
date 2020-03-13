@@ -45,7 +45,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace MongoDB.Driver.Core.Compression.Zstd
+namespace MongoDB.Driver.Core.Compression.Zstandard
 {
     [StructLayout(LayoutKind.Sequential)]
     internal class NativeBufferInfo

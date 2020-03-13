@@ -89,7 +89,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <ZstdBinaries>Core/Compression/Zstd/lib/win</ZstdBinaries>
+    <ZstdBinaries>Core/Compression/Zstandard/lib/win</ZstdBinaries>
   </PropertyGroup>
 
   <ItemGroup>

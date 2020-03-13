@@ -20,7 +20,7 @@ using System.IO.Compression;
 using System.Text;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
-using MongoDB.Driver.Core.Compression.Zstd;
+using MongoDB.Driver.Core.Compression.Zstandard;
 using MongoDB.Driver.Core.Misc;
 using Xunit;
 
@@ -149,10 +149,10 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
             using (var inputStream = new MemoryStream(data))
             using (var outputStream = new MemoryStream())
             {
-                using (var zstdStream = new ZstandardStream(outputStream, CompressionMode.Compress, compressionLevel))
+                using (var zstandardStream = new ZstandardStream(outputStream, CompressionMode.Compress, compressionLevel))
                 {
-                    inputStream.EfficientCopyTo(zstdStream);
-                    zstdStream.Flush();
+                    inputStream.EfficientCopyTo(zstandardStream);
+                    zstandardStream.Flush();
                 }
                 return outputStream.ToArray();
             }
@@ -161,10 +161,10 @@ namespace MongoDB.Driver.Core.Tests.Core.Compression
         private byte[] Decompress(byte[] compressed)
         {
             using (var inputStream = new MemoryStream(compressed))
-            using (var zstdStream = new ZstandardStream(inputStream, CompressionMode.Decompress))
+            using (var zstandardStream = new ZstandardStream(inputStream, CompressionMode.Decompress))
             using (var outputStream = new MemoryStream())
             {
-                zstdStream.CopyTo(outputStream);
+                zstandardStream.CopyTo(outputStream);
                 return outputStream.ToArray();
             }
         }

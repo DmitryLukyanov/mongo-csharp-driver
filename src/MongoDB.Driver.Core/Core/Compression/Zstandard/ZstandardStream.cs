@@ -48,7 +48,7 @@ using System.IO;
 using System.IO.Compression;
 using MongoDB.Driver.Core.Misc;
 
-namespace MongoDB.Driver.Core.Compression.Zstd
+namespace MongoDB.Driver.Core.Compression.Zstandard
 {
     internal class ZstandardStream : Stream
     {
@@ -116,25 +116,19 @@ namespace MongoDB.Driver.Core.Compression.Zstd
                 switch (_compressionMode)
                 {
                     case CompressionMode.Compress:
-                        try
+                        if (!_flushed)
                         {
-                            if (!_flushed)
+                            try
                             {
-                                try
-                                {
-                                    Flush();
-                                }
-                                catch
-                                {
-                                    // ignore exception
-                                }
+                                Flush();
+                            }
+                            catch
+                            {
+                                // ignore exception
                             }
                         }
-                        finally
-                        {
-                            _nativeWrapper.Dispose();
-                            _arrayPool.Return(_streamWriteHelper.CompressedBufferInfo.Bytes);
-                        }
+                        _nativeWrapper.Dispose();
+                        _arrayPool.Return(_streamWriteHelper.CompressedBufferInfo.Bytes);
                         break;
                     case CompressionMode.Decompress:
                         _nativeWrapper.Dispose();

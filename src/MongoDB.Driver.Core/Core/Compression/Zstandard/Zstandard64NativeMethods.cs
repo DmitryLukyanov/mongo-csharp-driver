@@ -47,7 +47,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using MongoDB.Driver.Core.NativeLibraryLoader;
 
-namespace MongoDB.Driver.Core.Compression.Zstd
+namespace MongoDB.Driver.Core.Compression.Zstandard
 {
     internal class Zstandard64NativeMethods
     {

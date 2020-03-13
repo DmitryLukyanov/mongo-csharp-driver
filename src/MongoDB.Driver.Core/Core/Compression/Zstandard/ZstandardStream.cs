@@ -214,13 +214,13 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                         operationContext,
                         inputCompressedSize: _nativeWrapper.RecommendedOutputSize,
                         inputUncompressedSize: currentAttemptSize,
-                        out var outputCompressedSize,
-                        out var outputUncompressedSize);
+                        out var compressedBytesProcessed,
+                        out var uncompressedBytesProcessed);
 
-                    _streamWriteHelper.WriteBufferToCompressedStream(count: outputCompressedSize);
+                    _streamWriteHelper.WriteBufferToCompressedStream(count: compressedBytesProcessed);
 
                     // calculate progress in input buffer
-                    remainingCount -= outputUncompressedSize;
+                    remainingCount -= uncompressedBytesProcessed;
                 }
             }
         }

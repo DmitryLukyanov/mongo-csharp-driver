@@ -118,14 +118,7 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                     case CompressionMode.Compress:
                         if (!_flushed)
                         {
-                            try
-                            {
-                                Flush();
-                            }
-                            catch
-                            {
-                                // ignore exception
-                            }
+                            try { Flush(); } catch { }
                         }
                         _nativeWrapper.Dispose();
                         _arrayPool.Return(_streamWriteHelper.CompressedBufferInfo.Bytes);
@@ -175,18 +168,18 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                         compressedOffset: currentDataPosition,
                         inputCompressedSize: remainingCompressedBufferSize,
                         inputUncompressedSize: remainingCount,
-                        out int outputCompressedSize,
-                        out int outputUncompressedSize);
+                        out int compressedBytesProcessed,
+                        out int uncompressedBytesProcessed);
 
                     if (!_streamReadHelper.TryPrepareDataForNextAttempt(
-                        outputCompressedSize,
-                        outputUncompressedSize))
+                        compressedBytesProcessed,
+                        uncompressedBytesProcessed))
                     {
                         break;
                     }
 
-                    length += outputUncompressedSize;
-                    remainingCount -= outputUncompressedSize;
+                    length += uncompressedBytesProcessed;
+                    remainingCount -= uncompressedBytesProcessed;
                 }
 
                 return length;
@@ -294,9 +287,9 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 return _readingState.DataPosition;
             }
 
-            public bool TryPrepareDataForNextAttempt(int outputCompressedSize, int outputUncompressedSize)
+            public bool TryPrepareDataForNextAttempt(int compressedBytesProcessed, int uncompressedBytesProcessed)
             {
-                if (outputUncompressedSize == 0) // 0 - when a frame is completely decoded and fully flushed
+                if (uncompressedBytesProcessed == 0) // 0 - when a frame is completely decoded and fully flushed
                 {
                     // the internal buffer is depleted, we're either done
                     if (_readingState.IsDataDepleted)
@@ -310,7 +303,7 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
 
                 // 1. calculate progress in compressed(input) buffer
                 // 2. save the data position for next Read calls
-                _readingState.DataPosition += outputCompressedSize;
+                _readingState.DataPosition += compressedBytesProcessed;
                 return true;
             }
 

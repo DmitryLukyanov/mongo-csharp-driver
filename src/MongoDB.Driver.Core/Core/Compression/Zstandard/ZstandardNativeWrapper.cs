@@ -93,10 +93,10 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
         // public methods
         public void Compress(
             OperationContext operationContext,
-            int compressedSize,
-            int uncompressedSize,
-            out int compressedBufferPosition,
-            out int uncompressedBufferPosition)
+            int inputCompressedSize,
+            int inputUncompressedSize,
+            out int outputCompressedSize,
+            out int outputUncompressedSize)
         {
             Ensure.IsNotNull(operationContext, nameof(operationContext));
             Ensure.That(_compressionMode == CompressionMode.Compress, nameof(_compressionMode));
@@ -106,12 +106,12 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
             // compressed data
             var outputNativeBuffer = CreateNativeBuffer(
                 operationContext.CompressedPinnedBufferWalker, // operation result
-                (ulong)compressedSize);
+                (ulong)inputCompressedSize);
 
             // uncompressed data
             var inputNativeBuffer = CreateNativeBuffer(
                 operationContext.UncompressedPinnedBufferWalker,
-                (ulong)uncompressedSize);
+                (ulong)inputUncompressedSize);
 
             // compress inputNativeBuffer to outputNativeBuffer
             Zstandard64NativeMethods.ZSTD_compressStream(
@@ -119,21 +119,21 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 outputNativeBuffer,
                 inputNativeBuffer);
 
-            compressedBufferPosition = (int)outputNativeBuffer.Position;
+            outputCompressedSize = (int)outputNativeBuffer.Position;
 
             // calculate progress in inputNativeBuffer
-            uncompressedBufferPosition = (int)inputNativeBuffer.Position;
-            operationContext.UncompressedPinnedBufferWalker.Offset += uncompressedBufferPosition;
+            outputUncompressedSize = (int)inputNativeBuffer.Position;
+            operationContext.UncompressedPinnedBufferWalker.Offset += outputUncompressedSize;
             // CompressedPinnedBufferWalker.Offset is always 0
         }
 
         public void Decompress(
             OperationContext operationContext,
             int compressedOffset,
-            int compressedSize,
-            int uncompressedSize,
-            out int compressedBufferPosition,
-            out int uncompressedBufferPosition)
+            int inputCompressedSize,
+            int inputUncompressedSize,
+            out int outputCompressedSize,
+            out int outputUncompressedSize)
         {
             Ensure.IsNotNull(operationContext, nameof(operationContext));
             Ensure.That(_compressionMode == CompressionMode.Decompress, nameof(_compressionMode));
@@ -144,13 +144,13 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
             operationContext.CompressedPinnedBufferWalker.Offset = compressedOffset;
             // compressed data
             var inputNativeBuffer = CreateNativeBuffer(
-                compressedSize <= 0 ? null : operationContext.CompressedPinnedBufferWalker,
-                compressedSize <= 0 ? 0 : (ulong)compressedSize);
+                inputCompressedSize <= 0 ? null : operationContext.CompressedPinnedBufferWalker,
+                inputCompressedSize <= 0 ? 0 : (ulong)inputCompressedSize);
 
             // uncompressed data
             var outputNativeBuffer = CreateNativeBuffer(
                 operationContext.UncompressedPinnedBufferWalker, // operation result
-                (ulong)uncompressedSize);
+                (ulong)inputUncompressedSize);
 
             // decompress inputNativeBuffer to outputNativeBuffer
             Zstandard64NativeMethods.ZSTD_decompressStream(
@@ -159,10 +159,10 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 inputNativeBuffer);
 
             // calculate progress in outputNativeBuffer
-            uncompressedBufferPosition = (int)outputNativeBuffer.Position;
-            compressedBufferPosition = (int)inputNativeBuffer.Position;
+            outputUncompressedSize = (int)outputNativeBuffer.Position;
+            outputCompressedSize = (int)inputNativeBuffer.Position;
 
-            operationContext.UncompressedPinnedBufferWalker.Offset += uncompressedBufferPosition;
+            operationContext.UncompressedPinnedBufferWalker.Offset += outputUncompressedSize;
             // CompressedPinnedBufferWalker.Offset will be calculated on stream side
         }
 

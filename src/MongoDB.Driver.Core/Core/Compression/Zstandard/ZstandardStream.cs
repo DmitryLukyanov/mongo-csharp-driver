@@ -173,20 +173,20 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                     _nativeWrapper.Decompress(
                         operationContext,
                         compressedOffset: currentDataPosition,
-                        compressedSize: remainingCompressedBufferSize,
-                        uncompressedSize: remainingCount,
-                        out int compressedBufferPosition,
-                        out int uncompressedBufferPosition);
+                        inputCompressedSize: remainingCompressedBufferSize,
+                        inputUncompressedSize: remainingCount,
+                        out int outputCompressedSize,
+                        out int outputUncompressedSize);
 
                     if (!_streamReadHelper.TryPrepareDataForNextAttempt(
-                        compressedBufferPosition,
-                        uncompressedBufferPosition))
+                        outputCompressedSize,
+                        outputUncompressedSize))
                     {
                         break;
                     }
 
-                    length += uncompressedBufferPosition;
-                    remainingCount -= uncompressedBufferPosition;
+                    length += outputUncompressedSize;
+                    remainingCount -= outputUncompressedSize;
                 }
 
                 return length;
@@ -212,15 +212,15 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                     // compress input to output
                     _nativeWrapper.Compress(
                         operationContext,
-                        compressedSize: _nativeWrapper.RecommendedOutputSize,
-                        uncompressedSize: currentAttemptSize,
-                        out var compressedBufferPosition,
-                        out var uncompressedBufferPosition);
+                        inputCompressedSize: _nativeWrapper.RecommendedOutputSize,
+                        inputUncompressedSize: currentAttemptSize,
+                        out var outputCompressedSize,
+                        out var outputUncompressedSize);
 
-                    _streamWriteHelper.WriteBufferToCompressedStream(count: compressedBufferPosition);
+                    _streamWriteHelper.WriteBufferToCompressedStream(count: outputCompressedSize);
 
                     // calculate progress in input buffer
-                    remainingCount -= uncompressedBufferPosition;
+                    remainingCount -= outputUncompressedSize;
                 }
             }
         }
@@ -294,9 +294,9 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 return _readingState.DataPosition;
             }
 
-            public bool TryPrepareDataForNextAttempt(int compressedBufferPosition, int uncompressedBufferPosition)
+            public bool TryPrepareDataForNextAttempt(int outputCompressedSize, int outputUncompressedSize)
             {
-                if (uncompressedBufferPosition == 0) // 0 - when a frame is completely decoded and fully flushed
+                if (outputUncompressedSize == 0) // 0 - when a frame is completely decoded and fully flushed
                 {
                     // the internal buffer is depleted, we're either done
                     if (_readingState.IsDataDepleted)
@@ -310,7 +310,7 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
 
                 // 1. calculate progress in compressed(input) buffer
                 // 2. save the data position for next Read calls
-                _readingState.DataPosition += compressedBufferPosition;
+                _readingState.DataPosition += outputCompressedSize;
                 return true;
             }
 

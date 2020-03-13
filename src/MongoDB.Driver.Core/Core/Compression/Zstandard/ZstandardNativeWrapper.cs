@@ -119,10 +119,9 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 outputNativeBuffer,
                 inputNativeBuffer);
 
-            compressedBytesProcessed = (int)outputNativeBuffer.Position;
+            compressedBytesProcessed = (int)outputNativeBuffer.Position; // because start Position is always 0
+            uncompressedBytesProcessed = (int)inputNativeBuffer.Position; // because start Position is always 0
 
-            // calculate progress in inputNativeBuffer
-            uncompressedBytesProcessed = (int)inputNativeBuffer.Position;
             operationContext.UncompressedPinnedBufferWalker.Offset += uncompressedBytesProcessed;
             // CompressedPinnedBufferWalker.Offset is always 0
         }

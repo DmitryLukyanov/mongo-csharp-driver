@@ -25,6 +25,24 @@ namespace MongoDB.Driver.Core.Authentication
     /// </summary>
     public sealed class UsernamePasswordCredential
     {
+        #region static
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="password">TODO</param>
+        /// <returns>TODO</returns>
+        public static SecureString ConvertPasswordToSecureString(string password)
+        {
+            var secureString = new SecureString();
+            foreach (var c in password)
+            {
+                secureString.AppendChar(c);
+            }
+            secureString.MakeReadOnly();
+            return secureString;
+        }
+        #endregion
+
         // fields
         private readonly Lazy<SecureString> _saslPreppedPassword;
         private string _source;
@@ -141,17 +159,6 @@ namespace MongoDB.Driver.Core.Authentication
                     Marshal.ZeroFreeGlobalAllocUnicode(passwordIntPtr);
                 }
             }
-        }
-
-        private static SecureString ConvertPasswordToSecureString(string password)
-        {
-            var secureString = new SecureString();
-            foreach (var c in password)
-            {
-                secureString.AppendChar(c);
-            }
-            secureString.MakeReadOnly();
-            return secureString;
         }
     }
 }

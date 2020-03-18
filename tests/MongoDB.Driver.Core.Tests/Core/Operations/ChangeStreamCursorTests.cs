@@ -392,7 +392,10 @@ namespace MongoDB.Driver.Core.Operations
         [Theory]
         [ParameterAttributeData]
         public void MoveNext_should_call_Resume_after_resumable_exception(
-            [Values(typeof(MongoConnectionException), typeof(MongoNotPrimaryException), typeof(MongoCursorNotFoundException))] Type resumableExceptionType,
+            [Values(
+                typeof(MongoConnectionException), // network error
+                typeof(MongoNotPrimaryException),
+                typeof(MongoNodeIsRecoveringException))] Type resumableExceptionType,
             [Values(false, true)] bool expectedResult,
             [Values(false, true)] bool async)
         {

@@ -15,19 +15,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using MongoDB.Bson;
 
 namespace MongoDB.Driver.Core.Operations
 {
     internal static class RetryabilityHelper
     {
         // private constants
+        private const string ResumableChangeStreamErrorLabel = "ResumableChangeStreamError";
         private const string RetryableWriteErrorLabel = "RetryableWriteError";
 
         // private static fields
-        private static readonly HashSet<ServerErrorCode> __notResumableChangeStreamErrorCodes;
-        private static readonly HashSet<string> __notResumableChangeStreamErrorLabels;
+        private static readonly HashSet<ServerErrorCode> __resumableChangeStreamErrorCodes;
         private static readonly HashSet<Type> __resumableChangeStreamExceptions;
         private static readonly HashSet<Type> __retryableReadExceptions;
         private static readonly HashSet<Type> __retryableWriteExceptions;
@@ -44,10 +42,7 @@ namespace MongoDB.Driver.Core.Operations
                 typeof(MongoNodeIsRecoveringException)
             };
 
-            __resumableChangeStreamExceptions = new HashSet<Type>(resumableAndRetryableExceptions)
-            {
-                typeof(MongoCursorNotFoundException)
-            };
+            __resumableChangeStreamExceptions = new HashSet<Type>(resumableAndRetryableExceptions);
 
             __retryableReadExceptions = new HashSet<Type>(resumableAndRetryableExceptions);
 
@@ -68,20 +63,38 @@ namespace MongoDB.Driver.Core.Operations
                 ServerErrorCode.ExceededTimeLimit
             };
 
-            __notResumableChangeStreamErrorCodes = new HashSet<ServerErrorCode>()
+            __resumableChangeStreamErrorCodes = new HashSet<ServerErrorCode>()
             {
-                ServerErrorCode.CappedPositionLost,
-                ServerErrorCode.CursorKilled,
-                ServerErrorCode.Interrupted
-            };
-
-            __notResumableChangeStreamErrorLabels = new HashSet<string>()
-            {
-                "NonResumableChangeStreamError"
+                ServerErrorCode.HostUnreachable,
+                ServerErrorCode.HostNotFound,
+                ServerErrorCode.NetworkTimeout,
+                ServerErrorCode.ShutdownInProgress,
+                ServerErrorCode.PrimarySteppedDown,
+                ServerErrorCode.ExceededTimeLimit,
+                ServerErrorCode.SocketException,
+                ServerErrorCode.NotMaster,
+                ServerErrorCode.InterruptedAtShutdown,
+                ServerErrorCode.InterruptedDueToReplStateChange,
+                ServerErrorCode.NotMasterNoSlaveOk,
+                ServerErrorCode.NotMasterOrSecondary,
+                ServerErrorCode.StaleShardVersion,
+                ServerErrorCode.StaleEpoch,
+                ServerErrorCode.StaleConfig,
+                ServerErrorCode.RetryChangeStream,
+                ServerErrorCode.FailedToSatisfyReadPreference,
+                ServerErrorCode.ElectionInProgress
             };
         }
 
         // public static methods
+        public static void AddResumableChangeStreamErrorLabelIfRequired(MongoException exception)
+        {
+            if (ShouldResumableChangeStreamExceptionLabelBeAdded(exception))
+            {
+                exception.AddErrorLabel(ResumableChangeStreamErrorLabel);
+            }
+        }
+
         public static void AddRetryableWriteErrorLabelIfRequired(MongoException exception)
         {
             if (ShouldRetryableWriteExceptionLabelBeAdded(exception))
@@ -92,19 +105,7 @@ namespace MongoDB.Driver.Core.Operations
 
         public static bool IsResumableChangeStreamException(Exception exception)
         {
-            var commandException = exception as MongoCommandException;
-            if (commandException != null)
-            {
-                var code = (ServerErrorCode)commandException.Code;
-                var isNonResumable =
-                    __notResumableChangeStreamErrorCodes.Contains(code) ||
-                    __notResumableChangeStreamErrorLabels.Any(c => commandException.HasErrorLabel(c));
-                return !isNonResumable;
-            }
-            else
-            {
-                return __resumableChangeStreamExceptions.Contains(exception.GetType());
-            }
+            return exception is MongoException mongoException ? mongoException.HasErrorLabel(ResumableChangeStreamErrorLabel) : false;
         }
 
         public static bool IsRetryableReadException(Exception exception)
@@ -133,6 +134,21 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private static methods
+        private static bool ShouldResumableChangeStreamExceptionLabelBeAdded(Exception exception)
+        {
+            var commandException = exception as MongoCommandException;
+            if (commandException != null)
+            {
+                var code = (ServerErrorCode)commandException.Code;
+                if (__resumableChangeStreamErrorCodes.Contains(code))
+                {
+                    return true;
+                }
+            }
+
+            return __resumableChangeStreamExceptions.Contains(exception.GetType());
+        }
+
         private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception)
         {
             if (__retryableWriteExceptions.Contains(exception.GetType()))

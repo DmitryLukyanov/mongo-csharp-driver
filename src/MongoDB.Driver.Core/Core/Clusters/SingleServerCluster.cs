@@ -198,7 +198,8 @@ namespace MongoDB.Driver.Core.Clusters
                 }
             }
 
-            UpdateClusterDescription(newClusterDescription);
+            var shouldClusterDescriptionChangedEventBePublished = !args.OldServerDescription.SdamEquals(args.NewServerDescription);
+            UpdateClusterDescription(newClusterDescription, shouldClusterDescriptionChangedEventBePublished);
         }
 
         protected override bool TryGetServer(EndPoint endPoint, out IClusterableServer server)

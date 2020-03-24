@@ -13,11 +13,10 @@
 * limitations under the License.
 */
 
-using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.Clusters.ServerSelectors;
+using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
@@ -30,27 +29,30 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void WriteConcernError_errInfo_should_be_propagated()
         {
-            RequireServer.Check().Supports(Feature.FailPointsFailCommand);
+            var feature = CoreTestConfiguration.Cluster.Description.Type == ClusterType.Sharded
+                ? Feature.FailPointsFailCommandForSharded
+                : Feature.FailPointsFailCommand;
+            RequireServer.Check().Supports(feature);
 
             var failPointCommand = @"
                 {
-                    ""configureFailPoint"" : ""failCommand"",
-                    ""data"" : {
-                        ""failCommands"" : [""insert""],
-                        ""writeConcernError"" : {
-                            ""code"" : 100,
-                            ""codeName"" : ""UnsatisfiableWriteConcern"",
-                            ""errmsg"" : ""Not enough data-bearing nodes"",
-                            ""errInfo"" : {
-                                ""writeConcern"" : {
-                                    ""w"" : 2,
-                                    ""wtimeout"" : 0,
-                                    ""provenance"" : ""clientSupplied""
+                    'configureFailPoint' : 'failCommand',
+                    'data' : {
+                        'failCommands' : ['insert'],
+                        'writeConcernError' : {
+                            'code' : 100,
+                            'codeName' : 'UnsatisfiableWriteConcern',
+                            'errmsg' : 'Not enough data-bearing nodes',
+                            'errInfo' : {
+                                'writeConcern' : {
+                                    'w' : 2,
+                                    'wtimeout' : 0,
+                                    'provenance' : 'clientSupplied'
                                 }
                             }
                         }
                     },
-                    ""mode"": { ""times"": 1 }
+                    'mode': { 'times': 1 }
                 }";
 
             using (ConfigureFailPoint(failPointCommand))
@@ -66,7 +68,7 @@ namespace MongoDB.Driver.Tests
                 var writeConcernError = e.WriteConcernError;
                 writeConcernError.Code.Should().Be(100);
                 writeConcernError.CodeName.Should().Be("UnsatisfiableWriteConcern");
-                writeConcernError.Details.Should().Be("{ \"writeConcern\" : { \"w\" : 2, \"wtimeout\" : 0, \"provenance\" : \"clientSupplied\" } }");
+                writeConcernError.Details.Should().Be("{ 'writeConcern' : { 'w' : 2, 'wtimeout' : 0, 'provenance' : 'clientSupplied' } }");
                 writeConcernError.Message.Should().Be("Not enough data-bearing nodes");
             }
         }
@@ -75,7 +77,6 @@ namespace MongoDB.Driver.Tests
         private FailPoint ConfigureFailPoint(string failpointCommand)
         {
             var cluster = DriverTestConfiguration.Client.Cluster;
-            var server = cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
             var session = NoCoreSession.NewHandle();
             return FailPoint.Configure(cluster, session, BsonDocument.Parse(failpointCommand));
         }

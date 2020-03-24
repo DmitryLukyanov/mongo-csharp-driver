@@ -19,7 +19,6 @@ using System.Net;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Connections;
-using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.TestHelpers
@@ -28,12 +27,10 @@ namespace MongoDB.Driver.Core.TestHelpers
     {
         public static Exception CreateException(Type exceptionType)
         {
-            Exception exception;
             switch (exceptionType.Name)
             {
                 case "IOException":
-                    exception = new IOException("Fake IOException.");
-                    break;
+                    return new IOException("Fake IOException.");
 
                 case "MongoConnectionException":
                     {
@@ -42,9 +39,8 @@ namespace MongoDB.Driver.Core.TestHelpers
                         var connectionId = new ConnectionId(serverId, 1);
                         var message = "Fake MongoConnectionException";
                         var innerException = new Exception();
-                        exception = new MongoConnectionException(connectionId, message, innerException);
+                        return new MongoConnectionException(connectionId, message, innerException);
                     }
-                    break;
 
                 case "MongoCursorNotFoundException":
                     {
@@ -53,39 +49,30 @@ namespace MongoDB.Driver.Core.TestHelpers
                         var connectionId = new ConnectionId(serverId, 1);
                         var cursorId = 1L;
                         var query = new BsonDocument();
-                        exception = new MongoCursorNotFoundException(connectionId, cursorId, query);
+                        return new MongoCursorNotFoundException(connectionId, cursorId, query);
                     }
-                    break;
 
                 case "MongoNodeIsRecoveringException":
                     {
                         var clusterId = new ClusterId(1);
                         var serverId = new ServerId(clusterId, new DnsEndPoint("localhost", 27017));
                         var connectionId = new ConnectionId(serverId, 1);
-                        var result = BsonDocument.Parse("{ code : 11600 }"); // InterruptedAtShutdown;
-                        exception = new MongoNodeIsRecoveringException(connectionId, null, result);
+                        var result = new BsonDocument();
+                        return new MongoNodeIsRecoveringException(connectionId, null, result);
                     }
-                    break;
 
                 case "MongoNotPrimaryException":
                     {
                         var clusterId = new ClusterId(1);
                         var serverId = new ServerId(clusterId, new DnsEndPoint("localhost", 27017));
                         var connectionId = new ConnectionId(serverId, 1);
-                        var result = BsonDocument.Parse("{ code : 10107 }"); // NotMaster;
-                        exception = new MongoNotPrimaryException(connectionId, null, result);
+                        var result = new BsonDocument();
+                        return new MongoNotPrimaryException(connectionId, null, result);
                     }
-                    break;
 
                 default:
                     throw new ArgumentException($"Unexpected exception type: {exceptionType.Name}.", nameof(exceptionType));
             }
-
-            if (exception is MongoException mongoException)
-            {
-                RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(mongoException);
-            }
-            return exception;
         }
 
         public static MongoCommandException CreateMongoCommandException(int code = 1, string label = null)

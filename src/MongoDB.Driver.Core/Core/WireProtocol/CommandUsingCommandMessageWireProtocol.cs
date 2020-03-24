@@ -185,11 +185,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                 {
                     RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(mongoException);
                 }
-
-                if (!Feature.ServerReturnsResumableChangeStreamErrorLabel.IsSupported(serverVersion))
-                {
-                    RetryabilityHelper.AddResumableChangeStreamErrorLabelIfRequired(mongoException);
-                }
             }
         }
 

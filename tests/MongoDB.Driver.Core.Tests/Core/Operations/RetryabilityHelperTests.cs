@@ -18,6 +18,7 @@ using System.IO;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers;
 using Xunit;
 
@@ -25,66 +26,6 @@ namespace MongoDB.Driver.Core.Operations
 {
     public class RetryabilityHelperTests
     {
-        [Theory]
-        [InlineData(typeof(MongoConnectionException), true)]
-        [InlineData(typeof(MongoNodeIsRecoveringException), true)]
-        [InlineData(typeof(MongoNotPrimaryException), true)]
-        [InlineData(typeof(MongoCursorNotFoundException), false)]
-        [InlineData(ServerErrorCode.HostNotFound, true)]
-        [InlineData(ServerErrorCode.HostUnreachable, true)]
-        [InlineData(ServerErrorCode.NetworkTimeout, true)]
-        [InlineData(ServerErrorCode.ShutdownInProgress, true)]
-        [InlineData(ServerErrorCode.PrimarySteppedDown, true)]
-        [InlineData(ServerErrorCode.ExceededTimeLimit, true)]
-        [InlineData(ServerErrorCode.SocketException, true)]
-        [InlineData(ServerErrorCode.NotMaster, true)]
-        [InlineData(ServerErrorCode.InterruptedAtShutdown, true)]
-        [InlineData(ServerErrorCode.InterruptedDueToReplStateChange, true)]
-        [InlineData(ServerErrorCode.NotMasterNoSlaveOk, true)]
-        [InlineData(ServerErrorCode.NotMasterOrSecondary, true)]
-        [InlineData(ServerErrorCode.StaleShardVersion, true)]
-        [InlineData(ServerErrorCode.StaleEpoch, true)]
-        [InlineData(ServerErrorCode.StaleConfig, true)]
-        [InlineData(ServerErrorCode.RetryChangeStream, true)]
-        [InlineData(ServerErrorCode.FailedToSatisfyReadPreference, true)]
-        [InlineData(ServerErrorCode.ElectionInProgress, true)]
-        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
-        [InlineData(ServerErrorCode.CappedPositionLost, false)]
-        [InlineData(ServerErrorCode.CursorKilled, false)]
-        [InlineData(ServerErrorCode.Interrupted, false)]
-        public void AddResumableChangeStreamErrorLabelIfRequired_should_add_ResumableChangeStreamErrorLabel_when_required(object exceptionDescription, bool shouldAddErrorLabel)
-        {
-            MongoException exception;
-            if (exceptionDescription is Type exceptionType)
-            {
-                exception = (MongoException)CoreExceptionHelper.CreateException(exceptionType);
-            }
-            else
-            {
-                exception = CoreExceptionHelper.CreateMongoCommandException((int)exceptionDescription);
-            }
-
-            RetryabilityHelper.AddResumableChangeStreamErrorLabelIfRequired(exception);
-
-            var hasResumableChangeStreamErrorLabel = exception.HasErrorLabel("ResumableChangeStreamError");
-            hasResumableChangeStreamErrorLabel.Should().Be(shouldAddErrorLabel);
-        }
-
-        [Theory]
-        [ParameterAttributeData]
-        public void IsResumableChangeStreamException_should_return_expected_result([Values(false, true)] bool hasResumableChangeStreamErrorLabel)
-        {
-            var exception = CoreExceptionHelper.CreateMongoCommandException(-1);
-            if (hasResumableChangeStreamErrorLabel)
-            {
-                exception.AddErrorLabel("ResumableChangeStreamError");
-            }
-
-            var result = RetryabilityHelper.IsResumableChangeStreamException(exception);
-
-            result.Should().Be(hasResumableChangeStreamErrorLabel);
-        }
-
         [Theory]
         [InlineData(1, false)]
         [InlineData(ServerErrorCode.InterruptedAtShutdown, true)]
@@ -149,6 +90,65 @@ namespace MongoDB.Driver.Core.Operations
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
+        }
+
+        [Theory]
+        [InlineData(typeof(MongoConnectionException), true)]
+        [InlineData(typeof(MongoNodeIsRecoveringException), true)]
+        [InlineData(typeof(MongoNotPrimaryException), true)]
+        [InlineData(typeof(MongoCursorNotFoundException), false)]
+        [InlineData(ServerErrorCode.HostNotFound, true)]
+        [InlineData(ServerErrorCode.HostUnreachable, true)]
+        [InlineData(ServerErrorCode.NetworkTimeout, true)]
+        [InlineData(ServerErrorCode.ShutdownInProgress, true)]
+        [InlineData(ServerErrorCode.PrimarySteppedDown, true)]
+        [InlineData(ServerErrorCode.ExceededTimeLimit, true)]
+        [InlineData(ServerErrorCode.SocketException, true)]
+        [InlineData(ServerErrorCode.NotMaster, true)]
+        [InlineData(ServerErrorCode.InterruptedAtShutdown, true)]
+        [InlineData(ServerErrorCode.InterruptedDueToReplStateChange, true)]
+        [InlineData(ServerErrorCode.NotMasterNoSlaveOk, true)]
+        [InlineData(ServerErrorCode.NotMasterOrSecondary, true)]
+        [InlineData(ServerErrorCode.StaleShardVersion, true)]
+        [InlineData(ServerErrorCode.StaleEpoch, true)]
+        [InlineData(ServerErrorCode.StaleConfig, true)]
+        [InlineData(ServerErrorCode.RetryChangeStream, true)]
+        [InlineData(ServerErrorCode.FailedToSatisfyReadPreference, true)]
+        [InlineData(ServerErrorCode.ElectionInProgress, true)]
+        [InlineData(ServerErrorCode.WriteConcernFailed, false)]
+        [InlineData(ServerErrorCode.CappedPositionLost, false)]
+        [InlineData(ServerErrorCode.CursorKilled, false)]
+        [InlineData(ServerErrorCode.Interrupted, false)]
+        public void IsResumableChangeStreamException_should_return_expected_result_for_servers_with_old_behavior(object exceptionDescription, bool isResumable)
+        {
+            MongoException exception;
+            if (exceptionDescription is Type exceptionType)
+            {
+                exception = (MongoException)CoreExceptionHelper.CreateException(exceptionType);
+            }
+            else
+            {
+                exception = CoreExceptionHelper.CreateMongoCommandException((int)exceptionDescription);
+            }
+
+            var result = RetryabilityHelper.IsResumableChangeStreamException(exception, Feature.ServerReturnsResumableChangeStreamErrorLabel.LastNotSupportedVersion);
+
+            result.Should().Be(isResumable);
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void IsResumableChangeStreamException_should_return_expected_result_for_servers_with_new_behavior([Values(false, true)] bool hasResumableChangeStreamErrorLabel)
+        {
+            var exception = CoreExceptionHelper.CreateMongoCommandException(-1);
+            if (hasResumableChangeStreamErrorLabel)
+            {
+                exception.AddErrorLabel("ResumableChangeStreamError");
+            }
+
+            var result = RetryabilityHelper.IsResumableChangeStreamException(exception, Feature.ServerReturnsResumableChangeStreamErrorLabel.FirstSupportedVersion);
+
+            result.Should().Be(hasResumableChangeStreamErrorLabel);
         }
 
         [Theory]

@@ -84,7 +84,6 @@ namespace MongoDB.Driver.Core.TestHelpers
             if (exception is MongoException mongoException)
             {
                 RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(mongoException);
-                RetryabilityHelper.AddResumableChangeStreamErrorLabelIfRequired(mongoException);
             }
             return exception;
         }

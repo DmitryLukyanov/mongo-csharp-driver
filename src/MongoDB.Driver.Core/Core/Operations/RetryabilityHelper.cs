@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.Operations
 {
@@ -87,14 +88,6 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // public static methods
-        public static void AddResumableChangeStreamErrorLabelIfRequired(MongoException exception)
-        {
-            if (ShouldResumableChangeStreamExceptionLabelBeAdded(exception))
-            {
-                exception.AddErrorLabel(ResumableChangeStreamErrorLabel);
-            }
-        }
-
         public static void AddRetryableWriteErrorLabelIfRequired(MongoException exception)
         {
             if (ShouldRetryableWriteExceptionLabelBeAdded(exception))
@@ -103,9 +96,24 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        public static bool IsResumableChangeStreamException(Exception exception)
+        public static bool IsResumableChangeStreamException(Exception exception, SemanticVersion serverVersion)
         {
-            return exception is MongoException mongoException ? mongoException.HasErrorLabel(ResumableChangeStreamErrorLabel) : false;
+            if (Feature.ServerReturnsResumableChangeStreamErrorLabel.IsSupported(serverVersion))
+            {
+                return exception is MongoException mongoException ? mongoException.HasErrorLabel(ResumableChangeStreamErrorLabel) : false;
+            }
+
+            var commandException = exception as MongoCommandException;
+            if (commandException != null)
+            {
+                var code = (ServerErrorCode)commandException.Code;
+                if (__resumableChangeStreamErrorCodes.Contains(code))
+                {
+                    return true;
+                }
+            }
+
+            return __resumableChangeStreamExceptions.Contains(exception.GetType());
         }
 
         public static bool IsRetryableReadException(Exception exception)
@@ -134,21 +142,6 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private static methods
-        private static bool ShouldResumableChangeStreamExceptionLabelBeAdded(Exception exception)
-        {
-            var commandException = exception as MongoCommandException;
-            if (commandException != null)
-            {
-                var code = (ServerErrorCode)commandException.Code;
-                if (__resumableChangeStreamErrorCodes.Contains(code))
-                {
-                    return true;
-                }
-            }
-
-            return __resumableChangeStreamExceptions.Contains(exception.GetType());
-        }
-
         private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception)
         {
             if (__retryableWriteExceptions.Contains(exception.GetType()))

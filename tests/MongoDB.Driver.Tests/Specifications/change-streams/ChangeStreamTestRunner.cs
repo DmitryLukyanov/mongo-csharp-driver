@@ -118,7 +118,7 @@ namespace MongoDB.Driver.Tests.Specifications.change_streams
                     condition.Add(topology);
                 }
 
-                return new BsonArray().Add(condition);
+                return new BsonArray() { condition };
             }
         }
 

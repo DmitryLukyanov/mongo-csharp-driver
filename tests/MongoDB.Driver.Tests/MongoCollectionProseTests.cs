@@ -29,10 +29,10 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void WriteConcernError_errInfo_should_be_propagated()
         {
-            var feature = CoreTestConfiguration.Cluster.Description.Type == ClusterType.Sharded
+            var failPointFeature = CoreTestConfiguration.Cluster.Description.Type == ClusterType.Sharded
                 ? Feature.FailPointsFailCommandForSharded
                 : Feature.FailPointsFailCommand;
-            RequireServer.Check().Supports(feature);
+            RequireServer.Check().Supports(failPointFeature);
 
             var failPointCommand = @"
                 {

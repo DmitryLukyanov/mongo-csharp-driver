@@ -114,7 +114,7 @@ namespace MongoDB.Driver.Core.Operations
         [InlineData(ServerErrorCode.StaleConfig, true)]
         [InlineData(ServerErrorCode.RetryChangeStream, true)]
         [InlineData(ServerErrorCode.FailedToSatisfyReadPreference, true)]
-        [InlineData(ServerErrorCode.ElectionInProgress, true)]
+        [InlineData(ServerErrorCode.ElectionInProgress, false)]
         [InlineData(ServerErrorCode.WriteConcernFailed, false)]
         [InlineData(ServerErrorCode.CappedPositionLost, false)]
         [InlineData(ServerErrorCode.CursorKilled, false)]
@@ -149,6 +149,16 @@ namespace MongoDB.Driver.Core.Operations
             var result = RetryabilityHelper.IsResumableChangeStreamException(exception, Feature.ServerReturnsResumableChangeStreamErrorLabel.FirstSupportedVersion);
 
             result.Should().Be(hasResumableChangeStreamErrorLabel);
+        }
+
+        [Fact]
+        public void IsResumableChangeStreamException_should_return_expected_result_for_servers_with_new_behavior_and_network_errors()
+        {
+            var exception = (MongoConnectionException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
+
+            var result = RetryabilityHelper.IsResumableChangeStreamException(exception, Feature.ServerReturnsResumableChangeStreamErrorLabel.FirstSupportedVersion);
+
+            result.Should().BeTrue();
         }
 
         [Theory]

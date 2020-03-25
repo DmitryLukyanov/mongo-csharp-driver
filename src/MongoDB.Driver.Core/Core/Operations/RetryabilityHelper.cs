@@ -26,6 +26,7 @@ namespace MongoDB.Driver.Core.Operations
         private const string RetryableWriteErrorLabel = "RetryableWriteError";
 
         // private static fields
+        private static readonly HashSet<Type> __networkExceptions;
         private static readonly HashSet<ServerErrorCode> __resumableChangeStreamErrorCodes;
         private static readonly HashSet<Type> __resumableChangeStreamExceptions;
         private static readonly HashSet<Type> __retryableReadExceptions;
@@ -36,9 +37,13 @@ namespace MongoDB.Driver.Core.Operations
         // static constructor
         static RetryabilityHelper()
         {
-            var resumableAndRetryableExceptions = new HashSet<Type>()
+            __networkExceptions = new HashSet<Type>
             {
-                typeof(MongoConnectionException),
+                typeof(MongoConnectionException)
+            };
+
+            var resumableAndRetryableExceptions = new HashSet<Type>(__networkExceptions)
+            {
                 typeof(MongoNotPrimaryException),
                 typeof(MongoNodeIsRecoveringException)
             };
@@ -82,8 +87,7 @@ namespace MongoDB.Driver.Core.Operations
                 ServerErrorCode.StaleEpoch,
                 ServerErrorCode.StaleConfig,
                 ServerErrorCode.RetryChangeStream,
-                ServerErrorCode.FailedToSatisfyReadPreference,
-                ServerErrorCode.ElectionInProgress
+                ServerErrorCode.FailedToSatisfyReadPreference
             };
         }
 
@@ -96,24 +100,36 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
+        public static bool IsNetworkException(Exception exception)
+        {
+            return __networkExceptions.Contains(exception.GetType());
+        }
+
         public static bool IsResumableChangeStreamException(Exception exception, SemanticVersion serverVersion)
         {
+            if (IsNetworkException(exception))
+            {
+                return true;
+            }
+
             if (Feature.ServerReturnsResumableChangeStreamErrorLabel.IsSupported(serverVersion))
             {
                 return exception is MongoException mongoException ? mongoException.HasErrorLabel(ResumableChangeStreamErrorLabel) : false;
             }
-
-            var commandException = exception as MongoCommandException;
-            if (commandException != null)
+            else
             {
-                var code = (ServerErrorCode)commandException.Code;
-                if (__resumableChangeStreamErrorCodes.Contains(code))
+                var commandException = exception as MongoCommandException;
+                if (commandException != null)
                 {
-                    return true;
+                    var code = (ServerErrorCode)commandException.Code;
+                    if (__resumableChangeStreamErrorCodes.Contains(code))
+                    {
+                        return true;
+                    }
                 }
-            }
 
-            return __resumableChangeStreamExceptions.Contains(exception.GetType());
+                return __resumableChangeStreamExceptions.Contains(exception.GetType());
+            }
         }
 
         public static bool IsRetryableReadException(Exception exception)

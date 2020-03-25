@@ -36,23 +36,23 @@ namespace MongoDB.Driver.Tests
 
             var failPointCommand = @"
                 {
-                    'configureFailPoint' : 'failCommand',
-                    'data' : {
-                        'failCommands' : ['insert'],
-                        'writeConcernError' : {
-                            'code' : 100,
-                            'codeName' : 'UnsatisfiableWriteConcern',
-                            'errmsg' : 'Not enough data-bearing nodes',
-                            'errInfo' : {
-                                'writeConcern' : {
-                                    'w' : 2,
-                                    'wtimeout' : 0,
-                                    'provenance' : 'clientSupplied'
+                    configureFailPoint : 'failCommand',
+                    data : {
+                        failCommands : ['insert'],
+                        writeConcernError : {
+                            code : 100,
+                            codeName : 'UnsatisfiableWriteConcern',
+                            errmsg : 'Not enough data-bearing nodes',
+                            errInfo : {
+                                writeConcern : {
+                                    w : 2,
+                                    wtimeout : 0,
+                                    provenance : 'clientSupplied'
                                 }
                             }
                         }
                     },
-                    'mode': { 'times': 1 }
+                    mode: { times: 1 }
                 }";
 
             using (ConfigureFailPoint(failPointCommand))
@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Tests
                 var writeConcernError = e.WriteConcernError;
                 writeConcernError.Code.Should().Be(100);
                 writeConcernError.CodeName.Should().Be("UnsatisfiableWriteConcern");
-                writeConcernError.Details.Should().Be("{ 'writeConcern' : { 'w' : 2, 'wtimeout' : 0, 'provenance' : 'clientSupplied' } }");
+                writeConcernError.Details.Should().Be("{ writeConcern : { w : 2, wtimeout : 0, provenance : 'clientSupplied' } }");
                 writeConcernError.Message.Should().Be("Not enough data-bearing nodes");
             }
         }

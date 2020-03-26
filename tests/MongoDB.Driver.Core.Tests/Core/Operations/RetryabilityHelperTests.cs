@@ -94,6 +94,7 @@ namespace MongoDB.Driver.Core.Operations
 
         [Theory]
         [InlineData(typeof(MongoConnectionException), true)]
+        [InlineData(typeof(MongoConnectionClosedException), false)]
         [InlineData(typeof(MongoNodeIsRecoveringException), true)]
         [InlineData(typeof(MongoNotPrimaryException), true)]
         [InlineData(typeof(MongoCursorNotFoundException), false)]
@@ -151,14 +152,16 @@ namespace MongoDB.Driver.Core.Operations
             result.Should().Be(hasResumableChangeStreamErrorLabel);
         }
 
-        [Fact]
-        public void IsResumableChangeStreamException_should_return_expected_result_for_servers_with_new_behavior_and_network_errors()
+        [Theory]
+        [InlineData(typeof(MongoConnectionException), true)] // network exception
+        [InlineData(typeof(MongoConnectionClosedException), false)]
+        public void IsResumableChangeStreamException_should_return_expected_result_for_servers_with_new_behavior_and_connection_errors(Type exceptionType, bool isResumable)
         {
-            var exception = (MongoConnectionException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
+            var exception = (MongoConnectionException)CoreExceptionHelper.CreateException(exceptionType);
 
             var result = RetryabilityHelper.IsResumableChangeStreamException(exception, Feature.ServerReturnsResumableChangeStreamErrorLabel.FirstSupportedVersion);
 
-            result.Should().BeTrue();
+            result.Should().Be(isResumable);
         }
 
         [Theory]

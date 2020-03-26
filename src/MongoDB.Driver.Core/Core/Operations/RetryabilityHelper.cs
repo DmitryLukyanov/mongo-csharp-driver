@@ -26,7 +26,6 @@ namespace MongoDB.Driver.Core.Operations
         private const string RetryableWriteErrorLabel = "RetryableWriteError";
 
         // private static fields
-        private static readonly HashSet<Type> __networkExceptions;
         private static readonly HashSet<ServerErrorCode> __resumableChangeStreamErrorCodes;
         private static readonly HashSet<Type> __resumableChangeStreamExceptions;
         private static readonly HashSet<Type> __retryableReadExceptions;
@@ -37,12 +36,7 @@ namespace MongoDB.Driver.Core.Operations
         // static constructor
         static RetryabilityHelper()
         {
-            __networkExceptions = new HashSet<Type>
-            {
-                typeof(MongoConnectionException)
-            };
-
-            var resumableAndRetryableExceptions = new HashSet<Type>(__networkExceptions)
+            var resumableAndRetryableExceptions = new HashSet<Type>()
             {
                 typeof(MongoNotPrimaryException),
                 typeof(MongoNodeIsRecoveringException)
@@ -102,7 +96,7 @@ namespace MongoDB.Driver.Core.Operations
 
         public static bool IsNetworkException(Exception exception)
         {
-            return __networkExceptions.Contains(exception.GetType());
+            return exception is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException;
         }
 
         public static bool IsResumableChangeStreamException(Exception exception, SemanticVersion serverVersion)
@@ -134,7 +128,7 @@ namespace MongoDB.Driver.Core.Operations
 
         public static bool IsRetryableReadException(Exception exception)
         {
-            if (__retryableReadExceptions.Contains(exception.GetType()))
+            if (__retryableReadExceptions.Contains(exception.GetType()) || IsNetworkException(exception))
             {
                 return true;
             }
@@ -160,7 +154,7 @@ namespace MongoDB.Driver.Core.Operations
         // private static methods
         private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception)
         {
-            if (__retryableWriteExceptions.Contains(exception.GetType()))
+            if (__retryableWriteExceptions.Contains(exception.GetType()) || IsNetworkException(exception))
             {
                 return true;
             }

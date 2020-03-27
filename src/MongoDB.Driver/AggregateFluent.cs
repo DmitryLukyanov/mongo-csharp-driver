@@ -208,6 +208,11 @@ namespace MongoDB.Driver
             return WithPipeline(_pipeline.ReplaceWith(newRoot));
         }
 
+        public override IAggregateFluent<TResult> Search(string indexName, AggregateSearchOptions options)
+        {
+            return WithPipeline(_pipeline.Search(indexName, options));
+        }
+
         public override IAggregateFluent<TResult> Skip(int skip)
         {
             return WithPipeline(_pipeline.Skip(skip));

@@ -1009,6 +1009,22 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        /// <typeparam name="TInput">TODO</typeparam>
+        /// <typeparam name="TOutput">TODO</typeparam>
+        /// <param name="pipeline">TODO</param>
+        /// <param name="indexName">TODO</param>
+        /// <param name="options">TODO</param>
+        public static PipelineDefinition<TInput, TOutput> Search<TInput, TOutput>(this PipelineDefinition<TInput, TOutput> pipeline, string indexName,  AggregateSearchOptions options)
+        {
+            Ensure.IsNotNull(pipeline, nameof(pipeline));
+
+            var searchStage = PipelineStageDefinitionBuilder.Search<TOutput>(indexName, options);
+            return pipeline.AppendStage(searchStage);
+        }
+
+        /// <summary>
         /// Appends a $skip stage to the pipeline.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

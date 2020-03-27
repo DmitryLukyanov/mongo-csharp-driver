@@ -1221,6 +1221,38 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Creates a search stage.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <param name="indexName">The index name.</param>
+        /// <param name="options">The options.</param>
+        public static PipelineStageDefinition<TInput, TInput> Search<TInput>(string indexName, AggregateSearchOptions options)
+        {
+            Ensure.IsNotNull(options, nameof(options));
+
+            var contentDocument = new BsonDocument
+            {
+                { "term", options.Term, options.Term != null },
+                { "text", options.Text, options.Text != null },
+                { "phrase", options.Phrase, options.Phrase != null },
+                { "compound", options.Compound, options.Compound != null },
+                { "span", options.Span, options.Span != null },
+                { "exists", options.Exists, options.Exists != null },
+                { "near", options.Near, options.Near != null },
+                { "range", options.Range, options.Range != null },
+                { "wildcard", options.Wildcard, options.Wildcard != null },
+                { "regex", options.Regex, options.Regex != null }
+            };
+            if (!contentDocument.Names.Any())
+            {
+                throw new ArgumentException("At least one search operation should be specified.");
+            }
+            contentDocument.Add("index", indexName, indexName != null);
+
+            return new BsonDocumentPipelineStageDefinition<TInput, TInput>(new BsonDocument("$searchBeta", contentDocument));
+        }
+
+        /// <summary>
         /// Creates a $skip stage.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

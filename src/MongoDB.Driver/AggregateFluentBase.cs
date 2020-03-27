@@ -186,6 +186,9 @@ namespace MongoDB.Driver
         }
 
         /// <inheritdoc />
+        public abstract IAggregateFluent<TResult> Search(string indexName, AggregateSearchOptions options);
+
+        /// <inheritdoc />
         public abstract IAggregateFluent<TResult> Skip(int skip);
 
         /// <inheritdoc />

@@ -305,6 +305,14 @@ namespace MongoDB.Driver
         IAggregateFluent<TNewResult> ReplaceWith<TNewResult>(AggregateExpressionDefinition<TResult, TNewResult> newRoot);
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="indexName">TODO</param>
+        /// <param name="options">TODO</param>
+        /// <returns>TODO</returns>
+        IAggregateFluent<TResult> Search(string indexName, AggregateSearchOptions options);
+
+        /// <summary>
         /// Appends a skip stage to the pipeline.
         /// </summary>
         /// <param name="skip">The number of documents to skip.</param>

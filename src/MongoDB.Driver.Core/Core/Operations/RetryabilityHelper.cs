@@ -86,9 +86,16 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // public static methods
-        public static void AddRetryableWriteErrorLabelIfRequired(MongoException exception)
+        public static void AddRetryableWriteErrorLabelIfRequired(MongoException exception, SemanticVersion serverVersion)
         {
-            if (ShouldRetryableWriteExceptionLabelBeAdded(exception))
+            if (!Feature.RetryableWrites.IsSupported(serverVersion))
+            {
+                return;
+            }
+
+            if (IsNetworkException(exception) ||
+                (!Feature.ServerReturnsRetryableWriteErrorLabel.IsSupported(serverVersion) &&
+                ShouldRetryableWriteExceptionLabelBeAdded(exception)))
             {
                 exception.AddErrorLabel(RetryableWriteErrorLabel);
             }
@@ -154,7 +161,7 @@ namespace MongoDB.Driver.Core.Operations
         // private static methods
         private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception)
         {
-            if (__retryableWriteExceptions.Contains(exception.GetType()) || IsNetworkException(exception))
+            if (__retryableWriteExceptions.Contains(exception.GetType()))
             {
                 return true;
             }

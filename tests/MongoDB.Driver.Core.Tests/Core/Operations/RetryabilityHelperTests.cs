@@ -45,18 +45,24 @@ namespace MongoDB.Driver.Core.Operations
         {
             var exception = CoreExceptionHelper.CreateMongoWriteConcernException(BsonDocument.Parse($"{{ writeConcernError : {{ code : {errorCode} }} }}"));
 
-            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception, Feature.ServerReturnsRetryableWriteErrorLabel.LastNotSupportedVersion);
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
         }
 
-        [Fact]
-        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_network_errors()
+        [Theory]
+        [ParameterAttributeData]
+        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_network_errors([Values(false, true)] bool isNewBehavior)
         {
             var exception = (MongoException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
 
-            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+            var serverReturnsRetryableWriteErrorLabelFeature = Feature.ServerReturnsRetryableWriteErrorLabel;
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(
+                exception, 
+                isNewBehavior 
+                    ? serverReturnsRetryableWriteErrorLabelFeature.FirstSupportedVersion
+                    : serverReturnsRetryableWriteErrorLabelFeature.LastNotSupportedVersion);
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().BeTrue();
@@ -86,7 +92,7 @@ namespace MongoDB.Driver.Core.Operations
                 exception = CoreExceptionHelper.CreateMongoCommandException((int)exceptionDescription);
             }
 
-            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception);
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception, Feature.ServerReturnsRetryableWriteErrorLabel.LastNotSupportedVersion);
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);

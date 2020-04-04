@@ -204,6 +204,12 @@ namespace MongoDB.Driver
         }
 
         /// <inheritdoc />
+        public abstract IAggregateFluent<TNewResult> UnionWith<TForeignDocument, TNewResult>(
+           IMongoCollection<TForeignDocument> foreignCollection,
+           PipelineDefinition<TForeignDocument, TNewResult> unionWithPipeline = null,
+           AggregateUnionWithOptions<TForeignDocument, TNewResult> options = null);
+
+        /// <inheritdoc />
         public abstract IAggregateFluent<TNewResult> Unwind<TNewResult>(FieldDefinition<TResult> field, IBsonSerializer<TNewResult> newResultSerializer);
 
         /// <inheritdoc />

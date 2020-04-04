@@ -17,9 +17,9 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
+using Moq;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -112,6 +112,55 @@ namespace MongoDB.Driver.Tests
             var stages = RenderStages(result, BsonDocumentSerializer.Instance);
             stages.Count.Should().Be(1);
             stages[0].Should().Be("{ $merge : { into : { db : 'database', coll : 'collection' } } }");
+        }
+
+        [Fact]
+        public void UnionWith_should_add_expected_stage()
+        {
+            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
+            var collection = Mock.Of<IMongoCollection<BsonDocument>>(
+                coll => coll.CollectionNamespace == CollectionNamespace.FromFullName("db.test"));
+
+            var unionWithPipeline = new EmptyPipelineDefinition<BsonDocument>()
+                .AppendStage<BsonDocument, BsonDocument, BsonDocument>("{ $match : { b : 1 } }");
+            var result = pipeline.UnionWith<BsonDocument, BsonDocument, BsonDocument, BsonDocument>(
+                collection,
+                unionWithPipeline);
+
+            var stages = RenderStages(result, BsonDocumentSerializer.Instance);
+            stages[0].Should().Be("{ $unionWith : { coll : 'test', pipeline : [{ '$match' : { b : 1 } }] } }");
+        }
+
+        [Fact]
+        public void UnionWith_should_throw_when_foreignCollection_is_null()
+        {
+            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
+            IMongoCollection<BsonDocument> foreignCollection = null;
+
+            var exception = Record.Exception(
+                () => pipeline.UnionWith(
+                    foreignCollection,
+                    new EmptyPipelineDefinition<BsonDocument>()
+            ));
+
+            var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            argumentNullException.ParamName.Should().Be("foreignCollection");
+        }
+
+        [Fact]
+        public void UnionWith_should_throw_when_pipeline_is_null()
+        {
+            PipelineDefinition<BsonDocument, IEnumerable<BsonDocument>> pipeline = null;
+            IMongoCollection<BsonDocument> foreignCollection = null;
+
+            var exception = Record.Exception(
+                () => pipeline.UnionWith(
+                    foreignCollection,
+                    new EmptyPipelineDefinition<BsonDocument>()
+            ));
+
+            var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            argumentNullException.ParamName.Should().Be("pipeline");
         }
 
         // private methods

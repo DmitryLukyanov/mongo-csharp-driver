@@ -340,6 +340,20 @@ namespace MongoDB.Driver
         Task ToCollectionAsync(CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
+        /// Appends an $unionWith stage to the pipeline.
+        /// </summary>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TNewResult">The type of the new result.</typeparam>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The fluent aggregate interface.</returns>
+        IAggregateFluent<TNewResult> UnionWith<TForeignDocument, TNewResult>(
+            IMongoCollection<TForeignDocument> foreignCollection,
+            PipelineDefinition<TForeignDocument, TNewResult> unionWithPipeline = null,
+            AggregateUnionWithOptions<TForeignDocument, TNewResult> options = null);
+
+        /// <summary>
         /// Appends an unwind stage to the pipeline.
         /// </summary>
         /// <typeparam name="TNewResult">The type of the result of the stage.</typeparam>

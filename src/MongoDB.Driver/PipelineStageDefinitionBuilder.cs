@@ -1287,6 +1287,47 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Creates a $unionWith stage.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The stage.</returns>
+        public static PipelineStageDefinition<TInput, TOutput> UnionWith<TInput, TForeignDocument, TOutput>(
+            IMongoCollection<TForeignDocument> foreignCollection,
+            PipelineDefinition<TForeignDocument, TOutput> unionWithPipeline = null,
+            AggregateUnionWithOptions<TForeignDocument, TOutput> options = null)
+        {
+            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
+
+            options = options ?? new AggregateUnionWithOptions<TForeignDocument, TOutput>();
+            const string operatorName = "$unionWith";
+            var stage = new DelegatedPipelineStageDefinition<TInput, TOutput>(
+                operatorName,
+                (inputSerializer, sr) =>
+                {
+                    var foreignSerializer = options.ForeignSerializer ?? foreignCollection.DocumentSerializer ?? inputSerializer as IBsonSerializer<TForeignDocument> ?? sr.GetSerializer<TForeignDocument>();
+                    var outputSerializer = options.ResultSerializer ?? inputSerializer as IBsonSerializer<TOutput> ?? sr.GetSerializer<TOutput>();
+                    var unionWithPipelineDocuments = unionWithPipeline != null
+                        ? new BsonArray(unionWithPipeline.Render(foreignSerializer, sr).Documents)
+                        : null;
+
+                    var unionWithBody = new BsonDocument
+                    {
+                        { "coll", foreignCollection.CollectionNamespace.CollectionName },
+                        { "pipeline", unionWithPipelineDocuments, unionWithPipelineDocuments != null }
+                    };
+
+                    return new RenderedPipelineStageDefinition<TOutput>(operatorName, new BsonDocument(operatorName, unionWithBody), outputSerializer);
+                });
+
+            return stage;
+        }
+
+        /// <summary>
         /// Creates an $unwind stage.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

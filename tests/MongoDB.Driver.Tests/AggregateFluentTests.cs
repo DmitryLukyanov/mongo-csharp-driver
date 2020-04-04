@@ -1031,6 +1031,93 @@ namespace MongoDB.Driver.Tests
             }
         }
 
+        public class Item1
+        {
+            public ObjectId Id { get; set; }
+            [BsonElement("name1")]
+            public string Name1 { get; set; }
+        }
+
+        public class Item2
+        {
+            public ObjectId Id { get; set; }
+            [BsonElement("name2")]
+            public string Name2 { get; set; }
+        }
+
+        public class ItemResult
+        {
+            public ObjectId Id { get; set; }
+            [BsonElement("name1")]
+            public string Name1 { get; set; }
+            [BsonElement("name2")]
+            public string Name2 { get; set; }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void UnionWith_should_return_the_expected_result([Values(false, true)] bool withPipeline)
+        {
+            RequireServer.Check().Supports(Feature.AggregateUnionWith);
+
+            var databaseName = "test";
+            var items1CollectionName = "items1";
+            var items2CollectionName = "items2";
+
+            var client = CreateClient();
+            DropCollection(client, databaseName, items1CollectionName);
+            DropCollection(client, databaseName, items2CollectionName);
+
+            var db = client.GetDatabase(databaseName);
+            var items1Collection = db.GetCollection<Item1>(items1CollectionName);
+            var items2Collection = db.GetCollection<Item2>(items2CollectionName);
+
+            var item1Documents = new[]
+            {
+                new Item1 { Name1 = "almonds" },
+                new Item1 { Name1 = "cookies" }
+            };
+            items1Collection.InsertMany(item1Documents);
+
+            var item2Documents = new[]
+            {
+                new Item2 { Name2 = "cookies" },
+                new Item2 { Name2 = "cookies" },
+                new Item2 { Name2 = "pecans" }
+            };
+            items2Collection.InsertMany(item2Documents);
+
+            var unionWithPipeline = withPipeline
+                ? new EmptyPipelineDefinition<Item2>()
+                    .As<Item2, Item2, ItemResult>()
+                    .Match(i2 => i2.Name2 == "cookies")
+                : null;
+
+            var result = items1Collection
+                .Aggregate()
+                .UnionWith<Item2, ItemResult>(
+                    items2Collection,
+                    unionWithPipeline)
+                .ToList()
+                .Select(item =>
+                {
+                    var document = item.ToBsonDocument();
+                    document.Remove("_id");
+                    return document;
+                })
+                .ToList();
+
+            result.Count.Should().Be(withPipeline ? 4 : 5);
+            result[0].Should().Be("{ name1 : 'almonds', name2 : null }");
+            result[1].Should().Be("{ name1 : 'cookies', name2 : null }");
+            result[2].Should().Be("{ name1 : null, name2 : 'cookies' }");
+            result[3].Should().Be("{ name1 : null, name2 : 'cookies' }");
+            if (!withPipeline)
+            {
+                result[4].Should().Be("{ name1 : null, name2 : 'pecans' }");
+            }
+        }
+
         // private methods
         private IAggregateFluent<C> CreateCollectionSubject(IClientSessionHandle session = null)
         {

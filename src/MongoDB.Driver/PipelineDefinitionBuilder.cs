@@ -1085,6 +1085,33 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Appends a $unionWith stage to the pipeline.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input documents.</typeparam>
+        /// <typeparam name="TIntermediate">The type of the intermediate documents.</typeparam>
+        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
+        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
+        /// <param name="pipeline">The pipeline.</param>
+        /// <param name="foreignCollection">The foreign collection.</param>
+        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
+        /// <param name="options">The options.</param>
+        /// <returns>The stage.</returns>
+        public static PipelineDefinition<TInput, TOutput> UnionWith<TInput, TIntermediate, TForeignDocument, TOutput>(
+            this PipelineDefinition<TInput, TIntermediate> pipeline,
+            IMongoCollection<TForeignDocument> foreignCollection,
+            PipelineDefinition<TForeignDocument, TOutput> unionWithPipeline = null,
+            AggregateUnionWithOptions<TForeignDocument, TOutput> options = null)
+        {
+            Ensure.IsNotNull(pipeline, nameof(pipeline));
+            return pipeline.AppendStage(
+                PipelineStageDefinitionBuilder.UnionWith<TIntermediate, TForeignDocument, TOutput>(
+                    foreignCollection,
+                    unionWithPipeline,
+                    options
+            ));
+        }
+
+        /// <summary>
         /// Appends an $unwind stage to the pipeline.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>

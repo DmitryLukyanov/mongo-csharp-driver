@@ -48,7 +48,20 @@ namespace MongoDB.Driver.Tests
         [SkippableFact]
         public void Retryable_write_errorlabel_should_not_be_added_with_retryWrites_false()
         {
-            RequireServer.Check().Supports(Feature.RetryableWrites).ClusterTypes(ClusterType.Sharded, ClusterType.ReplicaSet);
+            if (CoreTestConfiguration.Cluster.Description.Type == ClusterType.Sharded)
+            {
+                RequireServer
+                    .Check()
+                    .Supports(Feature.RetryableWrites, Feature.FailPointsFailCommandForSharded)
+                    .ClusterTypes(ClusterType.Sharded);
+            }
+            else
+            {
+                RequireServer
+                    .Check()
+                    .Supports(Feature.RetryableWrites, Feature.FailPointsFailCommand)
+                    .ClusterTypes(ClusterType.ReplicaSet);
+            }
 
             var failPointWithRetryableError = @"
             {

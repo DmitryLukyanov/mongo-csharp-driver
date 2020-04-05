@@ -53,16 +53,13 @@ namespace MongoDB.Driver.Core.Operations
 
         [Theory]
         [ParameterAttributeData]
-        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_network_errors([Values(false, true)] bool isNewBehavior)
+        public void AddRetryableWriteErrorLabelIfRequired_should_add_RetryableWriteError_for_network_errors([Values(false, true)] bool serverReturnsRetryableWriteErrorLabel)
         {
             var exception = (MongoException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
+            var feature = Feature.ServerReturnsRetryableWriteErrorLabel;
+            var serverVersion = serverReturnsRetryableWriteErrorLabel ? feature.FirstSupportedVersion : feature.LastNotSupportedVersion;
 
-            var serverReturnsRetryableWriteErrorLabelFeature = Feature.ServerReturnsRetryableWriteErrorLabel;
-            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(
-                exception, 
-                isNewBehavior 
-                    ? serverReturnsRetryableWriteErrorLabelFeature.FirstSupportedVersion
-                    : serverReturnsRetryableWriteErrorLabelFeature.LastNotSupportedVersion);
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception, serverVersion);
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().BeTrue();
@@ -96,6 +93,26 @@ namespace MongoDB.Driver.Core.Operations
 
             var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
             hasRetryableWriteErrorLabel.Should().Be(shouldAddErrorLabel);
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void AddRetryableWriteErrorLabelIfRequired_should_not_add_error_label_for_non_retryWrites_server([Values(false, true)] bool isNetworkError)
+        {
+            MongoException exception = null;
+            if (isNetworkError)
+            {
+                exception = (MongoException)CoreExceptionHelper.CreateException(typeof(MongoConnectionException));
+            }
+            else
+            {
+                exception = CoreExceptionHelper.CreateMongoCommandException((int)ServerErrorCode.HostNotFound);
+            }
+
+            RetryabilityHelper.AddRetryableWriteErrorLabelIfRequired(exception, Feature.RetryableWrites.LastNotSupportedVersion);
+
+            var hasRetryableWriteErrorLabel = exception.HasErrorLabel("RetryableWriteError");
+            hasRetryableWriteErrorLabel.Should().BeFalse();
         }
 
         [Theory]

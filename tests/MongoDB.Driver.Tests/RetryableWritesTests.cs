@@ -66,6 +66,7 @@ namespace MongoDB.Driver.Tests
                 var database = client.GetDatabase(DriverTestConfiguration.DatabaseNamespace.DatabaseName);
                 var collection = database.GetCollection<BsonDocument>(DriverTestConfiguration.CollectionNamespace.CollectionName);
                 var document = new BsonDocument("x", 1);
+
                 var exception = Record.Exception(() => collection.InsertOne(document));
 
                 var e = exception.Should().BeOfType<MongoCommandException>().Subject;

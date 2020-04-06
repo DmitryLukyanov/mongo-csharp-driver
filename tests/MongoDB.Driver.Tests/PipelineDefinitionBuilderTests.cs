@@ -123,10 +123,10 @@ namespace MongoDB.Driver.Tests
             var withPipeline = new EmptyPipelineDefinition<BsonDocument>()
                 .AppendStage<BsonDocument, BsonDocument, BsonDocument>("{ $match : { b : 1 } }");
 
-            var result = pipeline.UnionWith<BsonDocument, BsonDocument, BsonDocument>(withCollection, withPipeline);
+            var result = pipeline.UnionWith(withCollection, withPipeline);
 
             var stages = RenderStages(result, BsonDocumentSerializer.Instance);
-            stages[0].Should().Be("{ $unionWith : { coll : 'test', pipeline : [{ '$match' : { b : 1 } }] } }");
+            stages[0].Should().Be("{ $unionWith : { coll : 'test', pipeline : [{ $match : { b : 1 } }] } }");
         }
 
         [Fact]
@@ -143,13 +143,13 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-        public void UnionWith_should_throw_when_TWith_is_not_the_same_with_TInput_and_pipeline_is_null()
+        public void UnionWith_should_throw_when_TWith_is_not_the_same_with_TInput_and_withPipeline_is_null()
         {
             var pipeline = new EmptyPipelineDefinition<BsonDocument>();
-            var withCollection = Mock.Of<IMongoCollection<BsonValue>>(
+            var withCollection = Mock.Of<IMongoCollection<object>>(
                 coll => coll.CollectionNamespace == CollectionNamespace.FromFullName("db.test"));
 
-            var exception = Record.Exception(() => pipeline.UnionWith<BsonDocument, BsonValue, BsonDocument>(withCollection, withPipeline: null));
+            var exception = Record.Exception(() => pipeline.UnionWith(withCollection, withPipeline: null));
 
             var e = exception.Should().BeOfType<ArgumentException>().Subject;
             e.Message.Should().StartWith("The withPipeline cannot be null when TWith != TInput. A pipeline is required to transform the TWith documents to TInput documents.");

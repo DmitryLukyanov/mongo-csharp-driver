@@ -1045,7 +1045,6 @@ namespace MongoDB.Driver.Tests
 
         public class ItemResult
         {
-            public ObjectId Id { get; set; }
             public string Name { get; set; }
         }
 

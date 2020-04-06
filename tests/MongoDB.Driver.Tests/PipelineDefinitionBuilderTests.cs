@@ -148,7 +148,6 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-
         public void UnionWith_should_throw_when_TWith_is_not_the_same_with_TInput_and_pipeline_is_null()
         {
             var pipeline = new EmptyPipelineDefinition<BsonDocument>();

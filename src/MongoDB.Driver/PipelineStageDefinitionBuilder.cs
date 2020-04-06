@@ -1299,6 +1299,10 @@ namespace MongoDB.Driver
             PipelineDefinition<TWith, TInput> withPipeline = null)
         {
             Ensure.IsNotNull(withCollection, nameof(withCollection));
+            if (withPipeline == null && typeof(TWith) != typeof(TInput))
+            {
+                throw new ArgumentException("The withPipeline cannot be null when TWith != TInput. A pipeline is required to transform the TWith documents to TInput documents.", nameof(withPipeline));
+            }
 
             const string operatorName = "$unionWith";
             var stage = new DelegatedPipelineStageDefinition<TInput, TInput>(
@@ -1313,10 +1317,6 @@ namespace MongoDB.Driver
                     }
                     else
                     {
-                        if (typeof(TWith) != typeof(TInput))
-                        {
-                            throw new ArgumentException("The withPipeline cannot be null when TWith != TInput. A pipeline is required to transform the TWith documents to TInput documents.", nameof(withPipeline));
-                        }
                         withPipelineDocuments = null;
                     }
 

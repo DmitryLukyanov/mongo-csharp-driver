@@ -1088,13 +1088,13 @@ namespace MongoDB.Driver
         /// Appends a $unionWith stage to the pipeline.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
-        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
         /// <typeparam name="TWith">The type of the with collection documents.</typeparam>
+        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
         /// <param name="pipeline">The pipeline.</param>
         /// <param name="withCollection">The with collection.</param>
         /// <param name="withPipeline">The with pipeline.</param>
         /// <returns>The stage.</returns>
-        public static PipelineDefinition<TInput, TOutput> UnionWith<TInput, TOutput, TWith>(
+        public static PipelineDefinition<TInput, TOutput> UnionWith<TInput, TWith, TOutput>(
             this PipelineDefinition<TInput, TOutput> pipeline,
             IMongoCollection<TWith> withCollection,
             PipelineDefinition<TWith, TOutput> withPipeline = null)

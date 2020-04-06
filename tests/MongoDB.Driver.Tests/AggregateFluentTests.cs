@@ -1043,13 +1043,6 @@ namespace MongoDB.Driver.Tests
             public string Name2 { get; set; }
         }
 
-        public class ItemResult
-        {
-            public ObjectId Id { get; set; }
-            public string Name1 { get; set; }
-            public string Name2 { get; set; }
-        }
-
         [SkippableFact]
         [ParameterAttributeData]
         public void UnionWith_with_different_schemas_and_projection_should_return_the_expected_result()

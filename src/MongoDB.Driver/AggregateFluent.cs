@@ -236,13 +236,12 @@ namespace MongoDB.Driver
             return (IOrderedAggregateFluent<TResult>)WithPipeline(newPipeline);
         }
 
-        public override IAggregateFluent<TNewResult> UnionWith<TForeignDocument, TNewResult>(
-            IMongoCollection<TForeignDocument> foreignCollection,
-            PipelineDefinition<TForeignDocument, TNewResult> unionWithPipeline = null,
-            AggregateUnionWithOptions<TForeignDocument, TNewResult> options = null)
+        public override IAggregateFluent<TResult> UnionWith<TWith>(
+            IMongoCollection<TWith> withCollection,
+            PipelineDefinition<TWith, TResult> withPipeline = null)
         {
-            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
-            return WithPipeline(_pipeline.UnionWith(foreignCollection, unionWithPipeline, options));
+            Ensure.IsNotNull(withCollection, nameof(withCollection));
+            return WithPipeline(_pipeline.UnionWith(withCollection, withPipeline));
         }
 
         public override IAggregateFluent<TNewResult> Unwind<TNewResult>(FieldDefinition<TResult> field, IBsonSerializer<TNewResult> newResultSerializer)

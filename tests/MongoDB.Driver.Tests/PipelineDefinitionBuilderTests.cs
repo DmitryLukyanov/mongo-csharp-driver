@@ -118,13 +118,13 @@ namespace MongoDB.Driver.Tests
         public void UnionWith_should_add_expected_stage()
         {
             var pipeline = new EmptyPipelineDefinition<BsonDocument>();
-            var collection = Mock.Of<IMongoCollection<BsonDocument>>(
+            var withCollection = Mock.Of<IMongoCollection<BsonDocument>>(
                 coll => coll.CollectionNamespace == CollectionNamespace.FromFullName("db.test"));
 
             var unionWithPipeline = new EmptyPipelineDefinition<BsonDocument>()
                 .AppendStage<BsonDocument, BsonDocument, BsonDocument>("{ $match : { b : 1 } }");
-            var result = pipeline.UnionWith<BsonDocument, BsonDocument, BsonDocument, BsonDocument>(
-                collection,
+            var result = pipeline.UnionWith<BsonDocument, BsonDocument, BsonDocument>(
+                withCollection,
                 unionWithPipeline);
 
             var stages = RenderStages(result, BsonDocumentSerializer.Instance);
@@ -132,35 +132,53 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
-        public void UnionWith_should_throw_when_foreignCollection_is_null()
-        {
-            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
-            IMongoCollection<BsonDocument> foreignCollection = null;
-
-            var exception = Record.Exception(
-                () => pipeline.UnionWith(
-                    foreignCollection,
-                    new EmptyPipelineDefinition<BsonDocument>()
-            ));
-
-            var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
-            argumentNullException.ParamName.Should().Be("foreignCollection");
-        }
-
-        [Fact]
         public void UnionWith_should_throw_when_pipeline_is_null()
         {
-            PipelineDefinition<BsonDocument, IEnumerable<BsonDocument>> pipeline = null;
-            IMongoCollection<BsonDocument> foreignCollection = null;
+            PipelineDefinition<BsonDocument, BsonDocument> pipeline = null;
+            IMongoCollection<BsonDocument> withCollection = null;
 
             var exception = Record.Exception(
                 () => pipeline.UnionWith(
-                    foreignCollection,
+                    withCollection,
                     new EmptyPipelineDefinition<BsonDocument>()
             ));
 
             var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
             argumentNullException.ParamName.Should().Be("pipeline");
+        }
+
+        [Fact]
+
+        public void UnionWith_should_throw_when_TWith_is_not_the_same_with_TInput_and_pipeline_is_null()
+        {
+            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
+            var collection = Mock.Of<IMongoCollection<BsonValue>>(
+                coll => coll.CollectionNamespace == CollectionNamespace.FromFullName("db.test"));
+
+            var result = pipeline.UnionWith<BsonDocument, BsonDocument, BsonValue>(
+                collection,
+                withPipeline: null);
+            var exception = Record.Exception(() => RenderStages(result, BsonDocumentSerializer.Instance));
+
+            var e = exception.Should().BeOfType<ArgumentException>().Subject;
+            e.Message.Should().StartWith("The withPipeline cannot be null when TWith != TInput. A pipeline is required to transform the TWith documents to TInput documents.");
+            e.ParamName.Should().Be("withPipeline");
+        }
+
+        [Fact]
+        public void UnionWith_should_throw_when_withCollection_is_null()
+        {
+            var pipeline = new EmptyPipelineDefinition<BsonDocument>();
+            IMongoCollection<BsonDocument> withCollection = null;
+
+            var exception = Record.Exception(
+                () => pipeline.UnionWith(
+                    withCollection,
+                    new EmptyPipelineDefinition<BsonDocument>()
+            ));
+
+            var argumentNullException = exception.Should().BeOfType<ArgumentNullException>().Subject;
+            argumentNullException.ParamName.Should().Be("withCollection");
         }
 
         // private methods

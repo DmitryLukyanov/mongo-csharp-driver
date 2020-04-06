@@ -1034,29 +1034,25 @@ namespace MongoDB.Driver.Tests
         public class Item1
         {
             public ObjectId Id { get; set; }
-            [BsonElement("name1")]
             public string Name1 { get; set; }
         }
 
         public class Item2
         {
             public ObjectId Id { get; set; }
-            [BsonElement("name2")]
             public string Name2 { get; set; }
         }
 
         public class ItemResult
         {
             public ObjectId Id { get; set; }
-            [BsonElement("name1")]
             public string Name1 { get; set; }
-            [BsonElement("name2")]
             public string Name2 { get; set; }
         }
 
-        [SkippableTheory]
+        [SkippableFact]
         [ParameterAttributeData]
-        public void UnionWith_should_return_the_expected_result([Values(false, true)] bool withPipeline)
+        public void UnionWith_with_different_schemas_and_projection_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateUnionWith);
 
@@ -1087,17 +1083,19 @@ namespace MongoDB.Driver.Tests
             };
             items2Collection.InsertMany(item2Documents);
 
-            var unionWithPipeline = withPipeline
-                ? new EmptyPipelineDefinition<Item2>()
-                    .As<Item2, Item2, ItemResult>()
-                    .Match(i2 => i2.Name2 == "cookies")
-                : null;
+            var withPipeline =
+                new EmptyPipelineDefinition<Item2>()
+                .Match(x => x.Name2 == "cookies")
+                .Project(
+                    item2 => 
+                        new Item1
+                        {
+                            Name1 = item2.Name2 // manually project Item2 into Item1
+                        });
 
             var result = items1Collection
                 .Aggregate()
-                .UnionWith<Item2, ItemResult>(
-                    items2Collection,
-                    unionWithPipeline)
+                .UnionWith<Item2>(items2Collection, withPipeline)
                 .ToList()
                 .Select(item =>
                 {
@@ -1107,15 +1105,11 @@ namespace MongoDB.Driver.Tests
                 })
                 .ToList();
 
-            result.Count.Should().Be(withPipeline ? 4 : 5);
-            result[0].Should().Be("{ name1 : 'almonds', name2 : null }");
-            result[1].Should().Be("{ name1 : 'cookies', name2 : null }");
-            result[2].Should().Be("{ name1 : null, name2 : 'cookies' }");
-            result[3].Should().Be("{ name1 : null, name2 : 'cookies' }");
-            if (!withPipeline)
-            {
-                result[4].Should().Be("{ name1 : null, name2 : 'pecans' }");
-            }
+            result.Count.Should().Be(4);
+            result[0].Should().Be("{ Name1 : 'almonds' }");
+            result[1].Should().Be("{ Name1 : 'cookies' }");
+            result[2].Should().Be("{ Name1 : 'cookies' }");
+            result[3].Should().Be("{ Name1 : 'cookies' }");
         }
 
         // private methods

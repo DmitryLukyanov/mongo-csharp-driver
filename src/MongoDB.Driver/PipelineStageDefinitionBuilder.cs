@@ -1290,38 +1290,43 @@ namespace MongoDB.Driver
         /// Creates a $unionWith stage.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
-        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
-        /// <typeparam name="TOutput">The type of the output documents.</typeparam>
-        /// <param name="foreignCollection">The foreign collection.</param>
-        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
-        /// <param name="options">The options.</param>
+        /// <typeparam name="TWith">The type of the with collection documents.</typeparam>
+        /// <param name="withCollection">The with collection.</param>
+        /// <param name="withPipeline">The with pipeline.</param>
         /// <returns>The stage.</returns>
-        public static PipelineStageDefinition<TInput, TOutput> UnionWith<TInput, TForeignDocument, TOutput>(
-            IMongoCollection<TForeignDocument> foreignCollection,
-            PipelineDefinition<TForeignDocument, TOutput> unionWithPipeline = null,
-            AggregateUnionWithOptions<TForeignDocument, TOutput> options = null)
+        public static PipelineStageDefinition<TInput, TInput> UnionWith<TInput, TWith>(
+            IMongoCollection<TWith> withCollection,
+            PipelineDefinition<TWith, TInput> withPipeline = null)
         {
-            Ensure.IsNotNull(foreignCollection, nameof(foreignCollection));
+            Ensure.IsNotNull(withCollection, nameof(withCollection));
 
-            options = options ?? new AggregateUnionWithOptions<TForeignDocument, TOutput>();
             const string operatorName = "$unionWith";
-            var stage = new DelegatedPipelineStageDefinition<TInput, TOutput>(
+            var stage = new DelegatedPipelineStageDefinition<TInput, TInput>(
                 operatorName,
                 (inputSerializer, sr) =>
                 {
-                    var foreignSerializer = options.ForeignSerializer ?? foreignCollection.DocumentSerializer ?? inputSerializer as IBsonSerializer<TForeignDocument> ?? sr.GetSerializer<TForeignDocument>();
-                    var outputSerializer = options.ResultSerializer ?? inputSerializer as IBsonSerializer<TOutput> ?? sr.GetSerializer<TOutput>();
-                    var unionWithPipelineDocuments = unionWithPipeline != null
-                        ? new BsonArray(unionWithPipeline.Render(foreignSerializer, sr).Documents)
-                        : null;
+                    BsonArray withPipelineDocuments;
+                    if (withPipeline != null)
+                    {
+                        var withSerializer = withCollection.DocumentSerializer ?? inputSerializer as IBsonSerializer<TWith> ?? sr.GetSerializer<TWith>();
+                        withPipelineDocuments = new BsonArray(withPipeline.Render(withSerializer, sr).Documents);
+                    }
+                    else
+                    {
+                        if (typeof(TWith) != typeof(TInput))
+                        {
+                            throw new ArgumentException("The withPipeline cannot be null when TWith != TInput. A pipeline is required to transform the TWith documents to TInput documents.", nameof(withPipeline));
+                        }
+                        withPipelineDocuments = null;
+                    }
 
                     var unionWithBody = new BsonDocument
                     {
-                        { "coll", foreignCollection.CollectionNamespace.CollectionName },
-                        { "pipeline", unionWithPipelineDocuments, unionWithPipelineDocuments != null }
+                        { "coll", withCollection.CollectionNamespace.CollectionName },
+                        { "pipeline", withPipelineDocuments, withPipelineDocuments != null }
                     };
 
-                    return new RenderedPipelineStageDefinition<TOutput>(operatorName, new BsonDocument(operatorName, unionWithBody), outputSerializer);
+                    return new RenderedPipelineStageDefinition<TInput>(operatorName, new BsonDocument(operatorName, unionWithBody), inputSerializer);
                 });
 
             return stage;

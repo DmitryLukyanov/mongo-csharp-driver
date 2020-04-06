@@ -342,16 +342,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Appends an $unionWith stage to the pipeline.
         /// </summary>
-        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
-        /// <typeparam name="TNewResult">The type of the new result.</typeparam>
-        /// <param name="foreignCollection">The foreign collection.</param>
-        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
-        /// <param name="options">The options.</param>
+        /// <typeparam name="TWith">The type of the with collection documents.</typeparam>
+        /// <param name="withCollection">The with collection.</param>
+        /// <param name="withPipeline">The with pipeline.</param>
         /// <returns>The fluent aggregate interface.</returns>
-        IAggregateFluent<TNewResult> UnionWith<TForeignDocument, TNewResult>(
-            IMongoCollection<TForeignDocument> foreignCollection,
-            PipelineDefinition<TForeignDocument, TNewResult> unionWithPipeline = null,
-            AggregateUnionWithOptions<TForeignDocument, TNewResult> options = null);
+        IAggregateFluent<TResult> UnionWith<TWith>(
+            IMongoCollection<TWith> withCollection,
+            PipelineDefinition<TWith, TResult> withPipeline = null);
 
         /// <summary>
         /// Appends an unwind stage to the pipeline.

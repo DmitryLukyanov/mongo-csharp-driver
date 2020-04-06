@@ -1088,27 +1088,21 @@ namespace MongoDB.Driver
         /// Appends a $unionWith stage to the pipeline.
         /// </summary>
         /// <typeparam name="TInput">The type of the input documents.</typeparam>
-        /// <typeparam name="TIntermediate">The type of the intermediate documents.</typeparam>
-        /// <typeparam name="TForeignDocument">The type of the foreign collection documents.</typeparam>
         /// <typeparam name="TOutput">The type of the output documents.</typeparam>
+        /// <typeparam name="TWith">The type of the with collection documents.</typeparam>
         /// <param name="pipeline">The pipeline.</param>
-        /// <param name="foreignCollection">The foreign collection.</param>
-        /// <param name="unionWithPipeline">The unionWith pipeline.</param>
-        /// <param name="options">The options.</param>
+        /// <param name="withCollection">The with collection.</param>
+        /// <param name="withPipeline">The with pipeline.</param>
         /// <returns>The stage.</returns>
-        public static PipelineDefinition<TInput, TOutput> UnionWith<TInput, TIntermediate, TForeignDocument, TOutput>(
-            this PipelineDefinition<TInput, TIntermediate> pipeline,
-            IMongoCollection<TForeignDocument> foreignCollection,
-            PipelineDefinition<TForeignDocument, TOutput> unionWithPipeline = null,
-            AggregateUnionWithOptions<TForeignDocument, TOutput> options = null)
+        public static PipelineDefinition<TInput, TOutput> UnionWith<TInput, TOutput, TWith>(
+            this PipelineDefinition<TInput, TOutput> pipeline,
+            IMongoCollection<TWith> withCollection,
+            PipelineDefinition<TWith, TOutput> withPipeline = null)
         {
             Ensure.IsNotNull(pipeline, nameof(pipeline));
-            return pipeline.AppendStage(
-                PipelineStageDefinitionBuilder.UnionWith<TIntermediate, TForeignDocument, TOutput>(
-                    foreignCollection,
-                    unionWithPipeline,
-                    options
-            ));
+            return pipeline.AppendStage<TInput, TOutput, TOutput>(
+                PipelineStageDefinitionBuilder.UnionWith<TOutput, TWith>(withCollection, withPipeline),
+                pipeline.OutputSerializer);
         }
 
         /// <summary>

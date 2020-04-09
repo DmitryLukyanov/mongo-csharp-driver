@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FluentAssertions;
+using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core.Misc;
 using Xunit;
 
@@ -26,21 +27,11 @@ namespace MongoDB.Driver.Core.Clusters
     public class DnsClientWrapperTests
     {
         [Fact]
-        public void constructor_should_initialize_instance()
+        public void Instance_should_return_the_same_instance_each_time()
         {
-            var subject = new DnsClientWrapper();
-
-            subject.LookupClient.Should().NotBeNull();
-        }
-
-        [Fact]
-        public void LookupClient_should_return_expected_result()
-        {
-            var subject = new DnsClientWrapper();
-
-            var result = subject.LookupClient;
-
-            result.Should().NotBeNull();
+            var instance1 = DnsClientWrapper.Instance;
+            var instance2 = DnsClientWrapper.Instance;
+            instance1.Should().BeSameAs(instance2);
         }
 
         [Theory]
@@ -48,16 +39,16 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData("_mongodb._tcp.test5.test.build.10gen.cc", new[] { "localhost.test.build.10gen.cc.:27017" }, true)]
         public void ResolveSrvRecords_should_return_expected_result(string service, string[] expectedEndPoints, bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
 
             List<SrvRecord> result;
             if (async)
             {
-                result = subject.ResolveSrvRecords(service, CancellationToken.None);
+                result = subject.ResolveSrvRecordsAsync(service, CancellationToken.None).GetAwaiter().GetResult();
             }
             else
             {
-                result = subject.ResolveSrvRecordsAsync(service, CancellationToken.None).GetAwaiter().GetResult();
+                result = subject.ResolveSrvRecords(service, CancellationToken.None);
             }
 
             var actualEndPoints = result.Select(s => EndPointHelper.ToString(s.EndPoint)).ToList();
@@ -69,16 +60,16 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(true)]
         public void ResolveSrvRecords_should_throw_when_service_is_null(bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
 
             Exception exception;
             if (async)
             {
-                exception = Record.Exception(() => subject.ResolveSrvRecords(null, CancellationToken.None));
+                exception = Record.Exception(() => subject.ResolveSrvRecordsAsync(null, CancellationToken.None).GetAwaiter().GetResult());
             }
             else
             {
-                exception = Record.Exception(() => subject.ResolveSrvRecordsAsync(null, CancellationToken.None).GetAwaiter().GetResult());
+                exception = Record.Exception(() => subject.ResolveSrvRecords(null, CancellationToken.None));
             }
 
             var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
@@ -90,7 +81,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(true)]
         public void ResolveSrvRecords_should_throw_when_cancellation_is_already_requested(bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
             var service = "_mongodb._tcp.test5.test.build.10gen.cc";
             var cts = new CancellationTokenSource();
             cts.Cancel();
@@ -98,11 +89,11 @@ namespace MongoDB.Driver.Core.Clusters
             Exception exception;
             if (async)
             {
-                exception = Record.Exception(() => subject.ResolveSrvRecords(service, cts.Token));
+                exception = Record.Exception(() => subject.ResolveSrvRecordsAsync(service, cts.Token).GetAwaiter().GetResult());
             }
             else
             {
-                exception = Record.Exception(() => subject.ResolveSrvRecordsAsync(service, cts.Token).GetAwaiter().GetResult());
+                exception = Record.Exception(() => subject.ResolveSrvRecords(service, cts.Token));
             }
 
             exception.Should().Match<Exception>(e => e is OperationCanceledException || e.InnerException is OperationCanceledException);
@@ -113,16 +104,16 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData("test5.test.build.10gen.cc", "replicaSet=repl0&authSource=thisDB", true)]
         public void ResolveTxtRecords_should_return_expected_result(string domainName, string expectedString, bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
 
             List<TxtRecord> result;
             if (async)
             {
-                result = subject.ResolveTxtRecords(domainName, CancellationToken.None);
+                result = subject.ResolveTxtRecordsAsync(domainName, CancellationToken.None).GetAwaiter().GetResult();
             }
             else
             {
-                result = subject.ResolveTxtRecordsAsync(domainName, CancellationToken.None).GetAwaiter().GetResult();
+                result = subject.ResolveTxtRecords(domainName, CancellationToken.None);
             }
 
             result.Should().HaveCount(1);
@@ -135,16 +126,16 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(true)]
         public void ResolveTxtRecords_should_throw_when_domainName_is_null(bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
 
             Exception exception;
             if (async)
             {
-                exception = Record.Exception(() => subject.ResolveTxtRecords(null, CancellationToken.None));
+                exception = Record.Exception(() => subject.ResolveTxtRecordsAsync(null, CancellationToken.None).GetAwaiter().GetResult());
             }
             else
             {
-                exception = Record.Exception(() => subject.ResolveTxtRecordsAsync(null, CancellationToken.None).GetAwaiter().GetResult());
+                exception = Record.Exception(() => subject.ResolveTxtRecords(null, CancellationToken.None));
             }
 
             var e = exception.Should().BeOfType<ArgumentNullException>().Subject;
@@ -156,7 +147,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(true)]
         public void ResolveTxtRecords_should_throw_when_cancellation_is_already_requested(bool async)
         {
-            var subject = new DnsClientWrapper();
+            var subject = CreateSubject();
             var domainName = "test5.test.build.10gen.cc";
             var cts = new CancellationTokenSource();
             cts.Cancel();
@@ -164,14 +155,26 @@ namespace MongoDB.Driver.Core.Clusters
             Exception exception;
             if (async)
             {
-                exception = Record.Exception(() => subject.ResolveTxtRecords(domainName, cts.Token));
+                exception = Record.Exception(() => subject.ResolveTxtRecordsAsync(domainName, cts.Token).GetAwaiter().GetResult());
             }
             else
             {
-                exception = Record.Exception(() => subject.ResolveTxtRecordsAsync(domainName, cts.Token).GetAwaiter().GetResult());
+                exception = Record.Exception(() => subject.ResolveTxtRecords(domainName, cts.Token));
             }
 
             exception.Should().Match<Exception>(e => e is OperationCanceledException || e.InnerException is OperationCanceledException);
         }
+
+        // private methods
+        private IDnsResolver CreateSubject()
+        {
+            DnsClientWrapperReflector.__instance(null); // reset cache
+            return DnsClientWrapper.Instance;
+        }
+    }
+
+    internal static class DnsClientWrapperReflector
+    {
+        public static void __instance(IDnsResolver dnsResolver) => Reflector.SetStaticFieldValue(typeof(DnsClientWrapper), nameof(__instance), dnsResolver);
     }
 }

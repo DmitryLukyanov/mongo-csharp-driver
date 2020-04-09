@@ -25,17 +25,19 @@ namespace MongoDB.Driver.Core.Misc
 {
     internal class DnsClientWrapper : IDnsResolver
     {
+        #region static
+        private static IDnsResolver __instance;
+        public static IDnsResolver Instance => __instance ?? (__instance = new DnsClientWrapper());
+        #endregion
+
         // private fields
         private readonly LookupClient _lookupClient;
 
         // constructors
-        public DnsClientWrapper()
+        private DnsClientWrapper()
         {
             _lookupClient = new LookupClient();
         }
-
-        // public properties
-        public LookupClient LookupClient => _lookupClient;
 
         // public methods
         public List<SrvRecord> ResolveSrvRecords(string service, CancellationToken cancellationToken)

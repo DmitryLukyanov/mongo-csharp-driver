@@ -197,6 +197,71 @@ namespace MongoDB.Driver.Tests
         }
 
         [SkippableFact]
+        public void Function_should_return_expected_result()
+        {
+            RequireServer.Check().Supports(Feature.AggregateFunction);
+
+            var client = CreateClient();
+            var databaseName = "test";
+            var collectionName = "collection";
+            DropCollection(client, databaseName, collectionName);
+            var collection = client.GetDatabase(databaseName).GetCollection<BsonDocument>(collectionName);
+            var players = new[]
+            {
+                BsonDocument.Parse("{ _id : 1, name : 'Miss Cheevous',  scores : [10, 5, 10] }"),
+                BsonDocument.Parse("{ _id : 2, name : 'Miss Ann Thrope', scores : [10, 10, 10] }"),
+                BsonDocument.Parse("{ _id : 3, name : 'Mrs. Eppie Delta', scores : [9, 8, 8] }")
+            };
+            collection.InsertMany(players);
+
+            var isFoundBodyFunction = "function(name) { return hex_md5(name) == '15b0a220baa16331e8d80e15367677ad' }";
+            var messageBodyFunction = "function(name, scores) { let total = Array.sum(scores); return `Hello ${ name}. Your total score is ${ total}.` }";
+            var isFoundFunction = new BsonDocument
+            {
+                {
+                    "$function",
+                    new BsonDocument
+                    {
+                        { "body", isFoundBodyFunction },
+                        { "args", new BsonArray { "$name" } },
+                        { "lang", "js" }
+                    }
+                },
+            };
+            var messageFunction = new BsonDocument
+            {
+                {
+                    "$function",
+                    new BsonDocument
+                    {
+                        { "body", messageBodyFunction },
+                        { "args", new BsonArray { "$name", "$scores" } },
+                        { "lang", "js" }
+                    }
+                },
+            };
+            var aggregatePipelineStage = new BsonDocument
+            {
+                {
+                    "$addFields",
+                    new BsonDocument
+                    {
+                        { "isFound", isFoundFunction },
+                        { "message", messageFunction },
+                    }
+                }
+            };
+            var aggregateStagePipelineDefinition = new BsonDocumentStagePipelineDefinition<BsonDocument, BsonDocument>(new[] { aggregatePipelineStage });
+
+            var result = collection.Aggregate(aggregateStagePipelineDefinition).ToList();
+
+            result.Count.Should().Be(3);
+            result[0].Should().Be("{ _id : 1, name : 'Miss Cheevous', scores : [10, 5, 10], isFound : false, message : 'Hello Miss Cheevous. Your total score is 25.' }");
+            result[1].Should().Be("{ _id : 2, name : 'Miss Ann Thrope', scores : [10, 10, 10], isFound : true, message : 'Hello Miss Ann Thrope. Your total score is 30.' }");
+            result[2].Should().Be("{ _id : 3, name : 'Mrs. Eppie Delta', scores : [9, 8, 8], isFound : false, message : 'Hello Mrs. Eppie Delta. Your total score is 25.' }");
+        }
+
+        [SkippableFact]
         public void Lookup_with_let_and_bsondocuments_params_should_return_the_expected_result()
         {
             RequireServer.Check().Supports(Feature.AggregateLet);

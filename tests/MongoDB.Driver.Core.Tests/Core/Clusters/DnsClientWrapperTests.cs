@@ -16,7 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
+using DnsClient;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core.Misc;
@@ -26,6 +28,14 @@ namespace MongoDB.Driver.Core.Clusters
 {
     public class DnsClientWrapperTests
     {
+        [Fact]
+        public void constructor_should_initialize_instance()
+        {
+            var subject = CreateSubject();
+
+            subject._lookupClient().Should().NotBeNull();
+        }
+
         [Fact]
         public void Instance_should_return_the_same_instance_each_time()
         {
@@ -166,15 +176,16 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         // private methods
-        private IDnsResolver CreateSubject()
+        private DnsClientWrapper CreateSubject()
         {
-            DnsClientWrapperReflector.__instance(null); // reset cache
-            return DnsClientWrapper.Instance;
+            var constructorInfo = typeof(DnsClientWrapper).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).Single();
+            var subject = (DnsClientWrapper)constructorInfo.Invoke(new object[0]);
+            return subject;
         }
     }
 
     internal static class DnsClientWrapperReflector
     {
-        public static void __instance(IDnsResolver dnsResolver) => Reflector.SetStaticFieldValue(typeof(DnsClientWrapper), nameof(__instance), dnsResolver);
+        public static LookupClient _lookupClient(this IDnsResolver dnsResolver) => (LookupClient)Reflector.GetFieldValue(dnsResolver, nameof(_lookupClient));
     }
 }

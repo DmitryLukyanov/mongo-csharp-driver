@@ -26,8 +26,8 @@ namespace MongoDB.Driver.Core.Misc
     internal class DnsClientWrapper : IDnsResolver
     {
         #region static
-        private static IDnsResolver __instance;
-        public static IDnsResolver Instance => __instance ?? (__instance = new DnsClientWrapper());
+        private static IDnsResolver __instance = new DnsClientWrapper();
+        public static IDnsResolver Instance => __instance;
         #endregion
 
         // private fields

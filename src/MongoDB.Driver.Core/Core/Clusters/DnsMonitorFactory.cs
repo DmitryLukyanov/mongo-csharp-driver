@@ -30,12 +30,8 @@ namespace MongoDB.Driver.Core.Clusters
 
         public IDnsMonitor CreateDnsMonitor(IDnsMonitoringCluster cluster, string lookupDomainName, CancellationToken cancellationToken)
         {
-            return new DnsMonitor(
-                cluster,
-                DnsClientWrapper.Instance,
-                lookupDomainName,
-                _eventSubscriber,
-                cancellationToken);
+            var dnsResolver = DnsClientWrapper.Instance;
+            return new DnsMonitor(cluster, dnsResolver, lookupDomainName, _eventSubscriber, cancellationToken);
         }
     }
 }

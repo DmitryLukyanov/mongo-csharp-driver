@@ -516,10 +516,11 @@ namespace MongoDB.Driver.Core.Configuration
         /// Resolves a connection string. If the connection string indicates more information is available
         /// in the DNS system, it will acquire that information as well.
         /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A resolved ConnectionString.</returns>
-        public ConnectionString Resolve()
+        public ConnectionString Resolve(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Resolve(resolveHosts: true);
+            return Resolve(resolveHosts: true, cancellationToken);
         }
 
         /// <summary>
@@ -527,8 +528,9 @@ namespace MongoDB.Driver.Core.Configuration
         /// in the DNS system, it will acquire that information as well.
         /// </summary>
         /// <param name="resolveHosts">Whether to resolve hosts.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A resolved ConnectionString.</returns>
-        public ConnectionString Resolve(bool resolveHosts)
+        public ConnectionString Resolve(bool resolveHosts, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_isResolved)
             {
@@ -542,7 +544,7 @@ namespace MongoDB.Driver.Core.Configuration
             if (resolveHosts)
             {
                 resolvedScheme = ConnectionStringScheme.MongoDB;
-                var srvRecords = _dnsResolver.ResolveSrvRecords(srvPrefix + host, CancellationToken.None);
+                var srvRecords = _dnsResolver.ResolveSrvRecords(srvPrefix + host, cancellationToken);
                 hosts = GetHostsFromSrvRecords(srvRecords);
                 ValidateResolvedHosts(host, hosts);
             }
@@ -552,7 +554,7 @@ namespace MongoDB.Driver.Core.Configuration
                 hosts = new List<string> { host };
             }
 
-            var txtRecords = _dnsResolver.ResolveTxtRecords(host, CancellationToken.None);
+            var txtRecords = _dnsResolver.ResolveTxtRecords(host, cancellationToken);
             var options = GetOptionsFromTxtRecords(txtRecords);
 
             var resolvedOptions = GetResolvedOptions(options);

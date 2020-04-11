@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.Operations
@@ -94,9 +95,12 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        public static bool IsNetworkException(Exception exception)
+        public static bool IsCommandRetryable(BsonDocument command)
         {
-            return exception is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException;
+            return
+                command.Contains("txnNumber") || // retryWrites=true
+                command.Contains("commitTransaction") ||
+                command.Contains("abortTransaction");
         }
 
         public static bool IsResumableChangeStreamException(Exception exception, SemanticVersion serverVersion)
@@ -152,6 +156,11 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private static methods
+        private static bool IsNetworkException(Exception exception)
+        {
+            return exception is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException;
+        }
+
         private static bool ShouldRetryableWriteExceptionLabelBeAdded(Exception exception, SemanticVersion serverVersion)
         {
             if (!Feature.RetryableWrites.IsSupported(serverVersion))

@@ -116,6 +116,20 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         [Theory]
+        [InlineData("{ txnNumber : 1 }", true)]
+        [InlineData("{ commitTransaction : 1 }", true)]
+        [InlineData("{ abortTransaction : 1 }", true)]
+        [InlineData("{ ping : 1 }", false)]
+        public void IsCommandRetryable_should_return_expected_result(string command, bool isRetryable)
+        {
+            var commandDocument = BsonDocument.Parse(command);
+
+            var result = RetryabilityHelper.IsCommandRetryable(commandDocument);
+
+            result.Should().Be(isRetryable);
+        }
+
+        [Theory]
         [InlineData(typeof(MongoConnectionException), true)]
         [InlineData(typeof(MongoConnectionClosedException), false)]
         [InlineData(typeof(MongoNodeIsRecoveringException), true)]

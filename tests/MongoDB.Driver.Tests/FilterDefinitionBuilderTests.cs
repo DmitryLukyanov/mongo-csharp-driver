@@ -93,6 +93,18 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
+        public void And_with_clashing_keys_and_different_operators_but_with_filters_that_support_only_dollar_form_and_empty_filter_should_ignore_empty_filter()
+        {
+            var subject = CreateSubject<BsonDocument>();
+
+            var combinedFilter = subject.And(
+                "{ geoField : { $near : [ 5.0, 6.0 ] } }",
+                "{ geoField : { } }");
+
+            Assert(combinedFilter, "{ geoField : { $near : [ 5.0, 6.0 ] } }");
+        }
+
+        [Fact]
         public void And_with_an_empty_filter()
         {
             var subject = CreateSubject<BsonDocument>();

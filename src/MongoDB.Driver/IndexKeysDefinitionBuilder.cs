@@ -129,7 +129,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A combined index keys definition.
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysDefinition<TDocument> GeoHaystack<TDocument>(this IndexKeysDefinition<TDocument> keys, FieldDefinition<TDocument> field, FieldDefinition<TDocument> additionalFieldName = null)
         {
             var builder = Builders<TDocument>.IndexKeys;
@@ -146,7 +146,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A combined index keys definition.
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysDefinition<TDocument> GeoHaystack<TDocument>(this IndexKeysDefinition<TDocument> keys, Expression<Func<TDocument, object>> field, Expression<Func<TDocument, object>> additionalFieldName = null)
         {
             var builder = Builders<TDocument>.IndexKeys;
@@ -338,7 +338,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A geo haystack index key definition.
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysDefinition<TDocument> GeoHaystack(FieldDefinition<TDocument> field, FieldDefinition<TDocument> additionalFieldName = null)
         {
             return new GeoHaystackIndexKeyDefinition<TDocument>(field, additionalFieldName);
@@ -352,7 +352,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A geo haystack index key definition.
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysDefinition<TDocument> GeoHaystack(Expression<Func<TDocument, object>> field, Expression<Func<TDocument, object>> additionalFieldName = null)
         {
             FieldDefinition<TDocument> additional = additionalFieldName == null ? null : new ExpressionFieldDefinition<TDocument>(additionalFieldName);
@@ -506,7 +506,7 @@ namespace MongoDB.Driver
         }
     }
 
-    [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+    [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
     internal sealed class GeoHaystackIndexKeyDefinition<TDocument> : IndexKeysDefinition<TDocument>
     {
         private readonly FieldDefinition<TDocument> _field;

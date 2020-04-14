@@ -66,7 +66,7 @@ namespace MongoDB.Driver.Builders
         /// </summary>
         /// <param name="name">The key name.</param>
         /// <returns>The builder (so method calls can be chained).</returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysBuilder GeoSpatialHaystack(string name)
         {
             return new IndexKeysBuilder().GeoSpatialHaystack(name);
@@ -78,7 +78,7 @@ namespace MongoDB.Driver.Builders
         /// <param name="name">The key name.</param>
         /// <param name="additionalName">The name of an additional field to index.</param>
         /// <returns>The builder (so method calls can be chained).</returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysBuilder GeoSpatialHaystack(string name, string additionalName)
         {
             return new IndexKeysBuilder().GeoSpatialHaystack(name, additionalName);
@@ -200,7 +200,7 @@ namespace MongoDB.Driver.Builders
         /// </summary>
         /// <param name="name">The key name.</param>
         /// <returns>The builder (so method calls can be chained).</returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysBuilder GeoSpatialHaystack(string name)
         {
             return GeoSpatialHaystack(name, null);
@@ -212,7 +212,7 @@ namespace MongoDB.Driver.Builders
         /// <param name="name">The key name.</param>
         /// <param name="additionalName">The name of an additional field to index.</param>
         /// <returns>The builder (so method calls can be chained).</returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysBuilder GeoSpatialHaystack(string name, string additionalName)
         {
             _document.Add(name, "geoHaystack");
@@ -359,7 +359,7 @@ namespace MongoDB.Driver.Builders
         /// <returns>
         /// The builder (so method calls can be chained).
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysBuilder<TDocument> GeoSpatialHaystack<TMember>(Expression<Func<TDocument, TMember>> memberExpression)
         {
             return new IndexKeysBuilder<TDocument>().GeoSpatialHaystack(memberExpression);
@@ -375,7 +375,7 @@ namespace MongoDB.Driver.Builders
         /// <returns>
         /// The builder (so method calls can be chained).
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public static IndexKeysBuilder<TDocument> GeoSpatialHaystack<TMember, TAdditionalMember>(Expression<Func<TDocument, TMember>> memberExpression, Expression<Func<TDocument, TAdditionalMember>> additionalMemberExpression)
         {
             return new IndexKeysBuilder<TDocument>().GeoSpatialHaystack(memberExpression, additionalMemberExpression);
@@ -522,7 +522,7 @@ namespace MongoDB.Driver.Builders
         /// <returns>
         /// The builder (so method calls can be chained).
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysBuilder<TDocument> GeoSpatialHaystack<TMember>(Expression<Func<TDocument, TMember>> memberExpression)
         {
             _indexKeysBuilder = _indexKeysBuilder.GeoSpatialHaystack(GetElementName(memberExpression));
@@ -539,7 +539,7 @@ namespace MongoDB.Driver.Builders
         /// <returns>
         /// The builder (so method calls can be chained).
         /// </returns>
-        [Obsolete("The geoHaystack was deprecated in server version 4.4.")]
+        [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
         public IndexKeysBuilder<TDocument> GeoSpatialHaystack<TMember, TAdditionalMember>(Expression<Func<TDocument, TMember>> memberExpression, Expression<Func<TDocument, TAdditionalMember>> additionalMemberExpression)
         {
             _indexKeysBuilder = _indexKeysBuilder.GeoSpatialHaystack(GetElementName(memberExpression), GetElementName(additionalMemberExpression));

@@ -24,7 +24,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents the arguments to the GeoHaystackSearch method.
     /// </summary>
-    [Obsolete("The geoSearch was deprecated in server version 4.4.")]
+    [Obsolete("GeoHaystack indexes were deprecated in server version 4.4.")]
     public class GeoHaystackSearchArgs
     {
         // private fields

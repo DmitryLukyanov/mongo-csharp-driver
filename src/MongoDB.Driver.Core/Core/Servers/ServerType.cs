@@ -121,13 +121,14 @@ namespace MongoDB.Driver.Core.Servers
                 case ServerType.ReplicaSetSecondary:
                 case ServerType.ReplicaSetArbiter:
                 case ServerType.ReplicaSetOther:
-                case ServerType.ReplicaSetGhost:
+                //case ServerType.ReplicaSetGhost:
                     return ClusterType.ReplicaSet;
                 case ServerType.ShardRouter:
                     return ClusterType.Sharded;
                 case ServerType.Standalone:
                     return ClusterType.Standalone;
                 case ServerType.Unknown:
+                case ServerType.ReplicaSetGhost:
                     return ClusterType.Unknown;
                 default:
                     var message = string.Format("Invalid server type: {0}.", serverType);

@@ -98,6 +98,10 @@ namespace MongoDB.Driver.Specifications.connection_string
                         case "connecttimeoutms":
                             AssertTimeSpan(connectionString.ConnectTimeout, expectedOption.Value);
                             break;
+                        case "directconnection":
+                            var directConnection = bool.Parse(connectionString.GetOption("directconnection"));
+                            AssertBoolean(directConnection, expectedOption.Value);
+                            break;
                         case "heartbeatfrequencyms":
                             AssertTimeSpan(connectionString.HeartbeatInterval, expectedOption.Value);
                             break;

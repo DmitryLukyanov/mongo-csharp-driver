@@ -515,6 +515,59 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://localhost/?directConnection=true&replicaSet=yeah", true, ClusterConnectionMode.Direct)]
+        [InlineData("mongodb://localhost/?directConnection=true", true, ClusterConnectionMode.Direct)]
+        [InlineData("mongodb://localhost/?directConnection=false&replicaSet=yeah", false, ClusterConnectionMode.ReplicaSet)]
+        [InlineData("mongodb://localhost/?directConnection=false", false, ClusterConnectionMode.Automatic)]
+        public void When_a_directConenction_is_specified(string connectionString, bool directConnection, ClusterConnectionMode mode)
+        {
+            var subject = new ConnectionString(connectionString);
+
+            var result = bool.Parse(subject.GetOption("directConnection"));
+            result.Should().Be(directConnection);
+        }
+
+        [Theory]
+        [InlineData("mongodb+srv://localhost1/?directConnection=false", false)]
+        [InlineData("mongodb+srv://localhost1/?directConnection=true", true)]
+        public void When_a_directConnection_is_specified_with_a_srv_scheme(string connectionString, bool shouldThrow)
+        {
+            ConnectionString result = null;
+            var exception = Record.Exception(() => result = new ConnectionString(connectionString));
+
+            if (shouldThrow)
+            {
+                exception.Should().BeOfType<MongoConfigurationException>();
+            }
+            else
+            {
+                exception.Should().BeNull();
+                var directConnection = bool.Parse(result.GetOption("directConnection"));
+                directConnection.Should().BeFalse();
+            }
+        }
+
+        [Theory]
+        [InlineData("mongodb://localhost1,localhost2/?directConnection=false", false)]
+        [InlineData("mongodb://localhost1,localhost2/?directConnection=true", true)]
+        public void When_a_directConnection_is_specified_with_multiple_seeds(string connectionString, bool shouldThrow)
+        {
+            ConnectionString result = null;
+            var exception = Record.Exception(() => result = new ConnectionString(connectionString));
+
+            if (shouldThrow)
+            {
+                exception.Should().BeOfType<MongoConfigurationException>();
+            }
+            else
+            {
+                exception.Should().BeNull();
+                var directConnection = bool.Parse(result.GetOption("directConnection"));
+                directConnection.Should().BeFalse();
+            }
+        }
+
+        [Theory]
         [InlineData("mongodb://localhost?fsync=true", true)]
         [InlineData("mongodb://localhost?fsync=false", false)]
         public void When_fsync_is_specified(string connectionString, bool fsync)

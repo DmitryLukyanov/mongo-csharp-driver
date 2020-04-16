@@ -15,18 +15,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
 using Xunit;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
-using System.Collections;
-using System.Threading.Tasks;
-using Xunit.Abstractions;
+using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 
 namespace MongoDB.Driver.Specifications.initial_dns_seedlist_discovery
 {
@@ -35,22 +31,35 @@ namespace MongoDB.Driver.Specifications.initial_dns_seedlist_discovery
     {
         [Theory]
         [ClassData(typeof(TestCaseFactory))]
-        public void RunTestDefinition(TestCase testCase)
+        public void RunTestDefinition(JsonDrivenTestCase testCase)
         {
+            var definition = testCase.Test;
+
+            JsonDrivenHelper.EnsureAllFieldsAreValid(definition, "_path", "uri", "seeds", "hosts", "options", "comment", "error", "async");
+
+            var uri = (string)testCase.Test["uri"];
+
             ConnectionString connectionString = null;
-            Exception resolveException = Record.Exception(() => connectionString = new ConnectionString((string)testCase.Definition["uri"]).Resolve());
-            Assert(connectionString, resolveException, testCase.Definition);
+            Exception resolveException = null;
+
+            if (definition["async"].AsBoolean)
+            {
+                resolveException = Record.Exception(
+                    () =>
+                        connectionString = new ConnectionString(uri)
+                            .ResolveAsync()
+                            .GetAwaiter()
+                            .GetResult());
+            }
+            else
+            {
+                resolveException = Record.Exception(() => connectionString = new ConnectionString(uri).Resolve());
+            }
+
+            Assert(connectionString, resolveException, definition);
         }
 
-        [Theory]
-        [ClassData(typeof(TestCaseFactory))]
-        public async Task RunTestDefinitionAsync(TestCase testCase)
-        {
-            ConnectionString connectionString = null;
-            Exception resolveException = await Record.ExceptionAsync(async () => connectionString = await new ConnectionString((string)testCase.Definition["uri"]).ResolveAsync());
-            Assert(connectionString, resolveException, testCase.Definition);
-        }
-
+        // private methods
         private void Assert(ConnectionString connectionString, Exception resolveException, BsonDocument definition)
         {
             if (definition.GetValue("error", false).ToBoolean())
@@ -75,9 +84,10 @@ namespace MongoDB.Driver.Specifications.initial_dns_seedlist_discovery
 
             actualSeeds.ShouldAllBeEquivalentTo(expectedSeeds);
 
-            if (definition.Contains("options"))
+            // todo: merge
+            if (definition.TryGetValue("options", out var options))
             {
-                foreach (BsonElement option in definition["options"].AsBsonDocument)
+                foreach (BsonElement option in options.AsBsonDocument)
                 {
                     var expectedValue = ValueToString(option.Name, option.Value);
 
@@ -127,60 +137,21 @@ namespace MongoDB.Driver.Specifications.initial_dns_seedlist_discovery
             throw new AssertionException($"Invalid endpoint: {ep}");
         }
 
-        public class TestCase : IXunitSerializable
+        // nested types
+        private class TestCaseFactory : JsonDrivenTestCaseFactory
         {
-            public BsonDocument Definition;
-            public string Name;
+            // protected properties
+            protected override string PathPrefix => "MongoDB.Driver.Core.Tests.Specifications.initial_dns_seedlist_discovery.tests.";
 
-            public void Deserialize(IXunitSerializationInfo info)
+            // protected methods
+            protected override IEnumerable<JsonDrivenTestCase> CreateTestCases(BsonDocument document)
             {
-                Definition = BsonDocument.Parse(info.GetValue<string>("Definition"));
-                Name = info.GetValue<string>("Name");
-            }
-
-            public void Serialize(IXunitSerializationInfo info)
-            {
-                info.AddValue("Definition", Definition.ToString());
-                info.AddValue("Name", Name);
-            }
-
-            public override string ToString()
-            {
-                return Name + "(" + Definition["uri"].ToString() + ")";
-            }
-        }
-
-        private class TestCaseFactory : IEnumerable<object[]>
-        {
-            public IEnumerator<object[]> GetEnumerator()
-            {
-                const string prefix = "MongoDB.Driver.Core.Tests.Specifications.initial_dns_seedlist_discovery.tests.";
-                var executingAssembly = typeof(TestCaseFactory).GetTypeInfo().Assembly;
-                return executingAssembly
-                    .GetManifestResourceNames()
-                    .Where(path => path.StartsWith(prefix) && path.EndsWith(".json"))
-                    .Select(path =>
-                    {
-                        var test = ReadDefinition(path);
-                        var fullName = path.Remove(0, prefix.Length);
-                        var testName = fullName.Remove(fullName.Length - 5);
-                        return new object[] { new TestCase { Name = testName, Definition = test } };
-                    }).GetEnumerator();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-
-            private static BsonDocument ReadDefinition(string path)
-            {
-                var executingAssembly = typeof(TestCaseFactory).GetTypeInfo().Assembly;
-                using (var definitionStream = executingAssembly.GetManifestResourceStream(path))
-                using (var definitionStringReader = new StreamReader(definitionStream))
+                foreach (var async in new[] { false, true })
                 {
-                    var definitionString = definitionStringReader.ReadToEnd();
-                    return BsonDocument.Parse(definitionString);
+                    var name = $"{GetTestCaseName(document, document, 0)}:async={async}";
+                    var testCase = new JsonDrivenTestCase(name, document, document);
+                    var test = testCase.Test.DeepClone().AsBsonDocument.Add("async", async);
+                    yield return new JsonDrivenTestCase(name, testCase.Shared, test);
                 }
             }
         }

@@ -53,7 +53,7 @@ namespace MongoDB.Driver.Core.Clusters
             switch (connectionMode)
             {
                 case ClusterConnectionMode.Automatic:
-                    if (settings.EndPoints.Count == 1 && settings.Scheme != ConnectionStringScheme.MongoDBPlusSrv)
+                    if (settings.EndPoints.Count == 100 && settings.Scheme != ConnectionStringScheme.MongoDBPlusSrv)
                     {
                         return CreateSingleServerCluster(settings);
                     }

@@ -283,7 +283,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 var name = GetTestCaseName(document, document, 0);
 
                 // todo:remove these lines to launch all tests
-                string[] tests = new[]
+                string[] failedTestWithOldValidationInClusterFactory = new[]
                 {
                     "Discover arbiters with directConnection URI option",
                     "Discover ghost with replicaSet URI option",
@@ -297,7 +297,24 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                     "Parse logicalSessionTimeoutMinutes from replica set",
                     "Primary becomes ghost"
                 };
-                if (tests.Any(c => name.Contains(c)))
+
+                string[] failedTestsWithRemovedValidationInClusterFactory = new[]
+                {
+                    "Discover ghost with directConnection URI option",
+                    "Discover ghost with replicaSet URI option", // duplicate
+                    "Ghost discovered", // duplicate
+                    "Incompatible ghost", // duplicate
+                    "Parse logicalSessionTimeoutMinutes from replica set", // duplicate
+                    "Primary becomes ghost", // duplicate
+                    "Standalone with large maxWireVersion",
+                    "Discover standalone",
+                    "Parse logicalSessionTimeoutMinutes from standalone",
+                    "Handle a not-ok ismaster response",
+                    "Standalone with large minWireVersion", //too_new
+                    "Standalone with default maxWireVersion of 0", //too_old
+                    "Unavailable seed"
+                };
+                if (failedTestsWithRemovedValidationInClusterFactory.Any(c => name.Contains(c)))
                 {
                     yield return new JsonDrivenTestCase(name, document, document);
                 }

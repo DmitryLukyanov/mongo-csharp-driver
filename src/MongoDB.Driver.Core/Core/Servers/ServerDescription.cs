@@ -540,6 +540,7 @@ namespace MongoDB.Driver.Core.Servers
             Optional<SemanticVersion> version = default(Optional<SemanticVersion>),
             Optional<Range<int>> wireVersionRange = default(Optional<Range<int>>))
         {
+         //   var typeResult = 
             return new ServerDescription(
                 _serverId,
                 _endPoint,

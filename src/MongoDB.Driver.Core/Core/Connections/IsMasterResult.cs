@@ -291,8 +291,12 @@ namespace MongoDB.Driver.Core.Connections
                     return ServerType.ReplicaSetGhost;
                 }
 
-                if (_wrapped.Contains("setName"))
+                if (_wrapped.TryGetValue("setName", out var setName))
                 {
+                    if (setName is BsonNull || setName.AsString != "rs")
+                    {
+                      //  return ServerType.Unknown;
+                    }
                     if (_wrapped.GetValue("ismaster", false).ToBoolean())
                     {
                         return ServerType.ReplicaSetPrimary;
@@ -309,7 +313,6 @@ namespace MongoDB.Driver.Core.Connections
                     {
                         return ServerType.ReplicaSetArbiter;
                     }
-
                     return ServerType.ReplicaSetOther;
                 }
 

@@ -187,7 +187,7 @@ namespace MongoDB.Driver.Core.Clusters
                 {
                     if (newClusterDescription.Type == ClusterType.Unknown)
                     {
-                        newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
+                        newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType(true));
                     }
 
                     newClusterDescription = newClusterDescription.WithServerDescription(newServerDescription);

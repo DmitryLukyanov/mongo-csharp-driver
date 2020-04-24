@@ -293,10 +293,10 @@ namespace MongoDB.Driver.Core.Clusters
                 {
                     if (IsServerValidForCluster(newClusterDescription.Type, Settings.ConnectionMode, newServerDescription.Type))
                     {
-                        if (newClusterDescription.Type == ClusterType.Unknown)
+                        if (newClusterDescription.Type == ClusterType.Unknown /*&& newServerDescription.Type != ServerType.ReplicaSetGhost*/)
                         {
                             // надо чтобы значение попало в сервер и не попало в clusterType
-                            newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
+                            newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType(true));
                         }
 
                         switch (newClusterDescription.Type)
@@ -314,7 +314,7 @@ namespace MongoDB.Driver.Core.Clusters
                                 break;
 
                             case ClusterType.Unknown:
-                                //newClusterDescription = ProcessReplicaSetChange(newClusterDescription, args, newServers);
+                                newClusterDescription = ProcessReplicaSetChange(newClusterDescription, args, newServers);
                                 break;
 
                             default:

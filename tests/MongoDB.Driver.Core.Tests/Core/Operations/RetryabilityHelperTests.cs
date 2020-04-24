@@ -97,7 +97,8 @@ namespace MongoDB.Driver.Core.Operations
 
         [Theory]
         [ParameterAttributeData]
-        public void AddRetryableWriteErrorLabelIfRequired_should_not_add_error_label_for_non_retryWrites_server([Values(false, true)] bool isNetworkError)
+        public void AddRetryableWriteErrorLabelIfRequired_should_not_add_error_label_for_non_retryWrites_server(
+            [Values(false, true)] bool isNetworkError)
         {
             MongoException exception = null;
             if (isNetworkError)

@@ -132,7 +132,7 @@ namespace MongoDB.Driver.Core.Connections
         /// </value>
         public bool IsReplicaSetMember
         {
-            get { return ServerType.IsReplicaSetMember(); }
+            get { return ServerType.IsReplicaSetMember(false); }
         }
 
         /// <summary>

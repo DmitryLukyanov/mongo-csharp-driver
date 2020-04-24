@@ -295,6 +295,7 @@ namespace MongoDB.Driver.Core.Clusters
                     {
                         if (newClusterDescription.Type == ClusterType.Unknown)
                         {
+                            // надо чтобы значение попало в сервер и не попало в clusterType
                             newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
                         }
 
@@ -310,6 +311,10 @@ namespace MongoDB.Driver.Core.Clusters
 
                             case ClusterType.Sharded:
                                 newClusterDescription = ProcessShardedChange(newClusterDescription, args);
+                                break;
+
+                            case ClusterType.Unknown:
+                                //newClusterDescription = ProcessReplicaSetChange(newClusterDescription, args, newServers);
                                 break;
 
                             default:

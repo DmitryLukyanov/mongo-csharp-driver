@@ -31,6 +31,7 @@ namespace MongoDB.Driver.Core.Clusters
         // fields
         private IClusterableServer _server;
         private readonly InterlockedInt32 _state;
+        private readonly string _replicaSetName;
 
         private readonly Action<ClusterClosingEvent> _closingEventHandler;
         private readonly Action<ClusterClosedEvent> _closedEventHandler;
@@ -46,6 +47,7 @@ namespace MongoDB.Driver.Core.Clusters
             : base(settings, serverFactory, eventSubscriber)
         {
             Ensure.IsEqualTo(settings.EndPoints.Count, 1, "settings.EndPoints.Count");
+            _replicaSetName = settings.ReplicaSetName;  // can be null
 
             _state = new InterlockedInt32(State.Initial);
 
@@ -176,6 +178,16 @@ namespace MongoDB.Driver.Core.Clusters
         {
             var newServerDescription = args.NewServerDescription;
             var newClusterDescription = Description;
+
+            if (_replicaSetName != null && newServerDescription.ReplicaSetConfig != null)
+            {
+                var isMasterSetName = newServerDescription.ReplicaSetConfig.Name;
+                if (isMasterSetName == null || _replicaSetName != isMasterSetName)
+                {
+                    // in this case setName is considered as wrong, so the ServerDescription MUST be replaced with a default ServerDescription of type Unknown
+                    newServerDescription = newServerDescription.With(type: ServerType.Unknown);
+                }
+            }
 
             if (newServerDescription.State == ServerState.Disconnected)
             {

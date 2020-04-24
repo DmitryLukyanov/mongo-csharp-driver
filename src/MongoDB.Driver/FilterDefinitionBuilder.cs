@@ -1494,7 +1494,7 @@ namespace MongoDB.Driver
     internal sealed class AndFilterDefinition<TDocument> : FilterDefinition<TDocument>
     {
         #region static
-        private static readonly string[] __operatorsThatCantBeCombined = new[]
+        private static readonly string[] __operatorsThatCannotBeCombined = new[]
         {
             "$geoWithin",
             "$near",
@@ -1555,7 +1555,7 @@ namespace MongoDB.Driver
                 {
                     var clauseOperator = clauseValue.ElementCount > 0 ? clauseValue.GetElement(0).Name : null;
                     if (clauseValue.Names.Any(op => existingClauseValue.Contains(op)) ||
-                        __operatorsThatCantBeCombined.Contains(clauseOperator))
+                        __operatorsThatCannotBeCombined.Contains(clauseOperator))
                     {
                         PromoteFilterToDollarForm(document, clause);
                     }

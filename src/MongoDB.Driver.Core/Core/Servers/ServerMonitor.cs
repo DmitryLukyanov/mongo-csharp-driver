@@ -213,6 +213,7 @@ namespace MongoDB.Driver.Core.Servers
                 var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
                 var isMasterResult = heartbeatInfo.IsMasterResult;
                 var buildInfoResult = heartbeatInfo.BuildInfoResult;
+                //_baseDescription.ReplicaSetConfig.Name
 
                 newDescription = _baseDescription.With(
                     averageRoundTripTime: averageRoundTripTimeRounded,

@@ -179,6 +179,11 @@ namespace MongoDB.Driver.Core.Clusters
             var newServerDescription = args.NewServerDescription;
             var newClusterDescription = Description;
 
+            if (_replicaSetName != null && newServerDescription.ReplicaSetConfig != null && _replicaSetName != newServerDescription.ReplicaSetConfig.Name)
+            {
+                newServerDescription = newServerDescription.With(type: ServerType.Unknown);
+            }
+
             if (newServerDescription.State == ServerState.Disconnected)
             {
                 newClusterDescription = newClusterDescription.WithServerDescription(newServerDescription);
@@ -189,22 +194,17 @@ namespace MongoDB.Driver.Core.Clusters
                 {
                     if (newClusterDescription.Type == ClusterType.Unknown)
                     {
-                        ServerType newType;
-                        if (_replicaSetName != null &&
-                            newServerDescription.ReplicaSetConfig != null &&
-                            newServerDescription.ReplicaSetConfig.Name != _replicaSetName)
-                        {
-                            newType = ServerType.Unknown;
-                        }
-                        else
-                        {
-                            newType = newServerDescription.Type;
-                        }
-
-                        newClusterDescription = newClusterDescription.WithType(newType.ToClusterType());
+                        newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
                     }
 
                     newClusterDescription = newClusterDescription.WithServerDescription(newServerDescription);
+
+                    if (_replicaSetName != null &&
+                        newServerDescription.ReplicaSetConfig != null &&
+                        newServerDescription.ReplicaSetConfig.Name != _replicaSetName)
+                    {
+                        newClusterDescription = newClusterDescription.WithType(ClusterType.Unknown);
+                    }
                 }
                 else
                 {

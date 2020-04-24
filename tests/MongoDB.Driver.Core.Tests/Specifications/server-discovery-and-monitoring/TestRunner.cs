@@ -314,7 +314,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                     "Standalone with default maxWireVersion of 0", //too_old
                     "Unavailable seed"
                 };
-                //if (failedTestWithOldValidationInClusterFactory.Any(c => name.Contains(c)))
+                //if (failedTestsWithRemovedValidationInClusterFactory.Any(c => name.Contains(c)))
                 {
                     yield return new JsonDrivenTestCase(name, document, document);
                 }

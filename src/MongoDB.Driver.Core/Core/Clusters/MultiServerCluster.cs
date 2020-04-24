@@ -202,7 +202,8 @@ namespace MongoDB.Driver.Core.Clusters
                         case ClusterConnectionMode.Automatic:
                             if (serverType == ServerType.Standalone || serverType == ServerType.ReplicaSetGhost)
                             {
-                                return true;//Settings.Scheme == ConnectionStringScheme.MongoDBPlusSrv; // Standalone is only valid in MultiServerCluster when using MongoDBPlusSrv scheme
+                                return _servers.Count == 1;
+                               // Settings.Scheme == ConnectionStringScheme.MongoDBPlusSrv; // Standalone is only valid in MultiServerCluster when using MongoDBPlusSrv scheme
                             }
                             return serverType.IsReplicaSetMember() || serverType == ServerType.ShardRouter;
 

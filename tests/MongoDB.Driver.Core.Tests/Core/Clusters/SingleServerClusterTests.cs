@@ -151,7 +151,7 @@ namespace MongoDB.Driver.Core.Clusters
 
         [Theory]
         [ParameterAttributeData]
-        public void ServerDescription_type_should_be_replaced_on_Unknown_when_isMaster_setName_wrong(
+        public void ServerDescription_type_should_be_replaced_with_Unknown_when_isMaster_setName_is_different(
             [Values(null, "wrong")] string isMasterSetName)
         {
             _settings = _settings.With(

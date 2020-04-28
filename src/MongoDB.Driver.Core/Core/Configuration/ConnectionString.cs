@@ -810,7 +810,7 @@ namespace MongoDB.Driver.Core.Configuration
 
             if (_connect.HasValue && _directConnection.HasValue)
             {
-                throw new MongoConfigurationException("Specifying both connect and directConnection is invalid.");
+                throw new MongoConfigurationException("Connect and directConnection cannot both be specified.");
             }
             _connect = GetEffectiveConnectionMode(_connect, _directConnection, _replicaSet);
 
@@ -827,12 +827,12 @@ namespace MongoDB.Driver.Core.Configuration
 
             if (_scheme == ConnectionStringScheme.MongoDBPlusSrv && _connect == ClusterConnectionMode.Direct)
             {
-                throw new MongoConfigurationException("Direct connect is not allowed to be used with SRV.");
+                throw new MongoConfigurationException("Direct connect cannot be used with SRV.");
             }
 
             if (_hosts.Count > 1 && _connect == ClusterConnectionMode.Direct)
             {
-                throw new MongoConfigurationException("Direct connect is not allowed to be used with multiple seeds.");
+                throw new MongoConfigurationException("Direct connect cannot be used with multiple host names.");
             }
 
             string protectConnectionString(string connectionString)
@@ -1219,7 +1219,7 @@ namespace MongoDB.Driver.Core.Configuration
             return value;
         }
 
-        private ClusterConnectionMode? GetEffectiveConnectionMode(ClusterConnectionMode? mode, bool? directConnection, string replicaSet)
+        private ClusterConnectionMode? GetEffectiveConnectionMode(ClusterConnectionMode? connect, bool? directConnection, string replicaSet)
         {
             if (directConnection.HasValue)
             {
@@ -1234,7 +1234,7 @@ namespace MongoDB.Driver.Core.Configuration
             }
             else
             {
-                return mode;
+                return connect;
             }
         }
 

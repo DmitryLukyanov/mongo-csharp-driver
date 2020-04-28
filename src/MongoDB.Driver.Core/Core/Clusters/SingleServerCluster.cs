@@ -179,12 +179,12 @@ namespace MongoDB.Driver.Core.Clusters
             var newServerDescription = args.NewServerDescription;
             var newClusterDescription = Description;
 
-            if (_replicaSetName != null && newServerDescription.ReplicaSetConfig != null)
+            if (_replicaSetName != null)
             {
-                var isMasterSetName = newServerDescription.ReplicaSetConfig.Name;
-                if (isMasterSetName == null || _replicaSetName != isMasterSetName)
+                var replicaSetConfig = newServerDescription.ReplicaSetConfig;
+                if (replicaSetConfig == null || replicaSetConfig.Name != _replicaSetName)
                 {
-                    // in this case setName is considered as wrong, so the ServerDescription MUST be replaced with a default ServerDescription of type Unknown
+                    // if the replica set name does not match then the ServerType in the ServerDescription MUST be replaced with Unknown
                     newServerDescription = newServerDescription.With(type: ServerType.Unknown);
                 }
             }

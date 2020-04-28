@@ -202,7 +202,7 @@ namespace MongoDB.Driver.Core.Clusters
                         case ClusterConnectionMode.Automatic:
                             if (serverType == ServerType.Standalone)
                             {
-                                return Settings.Scheme == ConnectionStringScheme.MongoDBPlusSrv; // Standalone is only valid in MultiServerCluster when using MongoDBPlusSrv scheme
+                                return _servers.Count == 1 || Settings.Scheme == ConnectionStringScheme.MongoDBPlusSrv;
                             }
                             return serverType.IsReplicaSetMember() || serverType == ServerType.ShardRouter;
 
@@ -295,7 +295,11 @@ namespace MongoDB.Driver.Core.Clusters
                     {
                         if (newClusterDescription.Type == ClusterType.Unknown)
                         {
-                            newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
+                            if (newServerDescription.Type != ServerType.ReplicaSetGhost)
+                            {
+                                // Unknown cluster description with ServerType.ReplicaSetGhost should be untouched
+                                newClusterDescription = newClusterDescription.WithType(newServerDescription.Type.ToClusterType());
+                            }
                         }
 
                         switch (newClusterDescription.Type)
@@ -305,6 +309,7 @@ namespace MongoDB.Driver.Core.Clusters
                                 break;
 
                             case ClusterType.ReplicaSet:
+                            case ClusterType.Unknown when newServerDescription.Type == ServerType.ReplicaSetGhost: // update serverDescription in clusterDescription
                                 newClusterDescription = ProcessReplicaSetChange(newClusterDescription, args, newServers);
                                 break;
 

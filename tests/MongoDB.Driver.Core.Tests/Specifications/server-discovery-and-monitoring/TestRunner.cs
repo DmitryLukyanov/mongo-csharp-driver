@@ -104,7 +104,19 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             switch (expectedType)
             {
                 case "Single":
-                    cluster.Should().BeOfType<SingleServerCluster>();
+                    if (cluster is SingleServerCluster singleServerCluster)
+                    {
+                        singleServerCluster.Description.ConnectionMode.Should().Be(ClusterConnectionMode.Direct);
+                    }
+                    else if (cluster is MultiServerCluster multiServerCluster)
+                    {
+                        multiServerCluster.Description.ConnectionMode.Should().Be(ClusterConnectionMode.Automatic);
+                        multiServerCluster.Description.Type.Should().Be(ClusterType.Standalone);
+                    }
+                    else
+                    {
+                        throw new Exception($"Unexpected cluster type {cluster.GetType().Name}.");
+                    }
                     break;
                 case "ReplicaSetWithPrimary":
                     cluster.Should().BeOfType<MultiServerCluster>();

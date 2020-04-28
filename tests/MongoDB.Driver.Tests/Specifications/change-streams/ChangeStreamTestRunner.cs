@@ -293,7 +293,7 @@ namespace MongoDB.Driver.Tests.Specifications.change_streams
                     break;
                 }
 
-                if (stopwatch.Elapsed > TimeSpan.FromSeconds(10)) // this is enough time for the server to respond with non-empty batch if exists
+                if (stopwatch.Elapsed > TimeSpan.FromSeconds(10)) // 10 seconds is enough time to receive all the required change documents or for an exception to be thrown
                 {
                     break;
                 }

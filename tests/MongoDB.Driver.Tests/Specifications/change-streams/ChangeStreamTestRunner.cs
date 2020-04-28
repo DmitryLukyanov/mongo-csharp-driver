@@ -281,39 +281,25 @@ namespace MongoDB.Driver.Tests.Specifications.change_streams
         {
             var result = new List<ChangeStreamDocument<BsonDocument>>();
             var resultDocument = test["result"].AsBsonDocument;
-            if (!resultDocument.TryGetValue("success", out var successNode))
-            {
-                // skip an empty batch which is the result of an initial "aggregate" change stream request
-                // next `MoveNext` will call a server
-                cursor.MoveNext();
-            }
-            int expectedNumberOfDocuments = successNode?.AsBsonArray.Count ?? 0;
+            var successNode = resultDocument.GetValue("success", null)?.AsBsonArray;
 
-            foreach (var current in ReliableMoveNext())
+            var stopwatch = Stopwatch.StartNew();
+            while (async ? cursor.MoveNextAsync().GetAwaiter().GetResult() : cursor.MoveNext())
             {
-                result.AddRange(current);
+                result.AddRange(cursor.Current);
 
-                if (result.Count >= expectedNumberOfDocuments)
+                if (successNode != null && result.Count >= successNode.Count)
+                {
+                    break;
+                }
+
+                if (stopwatch.Elapsed > TimeSpan.FromSeconds(10)) // this is enough time for the server to respond with non-empty batch if exists
                 {
                     break;
                 }
             }
 
             return result;
-
-            IEnumerable<IEnumerable<ChangeStreamDocument<BsonDocument>>> ReliableMoveNext()
-            {
-                var stopwatch = Stopwatch.StartNew();
-                while (async ? cursor.MoveNextAsync().GetAwaiter().GetResult() : cursor.MoveNext())
-                {
-                    if (cursor.Current.Any() || stopwatch.Elapsed > TimeSpan.FromSeconds(10))
-                    {
-                        yield return cursor.Current;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(300)); // delay between attempts
-                }
-            }
         }
 
         private void AssertEvents(List<CommandStartedEvent> actualEvents, List<BsonDocument> expectedEvents)

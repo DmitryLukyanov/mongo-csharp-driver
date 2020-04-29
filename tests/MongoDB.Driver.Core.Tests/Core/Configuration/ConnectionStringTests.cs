@@ -1110,7 +1110,7 @@ namespace MongoDB.Driver.Core.Configuration
         }
     }
 
-    public static class ConnectionStringReflector
+    internal static class ConnectionStringReflector
     {
         public static bool _directConnection(this ConnectionString obj) => (bool)Reflector.GetFieldValue(obj, nameof(_directConnection));
     }

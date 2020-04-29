@@ -19,6 +19,7 @@ using System.Linq;
 using System.Net;
 using FluentAssertions;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Compression;
@@ -99,8 +100,7 @@ namespace MongoDB.Driver.Specifications.connection_string
                             AssertTimeSpan(connectionString.ConnectTimeout, expectedOption.Value);
                             break;
                         case "directconnection":
-                            var directConnection = bool.Parse(connectionString.GetOption("directconnection"));
-                            AssertBoolean(directConnection, expectedOption.Value);
+                            AssertBoolean(connectionString._directConnection(), expectedOption.Value);
                             break;
                         case "heartbeatfrequencyms":
                             AssertTimeSpan(connectionString.HeartbeatInterval, expectedOption.Value);

@@ -479,7 +479,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <returns><c>true</c>, if sdam events should be suppressed, otherwise <c>false</c>.</returns>
         public bool SdamEquals(ServerDescription other)
         {
-            var canBeConsideredAsEqual = 
+            return
                 EndPointHelper.Equals(_endPoint, other._endPoint) &&
                 _type == other.Type &&
                 object.Equals(_wireVersionRange, other._wireVersionRange) &&
@@ -491,7 +491,6 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_replicaSetConfig?.Primary, other._replicaSetConfig?.Primary) && // primary
                 _logicalSessionTimeout == other._logicalSessionTimeout;
-            return canBeConsideredAsEqual;
         }
 
         /// <inheritdoc/>

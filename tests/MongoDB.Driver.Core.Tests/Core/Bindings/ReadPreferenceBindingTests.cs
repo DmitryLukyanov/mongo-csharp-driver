@@ -108,8 +108,10 @@ namespace MongoDB.Driver.Core.Bindings
             var clusterId = new ClusterId();
             var endPoint = new DnsEndPoint("localhost", 27017);
             var initialClusterDescription = new ClusterDescription(
-                clusterId, 
+                clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.Automatic,
+#pragma warning restore 618
                 ClusterType.Unknown, 
                 new[] { new ServerDescription(new ServerId(clusterId, endPoint), endPoint) });
             var finalClusterDescription = initialClusterDescription.WithType(ClusterType.Standalone);
@@ -151,8 +153,10 @@ namespace MongoDB.Driver.Core.Bindings
             var clusterId = new ClusterId();
             var endPoint = new DnsEndPoint("localhost", 27017);
             var initialClusterDescription = new ClusterDescription(
-                clusterId, 
+                clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.Automatic,
+#pragma warning restore 618
                 ClusterType.Unknown, 
                 new[] { new ServerDescription(new ServerId(clusterId, endPoint), endPoint) });
             var finalClusterDescription = initialClusterDescription.WithType(ClusterType.Standalone);

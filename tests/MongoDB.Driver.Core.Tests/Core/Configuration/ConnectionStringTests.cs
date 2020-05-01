@@ -270,7 +270,9 @@ namespace MongoDB.Driver.Core.Configuration
             subject.AuthMechanism.Should().BeNull();
             subject.AuthSource.Should().BeNull();
             subject.Compressors.Should().BeEmpty();
+#pragma warning disable 618
             subject.Connect.Should().Be(ClusterConnectionMode.Automatic);
+#pragma warning restore 618
             subject.ConnectTimeout.Should().Be(null);
             subject.DatabaseName.Should().BeNull();
             subject.FSync.Should().Be(null);
@@ -354,7 +356,9 @@ namespace MongoDB.Driver.Core.Configuration
             var expectedCompressorTypes = new[] { CompressorType.Snappy, CompressorType.Zlib };
             subject.Compressors.Select(x => x.Type).Should().Equal(expectedCompressorTypes);
             subject.Compressors.Single(x => x.Type == CompressorType.Zlib).Properties["Level"].Should().Be(4);
+#pragma warning disable 618
             subject.Connect.Should().Be(ClusterConnectionMode.ReplicaSet);
+#pragma warning restore 618
             subject.ConnectTimeout.Should().Be(TimeSpan.FromMilliseconds(15));
             subject.DatabaseName.Should().Be("test");
             subject.FSync.Should().BeTrue();
@@ -478,6 +482,7 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData("mongodb://localhost?connect=automatic", ClusterConnectionMode.Automatic)]
         [InlineData("mongodb://localhost?connect=direct", ClusterConnectionMode.Direct)]
         [InlineData("mongodb://localhost?connect=replicaSet", ClusterConnectionMode.ReplicaSet)]
@@ -489,6 +494,7 @@ namespace MongoDB.Driver.Core.Configuration
             var subject = new ConnectionString(connectionString);
 
             subject.Connect.Should().Be(connect);
+#pragma warning restore 618
         }
 
         [Theory]
@@ -516,6 +522,7 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData("mongodb://localhost/?directConnection=true&replicaSet=yeah", true, ClusterConnectionMode.Direct)]
         [InlineData("mongodb://localhost/?directConnection=true", true, ClusterConnectionMode.Direct)]
         [InlineData("mongodb://localhost/?directConnection=false&replicaSet=yeah", false, ClusterConnectionMode.ReplicaSet)]
@@ -525,7 +532,8 @@ namespace MongoDB.Driver.Core.Configuration
             var subject = new ConnectionString(connectionString);
 
             subject.Connect.Should().Be(connect);
-            subject._directConnection().Should().Be(directConnection);
+#pragma warning restore 618
+            subject.DirectConnection.Should().Be(directConnection);
         }
 
         [Theory]
@@ -543,7 +551,7 @@ namespace MongoDB.Driver.Core.Configuration
             else
             {
                 exception.Should().BeNull();
-                subject._directConnection().Should().BeFalse();
+                subject.DirectConnection.Should().BeFalse();
             }
         }
 
@@ -562,7 +570,7 @@ namespace MongoDB.Driver.Core.Configuration
             else
             {
                 exception.Should().BeNull();
-                subject._directConnection().Should().BeFalse();
+                subject.DirectConnection.Should().BeFalse();
             }
         }
 
@@ -1108,10 +1116,5 @@ namespace MongoDB.Driver.Core.Configuration
 
             resolved.Should().BeSameAs(subject);
         }
-    }
-
-    internal static class ConnectionStringReflector
-    {
-        public static bool _directConnection(this ConnectionString obj) => (bool)Reflector.GetFieldValue(obj, nameof(_directConnection));
     }
 }

@@ -364,7 +364,9 @@ namespace MongoDB.Driver.Core.Bindings
         // private methods
         private ClusterDescription CreateClusterDescription(
             ClusterId clusterId = null,
+#pragma warning disable 618
             ClusterConnectionMode connectionMode = ClusterConnectionMode.Automatic,
+#pragma warning restore 618
             ClusterType type = ClusterType.Unknown,
             IEnumerable<ServerDescription> servers = null)
         {
@@ -394,7 +396,9 @@ namespace MongoDB.Driver.Core.Bindings
             var serverId = new ServerId(clusterId, endPoint);
             var version = Feature.Transactions.FirstSupportedVersion;
             var servers = new[] { new ServerDescription(serverId, endPoint, state: ServerState.Connected, type: ServerType.ReplicaSetPrimary, version: version) };
+#pragma warning disable 618
             var clusterDescription = new ClusterDescription(clusterId, ClusterConnectionMode.Automatic, ClusterType.ReplicaSet, servers);
+#pragma warning restore 618
             var mockCluster = new Mock<ICluster>();
             mockCluster.SetupGet(m => m.Description).Returns(clusterDescription);
             return mockCluster.Object;

@@ -38,6 +38,7 @@ namespace MongoDB.Driver.Core.Clusters
         // methods
         public ICluster CreateCluster()
         {
+#pragma warning disable 618
             var connectionMode = _settings.ConnectionMode;
 
             if (connectionMode == ClusterConnectionMode.Automatic)
@@ -63,6 +64,7 @@ namespace MongoDB.Driver.Core.Clusters
                 default:
                     throw new MongoInternalException(string.Format("Invalid connection mode: {0}.", connectionMode));
             }
+#pragma warning restore 618
         }
 
         private MultiServerCluster CreateMultiServerCluster(ClusterSettings settings)

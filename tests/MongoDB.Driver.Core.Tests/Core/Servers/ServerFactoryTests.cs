@@ -30,7 +30,9 @@ namespace MongoDB.Driver.Core.Servers
     public class ServerFactoryTests
     {
         private ClusterId _clusterId;
+#pragma warning disable 618
         private ClusterConnectionMode _clusterConnectionMode;
+#pragma warning restore 618
         private IConnectionPoolFactory _connectionPoolFactory;
         private EndPoint _endPoint;
         private IEventSubscriber _eventSubscriber;
@@ -40,7 +42,9 @@ namespace MongoDB.Driver.Core.Servers
         public ServerFactoryTests()
         {
             _clusterId = new ClusterId();
+#pragma warning disable 618
             _clusterConnectionMode = ClusterConnectionMode.Standalone;
+#pragma warning restore 618
             _connectionPoolFactory = new Mock<IConnectionPoolFactory>().Object;
             _endPoint = new DnsEndPoint("localhost", 27017);
             _serverMonitorFactory = new Mock<IServerMonitorFactory>().Object;

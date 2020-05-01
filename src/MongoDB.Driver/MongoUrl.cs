@@ -42,9 +42,12 @@ namespace MongoDB.Driver
         private readonly IEnumerable<KeyValuePair<string, string>> _authenticationMechanismProperties;
         private readonly string _authenticationSource;
         private readonly IReadOnlyList<CompressorConfiguration> _compressors;
+#pragma warning disable 618
         private readonly ConnectionMode _connectionMode;
+#pragma warning restore 618
         private readonly TimeSpan _connectTimeout;
         private readonly string _databaseName;
+        private readonly bool? _directConnection;
         private readonly bool? _fsync;
         private readonly GuidRepresentation _guidRepresentation;
         private readonly TimeSpan _heartbeatInterval;
@@ -94,9 +97,12 @@ namespace MongoDB.Driver
             _authenticationMechanismProperties = builder.AuthenticationMechanismProperties;
             _authenticationSource = builder.AuthenticationSource;
             _compressors = builder.Compressors;
+#pragma warning disable 618
             _connectionMode = builder.ConnectionMode;
+#pragma warning restore 618
             _connectTimeout = builder.ConnectTimeout;
             _databaseName = builder.DatabaseName;
+            _directConnection = builder.DirectConnection;
             _fsync = builder.FSync;
 #pragma warning disable 618
             if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
@@ -216,7 +222,10 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the connection mode.
         /// </summary>
+#pragma warning disable 618
+        [Obsolete("Use DirectConnection instead.")]
         public ConnectionMode ConnectionMode
+#pragma warning restore 618
         {
             get { return _connectionMode; }
         }
@@ -235,6 +244,14 @@ namespace MongoDB.Driver
         public string DatabaseName
         {
             get { return _databaseName; }
+        }
+
+        /// <summary>
+        /// Gets the direct connection.
+        /// </summary>
+        public bool? DirectConnection
+        {
+            get => _directConnection;
         }
 
         /// <summary>

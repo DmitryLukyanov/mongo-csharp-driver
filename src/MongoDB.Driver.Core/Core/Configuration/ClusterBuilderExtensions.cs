@@ -60,8 +60,10 @@ namespace MongoDB.Driver.Core.Configuration
 
             if (!connectionString.IsResolved)
             {
+#pragma warning disable 618
                 var connectionMode = connectionString.Connect;
                 var resolveHosts = connectionMode == ClusterConnectionMode.Direct || connectionMode == ClusterConnectionMode.Standalone;
+#pragma warning restore 618
                 connectionString = connectionString.Resolve(resolveHosts);
             }
 
@@ -161,7 +163,13 @@ namespace MongoDB.Driver.Core.Configuration
             // Server
 
             // Cluster
+#pragma warning disable 618
             builder = builder.ConfigureCluster(s => s.With(connectionMode: connectionString.Connect));
+#pragma warning restore 618
+            if (connectionString.DirectConnection.HasValue)
+            {
+                builder = builder.ConfigureCluster(s => s.With(directConnection: connectionString.DirectConnection.Value));
+            }
             if (connectionString.Hosts.Count > 0)
             {
                 builder = builder.ConfigureCluster(s => s.With(endPoints: Optional.Enumerable(connectionString.Hosts)));
@@ -169,7 +177,9 @@ namespace MongoDB.Driver.Core.Configuration
             if (connectionString.ReplicaSet != null)
             {
                 builder = builder.ConfigureCluster(s => s.With(
+#pragma warning disable 618
                     connectionMode: ClusterConnectionMode.ReplicaSet,
+#pragma warning restore 618
                     replicaSetName: connectionString.ReplicaSet));
             }
             if (connectionString.ServerSelectionTimeout != null)

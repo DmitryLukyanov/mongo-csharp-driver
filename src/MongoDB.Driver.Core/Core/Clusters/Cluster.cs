@@ -90,7 +90,9 @@ namespace MongoDB.Driver.Core.Clusters
             _state = new InterlockedInt32(State.Initial);
 
             _clusterId = new ClusterId();
+#pragma warning disable 618
             _description = ClusterDescription.CreateInitial(_clusterId, _settings.ConnectionMode);
+#pragma warning restore 618
             _descriptionChangedTaskCompletionSource = new TaskCompletionSource<bool>();
             _latencyLimitingServerSelector = new LatencyLimitingServerSelector(settings.LocalThreshold);
 

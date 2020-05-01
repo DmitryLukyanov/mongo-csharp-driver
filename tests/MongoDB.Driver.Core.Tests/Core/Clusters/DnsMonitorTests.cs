@@ -456,7 +456,9 @@ namespace MongoDB.Driver.Core.Clusters
         {
             var clusterId = new ClusterId(1);
             var servers = new ServerDescription[0];
+#pragma warning disable 618
             return new ClusterDescription(clusterId, ClusterConnectionMode.Automatic, type, servers);
+#pragma warning restore 618
         }
 
         private List<SrvRecord> CreateSrvRecords(int[] ttls)

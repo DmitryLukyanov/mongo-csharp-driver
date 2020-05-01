@@ -46,6 +46,7 @@ namespace MongoDB.Driver.Tests
 #pragma warning disable 618
             var credentials = new List<MongoCredential> { MongoCredential.CreateMongoCRCredential("source", "username", "password") };
 #pragma warning restore 618
+            var directConnection = false;
             var servers = new[] { new MongoServerAddress("localhost"), new MongoServerAddress("127.0.0.1", 30000), new MongoServerAddress("[::1]", 27018) };
             var sslSettings = new SslSettings
             {
@@ -66,9 +67,12 @@ namespace MongoDB.Driver.Tests
                 applicationName: "app1",
                 clusterConfigurator: clusterConfigurator,
                 compressors: new[] { new CompressorConfiguration(CompressorType.Zlib) },
+#pragma warning disable 618
                 connectionMode: ConnectionMode.ReplicaSet,
+#pragma warning restore 618
                 connectTimeout: TimeSpan.FromSeconds(1),
                 credentials: credentials,
+                directConnection: directConnection,
                 heartbeatInterval: TimeSpan.FromSeconds(2),
                 heartbeatTimeout: TimeSpan.FromSeconds(3),
                 ipv6: true,
@@ -102,7 +106,9 @@ namespace MongoDB.Driver.Tests
                     new IPEndPoint(IPAddress.Parse("127.0.0.1"), 30000),
                     new IPEndPoint(IPAddress.Parse("[::1]"), 27018)
                 };
+#pragma warning disable 618
                 cluster.Settings.ConnectionMode.Should().Be(clusterKey.ConnectionMode.ToCore());
+#pragma warning restore 618
                 cluster.Settings.KmsProviders.Should().BeEquivalentTo(kmsProviders);
                 cluster.Settings.EndPoints.Should().Equal(expectedEndPoints);
                 cluster.Settings.MaxServerSelectionWaitQueueSize.Should().Be(clusterKey.WaitQueueSize);

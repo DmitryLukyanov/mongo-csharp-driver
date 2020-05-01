@@ -249,7 +249,9 @@ namespace MongoDB.Driver.Tests
                 version: new SemanticVersion(3, 6, 0),
                 wireVersionRange: new Range<int>(2, 6));
 
+#pragma warning disable 618
             var connectionMode = ClusterConnectionMode.Automatic;
+#pragma warning restore 618
             var type = ClusterType.Sharded;
             var servers = new[] { serverDescription };
             var clusterDescription = new ClusterDescription(clusterId, connectionMode, type, servers);

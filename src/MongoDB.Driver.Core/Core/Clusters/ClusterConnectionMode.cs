@@ -13,11 +13,14 @@
 * limitations under the License.
 */
 
+using System;
+
 namespace MongoDB.Driver.Core.Clusters
 {
     /// <summary>
     /// Represents the cluster connection mode.
     /// </summary>
+    [Obsolete("Use DirectConnection instead.")]
     public enum ClusterConnectionMode
     {
         /// <summary>
@@ -48,6 +51,7 @@ namespace MongoDB.Driver.Core.Clusters
 
     internal static class ClusterConnectionModeExtensionMethods
     {
+#pragma warning disable 618
         public static ClusterType ToClusterType(this ClusterConnectionMode connectionMode)
         {
             switch(connectionMode)
@@ -62,5 +66,25 @@ namespace MongoDB.Driver.Core.Clusters
                     return ClusterType.Unknown;
             }
         }
+
+        public static ClusterConnectionMode GetEffectiveConnectionMode(this ClusterConnectionMode connect, bool? directConnection, string replicaSet)
+        {
+            if (directConnection.HasValue)
+            {
+                if (directConnection.Value)
+                {
+                    return ClusterConnectionMode.Direct;
+                }
+                else
+                {
+                    return replicaSet != null ? ClusterConnectionMode.ReplicaSet : ClusterConnectionMode.Automatic;
+                }
+            }
+            else
+            {
+                return connect;
+            }
+        }
+#pragma warning restore 618
     }
 }

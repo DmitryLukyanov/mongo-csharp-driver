@@ -145,7 +145,9 @@ namespace MongoDB.Driver.Specifications.server_selection
             var clusterType = GetClusterType(topologyDescription["type"].ToString());
             var servers = BuildServerDescriptions((BsonArray)topologyDescription["servers"], heartbeatInterval);
 
+#pragma warning disable 618
             return new ClusterDescription(_clusterId, ClusterConnectionMode.Automatic, clusterType, servers);
+#pragma warning restore 618
         }
 
         private IEnumerable<ServerDescription> BuildServerDescriptions(BsonArray serverDescriptions, TimeSpan heartbeatInterval)

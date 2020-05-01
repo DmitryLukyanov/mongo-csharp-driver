@@ -187,12 +187,14 @@ namespace MongoDB.Driver.Core.Events
             var @event = new ClusterDescriptionChangedEvent(
                 oldDescription: new ClusterDescription(
                     new ClusterId(),
+#pragma warning disable 618
                     ClusterConnectionMode.Automatic,
                     ClusterType.Unknown,
                     new ServerDescription[] { }),
                 newDescription: new ClusterDescription(
                     new ClusterId(),
                     ClusterConnectionMode.Direct,
+#pragma warning restore 618
                     ClusterType.Standalone,
                     new ServerDescription[] { new ServerDescription(new ServerId(new ClusterId(), ipAddress), ipAddress)}));
             var expectedLogMessage =

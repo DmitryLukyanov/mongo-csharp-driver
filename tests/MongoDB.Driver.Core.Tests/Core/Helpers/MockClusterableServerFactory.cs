@@ -80,7 +80,9 @@ namespace MongoDB.Driver.Core.Helpers
                         Server = new Server(
                             clusterId,
                             clusterClock,
+#pragma warning disable 618
                             ClusterConnectionMode.Automatic,
+#pragma warning restore 618
                             new ServerSettings(),
                             endPoint,
                             (new Mock<IConnectionPoolFactory> { DefaultValue = DefaultValue.Mock }).Object,

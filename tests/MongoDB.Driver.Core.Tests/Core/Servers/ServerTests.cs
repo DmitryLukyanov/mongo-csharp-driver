@@ -44,7 +44,9 @@ namespace MongoDB.Driver.Core.Servers
     {
         private IClusterClock _clusterClock;
         private ClusterId _clusterId;
+#pragma warning disable 618
         private ClusterConnectionMode _clusterConnectionMode;
+#pragma warning restore 618
         private Mock<IConnectionPool> _mockConnectionPool;
         private Mock<IConnectionPoolFactory> _mockConnectionPoolFactory;
         private EndPoint _endPoint;
@@ -60,7 +62,9 @@ namespace MongoDB.Driver.Core.Servers
             _endPoint = new DnsEndPoint("localhost", 27017);
 
             _clusterClock = new Mock<IClusterClock>().Object;
+#pragma warning disable 618
             _clusterConnectionMode = ClusterConnectionMode.Standalone;
+#pragma warning restore 618
             _mockConnectionPool = new Mock<IConnectionPool>();
             _mockConnectionPool.Setup(p => p.AcquireConnection(It.IsAny<CancellationToken>())).Returns(new Mock<IConnectionHandle>().Object);
             _mockConnectionPool.Setup(p => p.AcquireConnectionAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(new Mock<IConnectionHandle>().Object));

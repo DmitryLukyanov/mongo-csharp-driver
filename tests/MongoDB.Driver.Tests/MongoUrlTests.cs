@@ -125,7 +125,9 @@ namespace MongoDB.Driver.Tests
                 AuthenticationMechanismProperties = authMechanismProperties,
                 AuthenticationSource = "db",
                 Compressors = new[] { zlibCompressor },
+#pragma warning disable 618
                 ConnectionMode = ConnectionMode.ReplicaSet,
+#pragma warning restore 618
                 ConnectTimeout = TimeSpan.FromSeconds(1),
                 DatabaseName = "database",
                 FSync = true,
@@ -214,8 +216,8 @@ namespace MongoDB.Driver.Tests
                 Assert.Contains(url.Compressors, x => x.Type == CompressorType.Zlib);
 #pragma warning disable 618
                 Assert.Equal(123, url.ComputedWaitQueueSize);
-#pragma warning restore 618
                 Assert.Equal(ConnectionMode.ReplicaSet, url.ConnectionMode);
+#pragma warning restore 618
                 Assert.Equal(TimeSpan.FromSeconds(1), url.ConnectTimeout);
                 Assert.Equal("database", url.DatabaseName);
                 Assert.Equal(true, url.FSync);

@@ -30,6 +30,7 @@ namespace MongoDB.Driver.Core.Clusters
     {
         #region static
         // internal static methods
+#pragma warning disable 618
         internal static ClusterDescription CreateInitial(ClusterId clusterId, ClusterConnectionMode connectionMode)
         {
             return new ClusterDescription(
@@ -38,8 +39,10 @@ namespace MongoDB.Driver.Core.Clusters
                 ClusterType.Unknown,
                 Enumerable.Empty<ServerDescription>());
         }
+#pragma warning restore 618
 
         // private static methods
+#pragma warning disable 618
         private static TimeSpan? CalculateLogicalSessionTimeout(ClusterConnectionMode connectionMode, IEnumerable<ServerDescription> servers)
         {
             TimeSpan? logicalSessionTimeout = null;
@@ -59,7 +62,9 @@ namespace MongoDB.Driver.Core.Clusters
 
             return logicalSessionTimeout;
         }
+#pragma warning restore 618
 
+#pragma warning disable 618
         private static IEnumerable<ServerDescription> SelectServersThatDetermineWhetherSessionsAreSupported(ClusterConnectionMode connectionMode, IEnumerable<ServerDescription> servers)
         {
             var connectedServers = servers.Where(s => s.State == ServerState.Connected);
@@ -72,11 +77,14 @@ namespace MongoDB.Driver.Core.Clusters
                 return connectedServers.Where(s => s.IsDataBearing);
             }
         }
+#pragma warning restore 618
         #endregion
 
         // fields
         private readonly ClusterId _clusterId;
+#pragma warning disable 618
         private readonly ClusterConnectionMode _connectionMode;
+#pragma warning restore 618
         private readonly Exception _dnsMonitorException;
         private readonly TimeSpan? _logicalSessionTimeout;
         private readonly IReadOnlyList<ServerDescription> _servers;
@@ -92,7 +100,9 @@ namespace MongoDB.Driver.Core.Clusters
         /// <param name="servers">The servers.</param>
         public ClusterDescription(
             ClusterId clusterId,
+#pragma warning disable 618
             ClusterConnectionMode connectionMode,
+#pragma warning restore 618
             ClusterType type,
             IEnumerable<ServerDescription> servers)
             : this(clusterId, connectionMode, dnsMonitorException: null, type, servers)
@@ -109,7 +119,9 @@ namespace MongoDB.Driver.Core.Clusters
         /// <param name="servers">The servers.</param>
         public ClusterDescription(
             ClusterId clusterId,
+#pragma warning disable 618
             ClusterConnectionMode connectionMode,
+#pragma warning restore 618
             Exception dnsMonitorException,
             ClusterType type,
             IEnumerable<ServerDescription> servers)
@@ -134,10 +146,12 @@ namespace MongoDB.Driver.Core.Clusters
         /// <summary>
         /// Gets the connection mode.
         /// </summary>
+#pragma warning disable 618
         public ClusterConnectionMode ConnectionMode
         {
             get { return _connectionMode; }
         }
+#pragma warning restore 618
 
         /// <summary>
         /// Gets the last DNS monitor exception (null if there was none).

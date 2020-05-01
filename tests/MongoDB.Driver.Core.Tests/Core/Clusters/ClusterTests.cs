@@ -88,12 +88,14 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData(ClusterConnectionMode.Automatic, ClusterType.Unknown)]
         [InlineData(ClusterConnectionMode.Direct, ClusterType.Unknown)]
         [InlineData(ClusterConnectionMode.ReplicaSet, ClusterType.ReplicaSet)]
         [InlineData(ClusterConnectionMode.Sharded, ClusterType.Sharded)]
         [InlineData(ClusterConnectionMode.Standalone, ClusterType.Standalone)]
         public void Description_should_return_correct_description_when_not_initialized(ClusterConnectionMode connectionMode, ClusterType clusterType)
+#pragma warning restore 618
         {
             var subject = CreateSubject(connectionMode);
             var description = subject.Description;
@@ -533,7 +535,9 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         // private methods
+#pragma warning disable 618
         private StubCluster CreateSubject(ClusterConnectionMode connectionMode = ClusterConnectionMode.Automatic, TimeSpan? serverSelectionTimeout = null)
+#pragma warning restore 618
         {
             _settings = _settings.With(connectionMode: connectionMode);
             if (serverSelectionTimeout != null)

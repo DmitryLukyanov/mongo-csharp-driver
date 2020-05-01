@@ -48,7 +48,9 @@ namespace MongoDB.Driver.Tests
                 AuthenticationMechanismProperties = authMechanismProperties,
                 AuthenticationSource = "db",
                 Compressors = new[] { zlibCompressor },
+#pragma warning disable 618
                 ConnectionMode = ConnectionMode.ReplicaSet,
+#pragma warning restore 618
                 ConnectTimeout = TimeSpan.FromSeconds(1),
                 DatabaseName = "database",
                 FSync = true,
@@ -146,7 +148,9 @@ namespace MongoDB.Driver.Tests
                 Assert.Contains(
                     builder.Compressors,
                     x => x.Type == CompressorType.Zlib && x.Properties.ContainsKey("Level") && (int)x.Properties["Level"] == 4);
+#pragma warning disable 618
                 Assert.Equal(ConnectionMode.ReplicaSet, builder.ConnectionMode);
+#pragma warning restore 618
                 Assert.Equal(TimeSpan.FromSeconds(1), builder.ConnectTimeout);
                 Assert.Equal("database", builder.DatabaseName);
                 Assert.Equal(true, builder.FSync);
@@ -352,6 +356,7 @@ namespace MongoDB.Driver.Tests
 
         [Theory]
         [InlineData(null, "mongodb://localhost", new[] { "" })]
+#pragma warning disable 618
         [InlineData(ConnectionMode.Automatic, "mongodb://localhost{0}", new[] { "", "/?connect=automatic", "/?connect=Automatic" })]
         [InlineData(ConnectionMode.Direct, "mongodb://localhost/?connect={0}", new[] { "direct", "Direct" })]
         [InlineData(ConnectionMode.ReplicaSet, "mongodb://localhost/?connect={0}", new[] { "replicaSet", "ReplicaSet" })]
@@ -365,6 +370,7 @@ namespace MongoDB.Driver.Tests
             foreach (var builder in EnumerateBuiltAndParsedBuilders(built, formatString, values))
             {
                 Assert.Equal(connectionMode ?? ConnectionMode.Automatic, builder.ConnectionMode);
+#pragma warning restore 618
                 Assert.Equal(canonicalConnectionString, builder.ToString());
             }
         }
@@ -448,8 +454,8 @@ namespace MongoDB.Driver.Tests
                 Assert.Equal(new CompressorConfiguration[0], builder.Compressors);
 #pragma warning disable 618
                 Assert.Equal(MongoDefaults.ComputedWaitQueueSize, builder.ComputedWaitQueueSize);
-#pragma warning restore 618
                 Assert.Equal(ConnectionMode.Automatic, builder.ConnectionMode);
+#pragma warning restore 618
                 Assert.Equal(MongoDefaults.ConnectTimeout, builder.ConnectTimeout);
                 Assert.Equal(null, builder.DatabaseName);
                 Assert.Equal(null, builder.FSync);

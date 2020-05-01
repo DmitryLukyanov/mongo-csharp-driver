@@ -120,6 +120,7 @@ namespace MongoDB.Driver.Tests
         public void TestConnectionMode()
         {
             var settings = new MongoServerSettings();
+#pragma warning disable 618
             Assert.Equal(ConnectionMode.Automatic, settings.ConnectionMode);
 
             var connectionMode = ConnectionMode.Direct;
@@ -129,6 +130,7 @@ namespace MongoDB.Driver.Tests
             settings.Freeze();
             Assert.Equal(connectionMode, settings.ConnectionMode);
             Assert.Throws<InvalidOperationException>(() => { settings.ConnectionMode = connectionMode; });
+#pragma warning restore 618
         }
 
         [Fact]
@@ -168,7 +170,9 @@ namespace MongoDB.Driver.Tests
             var settings = new MongoServerSettings();
             Assert.Equal(false, settings.AllowInsecureTls);
             Assert.Equal(null, settings.ApplicationName);
+#pragma warning disable 618
             Assert.Equal(ConnectionMode.Automatic, settings.ConnectionMode);
+#pragma warning restore 618
             Assert.Equal(MongoDefaults.ConnectTimeout, settings.ConnectTimeout);
 #pragma warning disable 618
             Assert.Equal(0, settings.Credentials.Count());
@@ -227,7 +231,9 @@ namespace MongoDB.Driver.Tests
             Assert.False(clone.Equals(settings));
 
             clone = settings.Clone();
+#pragma warning disable 618
             clone.ConnectionMode = ConnectionMode.Direct;
+#pragma warning restore 618
             Assert.False(clone.Equals(settings));
 
             clone = settings.Clone();
@@ -416,7 +422,9 @@ namespace MongoDB.Driver.Tests
             var settings = MongoServerSettings.FromClientSettings(clientSettings);
             Assert.Equal(url.AllowInsecureTls, settings.AllowInsecureTls);
             Assert.Equal(url.ApplicationName, settings.ApplicationName);
+#pragma warning disable 618
             Assert.Equal(url.ConnectionMode, settings.ConnectionMode);
+#pragma warning restore 618
             Assert.Equal(url.ConnectTimeout, settings.ConnectTimeout);
 #pragma warning disable 618
             Assert.Equal(1, settings.Credentials.Count());
@@ -504,11 +512,13 @@ namespace MongoDB.Driver.Tests
             var settings = MongoServerSettings.FromUrl(url);
             Assert.Equal(url.AllowInsecureTls, settings.AllowInsecureTls);
             Assert.Equal(url.ApplicationName, settings.ApplicationName);
+#pragma warning disable 618
             Assert.Equal(url.ConnectionMode, settings.ConnectionMode);
+#pragma warning restore 618
             Assert.Equal(url.ConnectTimeout, settings.ConnectTimeout);
 #pragma warning disable 618
             Assert.Equal(1, settings.Credentials.Count());
-#pragma warning restore
+#pragma warning restore 618
             Assert.Equal(url.Username, settings.Credential.Username);
             Assert.Equal(url.AuthenticationMechanism, settings.Credential.Mechanism);
             Assert.Equal(url.AuthenticationSource, settings.Credential.Source);
@@ -1041,7 +1051,9 @@ namespace MongoDB.Driver.Tests
                 AllowInsecureTls = false,
                 ApplicationName = "app",
                 ClusterConfigurator = clusterConfigurator,
+#pragma warning disable 618
                 ConnectionMode = ConnectionMode.Direct,
+#pragma warning restore 618
                 ConnectTimeout = TimeSpan.FromSeconds(1),
                 Credential = credential,
                 HeartbeatInterval = TimeSpan.FromMinutes(1),
@@ -1077,7 +1089,9 @@ namespace MongoDB.Driver.Tests
             result.AllowInsecureTls.Should().Be(subject.AllowInsecureTls);
             result.ApplicationName.Should().Be(subject.ApplicationName);
             result.ClusterConfigurator.Should().BeSameAs(subject.ClusterConfigurator);
+#pragma warning disable 618
             result.ConnectionMode.Should().Be(subject.ConnectionMode);
+#pragma warning restore 618
             result.ConnectTimeout.Should().Be(subject.ConnectTimeout);
 #pragma warning disable 618
             result.Credentials.Should().Equal(subject.Credentials);

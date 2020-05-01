@@ -64,6 +64,7 @@ namespace MongoDB.Driver.Core.Clusters
             : base(settings, serverFactory, eventSubscriber)
         {
             Ensure.IsGreaterThanZero(settings.EndPoints.Count, "settings.EndPoints.Count");
+#pragma warning disable 618
             if (settings.ConnectionMode == ClusterConnectionMode.Standalone)
             {
                 throw new ArgumentException("ClusterConnectionMode.StandAlone is not supported for a MultiServerCluster.");
@@ -72,6 +73,8 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 throw new ArgumentException("ClusterConnectionMode.Direct is not supported for a MultiServerCluster.");
             }
+#pragma warning restore 618
+            // DirectConnection is validated on the ClusterSetting level
 
             _dnsMonitorFactory = dnsMonitorFactory ?? new DnsMonitorFactory(eventSubscriber);
             _monitorServersCancellationTokenSource = new CancellationTokenSource();
@@ -146,7 +149,10 @@ namespace MongoDB.Driver.Core.Clusters
                     // are re-entrant such that this won't cause problems,
                     // but could prevent issues of conflicting reports
                     // from servers that are quick to respond.
-                    var clusterDescription = Description.WithType(Settings.ConnectionMode.ToClusterType());
+#pragma warning disable 618
+                    var clusterDescription = Description.WithType(Settings.GetClusterType());
+#pragma warning restore 618
+
                     if (Settings.Scheme != ConnectionStringScheme.MongoDBPlusSrv)
                     {
                         lock (_serversLock)
@@ -183,7 +189,9 @@ namespace MongoDB.Driver.Core.Clusters
             }
         }
 
+#pragma warning disable 618
         private bool IsServerValidForCluster(ClusterType clusterType, ClusterConnectionMode connectionMode, ServerType serverType)
+#pragma warning restore 618
         {
             switch (clusterType)
             {
@@ -199,7 +207,9 @@ namespace MongoDB.Driver.Core.Clusters
                 case ClusterType.Unknown:
                     switch (connectionMode)
                     {
+#pragma warning disable 618
                         case ClusterConnectionMode.Automatic:
+#pragma warning restore 618
                             if (serverType == ServerType.Standalone)
                             {
                                 return _servers.Count == 1 || Settings.Scheme == ConnectionStringScheme.MongoDBPlusSrv;
@@ -291,7 +301,9 @@ namespace MongoDB.Driver.Core.Clusters
                 }
                 else
                 {
+#pragma warning disable 618
                     if (IsServerValidForCluster(newClusterDescription.Type, Settings.ConnectionMode, newServerDescription.Type))
+#pragma warning restore 618
                     {
                         if (newClusterDescription.Type == ClusterType.Unknown)
                         {

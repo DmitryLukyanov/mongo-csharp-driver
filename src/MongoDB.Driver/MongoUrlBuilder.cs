@@ -43,9 +43,12 @@ namespace MongoDB.Driver
         private Dictionary<string, string> _authenticationMechanismProperties;
         private string _authenticationSource;
         private IReadOnlyList<CompressorConfiguration> _compressors;
+#pragma warning disable 618
         private ConnectionMode _connectionMode;
+#pragma warning restore 618
         private TimeSpan _connectTimeout;
         private string _databaseName;
+        private bool? _directConnection;
         private bool? _fsync;
         private GuidRepresentation _guidRepresentation;
         private TimeSpan _heartbeatInterval;
@@ -88,9 +91,12 @@ namespace MongoDB.Driver
             _authenticationMechanismProperties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _authenticationSource = null;
             _compressors = new CompressorConfiguration[0];
+#pragma warning disable 618
             _connectionMode = ConnectionMode.Automatic;
+#pragma warning restore 618
             _connectTimeout = MongoDefaults.ConnectTimeout;
             _databaseName = null;
+            _directConnection = null;
             _fsync = null;
 #pragma warning disable 618
             if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
@@ -223,7 +229,10 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets the connection mode.
         /// </summary>
+#pragma warning disable 618
+        [Obsolete("Use DirectConnection instead.")]
         public ConnectionMode ConnectionMode
+#pragma warning restore 618
         {
             get { return _connectionMode; }
             set { _connectionMode = value; }
@@ -252,6 +261,15 @@ namespace MongoDB.Driver
         {
             get { return _databaseName; }
             set { _databaseName = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the direct connection.
+        /// </summary>
+        public bool? DirectConnection
+        {
+            get => _directConnection;
+            set => _directConnection = value;
         }
 
         /// <summary>
@@ -702,6 +720,7 @@ namespace MongoDB.Driver
             _authenticationMechanismProperties = connectionString.AuthMechanismProperties.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
             _authenticationSource = connectionString.AuthSource;
             _compressors = connectionString.Compressors;
+#pragma warning disable 618
             switch (connectionString.Connect)
             {
                 case ClusterConnectionMode.Direct:
@@ -720,8 +739,10 @@ namespace MongoDB.Driver
                     _connectionMode = Driver.ConnectionMode.Automatic;
                     break;
             }
+#pragma warning restore 618
             _connectTimeout = connectionString.ConnectTimeout.GetValueOrDefault(MongoDefaults.ConnectTimeout);
             _databaseName = connectionString.DatabaseName;
+            _directConnection = connectionString.DirectConnection;
             _fsync = connectionString.FSync;
 #pragma warning disable 618
             if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
@@ -884,6 +905,10 @@ namespace MongoDB.Driver
             {
                 query.AppendFormat("appname={0};", _applicationName);
             }
+            if (_directConnection != null)
+            {
+                query.AppendFormat("directConnection={0};", _directConnection);
+            }
             if (_ipv6)
             {
                 query.AppendFormat("ipv6=true;");
@@ -920,7 +945,10 @@ namespace MongoDB.Driver
                     ParseAndAppendCompressorOptions(query, compressor);
                 }
             }
+
+#pragma warning disable 618
             if (_connectionMode != ConnectionMode.Automatic)
+#pragma warning restore 618
             {
                 query.AppendFormat("connect={0};", MongoUtils.ToCamelCase(_connectionMode.ToString()));
             }

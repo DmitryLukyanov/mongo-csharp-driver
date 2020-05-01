@@ -25,14 +25,18 @@ namespace MongoDB.Driver.Core.Servers
     internal class ServerFactory : IClusterableServerFactory
     {
         // fields
+#pragma warning disable 618
         private readonly ClusterConnectionMode _clusterConnectionMode;
+#pragma warning restore 618
         private readonly IConnectionPoolFactory _connectionPoolFactory;
         private readonly IServerMonitorFactory _serverMonitorFactory;
         private readonly IEventSubscriber _eventSubscriber;
         private readonly ServerSettings _settings;
 
         // constructors
+#pragma warning disable 618
         public ServerFactory(ClusterConnectionMode clusterConnectionMode, ServerSettings settings, IConnectionPoolFactory connectionPoolFactory, IServerMonitorFactory serverMonitoryFactory, IEventSubscriber eventSubscriber)
+#pragma warning restore 618
         {
             _clusterConnectionMode = clusterConnectionMode;
             _settings = Ensure.IsNotNull(settings, nameof(settings));

@@ -115,7 +115,9 @@ namespace MongoDB.Driver.Core.Clusters
                 var stopwatch = Stopwatch.StartNew();
                 _server = CreateServer(Settings.EndPoints[0]);
                 var newClusterDescription = Description
-                    .WithType(Settings.ConnectionMode.ToClusterType())
+#pragma warning disable 618
+                    .WithType(Settings.GetClusterType())
+#pragma warning restore 618
                     .WithServerDescription(_server.Description);
                 if (_addingServerEventHandler != null)
                 {
@@ -140,7 +142,9 @@ namespace MongoDB.Driver.Core.Clusters
             }
         }
 
-        private bool IsServerValidForCluster(ClusterType clusterType, ClusterConnectionMode connectionMode, ServerType serverType)
+#pragma warning disable 618
+        private bool IsServerValidForCluster(ClusterType clusterType, ClusterConnectionMode connectionMode, bool? directConnection, ServerType serverType)
+#pragma warning restore 618
         {
             switch (clusterType)
             {
@@ -156,8 +160,11 @@ namespace MongoDB.Driver.Core.Clusters
                 case ClusterType.Unknown:
                     switch (connectionMode)
                     {
+#pragma warning disable 618
                         case ClusterConnectionMode.Automatic:
                         case ClusterConnectionMode.Direct:
+                        case ClusterConnectionMode _ when directConnection.GetValueOrDefault():
+#pragma warning restore 618
                             return true;
 
                         default:
@@ -195,7 +202,9 @@ namespace MongoDB.Driver.Core.Clusters
             }
             else
             {
-                if (IsServerValidForCluster(newClusterDescription.Type, Settings.ConnectionMode, newServerDescription.Type))
+#pragma warning disable 618
+                if (IsServerValidForCluster(newClusterDescription.Type, Settings.ConnectionMode, Settings.DirectConnection, newServerDescription.Type))
+#pragma warning restore 618
                 {
                     if (newClusterDescription.Type == ClusterType.Unknown)
                     {

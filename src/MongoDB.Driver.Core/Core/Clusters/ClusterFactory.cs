@@ -38,9 +38,10 @@ namespace MongoDB.Driver.Core.Clusters
         // methods
         public ICluster CreateCluster()
         {
+#pragma warning disable 618
             var connectionMode = _settings.ConnectionMode;
 
-            if (connectionMode == ClusterConnectionMode.Automatic)
+            if (connectionMode == ClusterConnectionMode.Automatic && !_settings.DirectConnection.HasValue)
             {
                 if (_settings.ReplicaSetName != null)
                 {
@@ -49,20 +50,33 @@ namespace MongoDB.Driver.Core.Clusters
             }
 
             var settings = _settings.With(connectionMode: connectionMode);
+            var directConnection = _settings.DirectConnection;
 
             switch (connectionMode)
             {
-                case ClusterConnectionMode.Automatic:
-                    return CreateMultiServerCluster(settings);
+                case ClusterConnectionMode _ when directConnection.HasValue && directConnection.Value:
                 case ClusterConnectionMode.Direct:
                 case ClusterConnectionMode.Standalone:
                     return CreateSingleServerCluster(settings);
+
+                case ClusterConnectionMode.Automatic:
+                    if (settings.EndPoints.Count == 1 && settings.Scheme != ConnectionStringScheme.MongoDBPlusSrv && !directConnection.HasValue)
+                    {
+                        return CreateSingleServerCluster(settings);
+                    }
+                    else
+                    {
+                        return CreateMultiServerCluster(settings);
+                    }
+
+                case ClusterConnectionMode _ when directConnection.HasValue && !directConnection.Value:
                 case ClusterConnectionMode.ReplicaSet:
                 case ClusterConnectionMode.Sharded:
                     return CreateMultiServerCluster(settings);
                 default:
                     throw new MongoInternalException(string.Format("Invalid connection mode: {0}.", connectionMode));
             }
+#pragma warning restore 618
         }
 
         private MultiServerCluster CreateMultiServerCluster(ClusterSettings settings)

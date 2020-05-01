@@ -326,7 +326,10 @@ namespace MongoDB.Driver.Specifications.sdam_monitoring
             var connectionString = new ConnectionString(definition["uri"].AsString);
             var settings = new ClusterSettings(
                 endPoints: Optional.Enumerable(connectionString.Hosts),
+#pragma warning disable 618
                 connectionMode: connectionString.Connect,
+#pragma warning restore 618
+                directConnection: connectionString.DirectConnection,
                 replicaSetName: connectionString.ReplicaSet);
 
             _eventSubscriber = new EventCapturer();

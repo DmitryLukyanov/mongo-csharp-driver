@@ -38,10 +38,12 @@ namespace MongoDB.Driver
     {
         #region static
         // private static methods
+#pragma warning disable 618
         private static IEnumerable<ServerDescription> SelectServersThatDetermineWhetherSessionsAreSupported(ClusterConnectionMode connectionMode, IEnumerable<ServerDescription> servers)
         {
             var connectedServers = servers.Where(s => s.State == ServerState.Connected);
             if (connectionMode == ClusterConnectionMode.Direct)
+#pragma warning restore 618
             {
                 return connectedServers;
             }

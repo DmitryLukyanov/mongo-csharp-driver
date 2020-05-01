@@ -38,7 +38,9 @@ namespace MongoDB.Driver.Core.Clusters.ServerSelectors
 
             _description = new ClusterDescription(
                 clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.ReplicaSet,
+#pragma warning restore 618
                 ClusterType.ReplicaSet,
                 new[] { _primary, _secondary1, _secondary2 });
         }
@@ -212,7 +214,9 @@ namespace MongoDB.Driver.Core.Clusters.ServerSelectors
 
             var description = new ClusterDescription(
                 clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.ReplicaSet,
+#pragma warning restore 618
                 ClusterType.ReplicaSet,
                 new[] { primary, secondary });
 
@@ -233,7 +237,9 @@ namespace MongoDB.Driver.Core.Clusters.ServerSelectors
 
             var description = new ClusterDescription(
                 clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.Direct,
+#pragma warning restore 618
                 ClusterType.ReplicaSet,
                 new[] { server });
 

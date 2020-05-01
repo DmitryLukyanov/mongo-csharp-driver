@@ -80,6 +80,7 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData(ClusterConnectionMode.ReplicaSet, ServerType.ShardRouter)]
         [InlineData(ClusterConnectionMode.ReplicaSet, ServerType.Standalone)]
         [InlineData(ClusterConnectionMode.Standalone, ServerType.ReplicaSetArbiter)]
@@ -95,6 +96,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(ClusterConnectionMode.Sharded, ServerType.ReplicaSetSecondary)]
         [InlineData(ClusterConnectionMode.Sharded, ServerType.Standalone)]
         public void Description_should_not_contain_any_servers_if_the_provided_server_is_not_of_the_required_type(ClusterConnectionMode connectionMode, ServerType serverType)
+#pragma warning restore 618
         {
             _settings = _settings.With(connectionMode: connectionMode);
 
@@ -112,7 +114,9 @@ namespace MongoDB.Driver.Core.Clusters
         [Fact]
         public void Description_should_regain_a_server_if_the_provided_server_is_rebooted_to_its_expected_type()
         {
+#pragma warning disable 618
             _settings = _settings.With(connectionMode: ClusterConnectionMode.Standalone);
+#pragma warning restore 618
 
             var subject = CreateSubject();
             subject.Initialize();
@@ -155,7 +159,9 @@ namespace MongoDB.Driver.Core.Clusters
             [Values(null, "wrong")] string isMasterSetName)
         {
             _settings = _settings.With(
+#pragma warning disable 618
                 connectionMode: ClusterConnectionMode.Direct,
+#pragma warning restore 618
                 replicaSetName: "rs");
 
             var subject = CreateSubject();

@@ -30,7 +30,10 @@ namespace MongoDB.Driver
         private readonly string _applicationName;
         private readonly Action<ClusterBuilder> _clusterConfigurator;
         private readonly IReadOnlyList<CompressorConfiguration> _compressors;
+#pragma warning disable 618
         private readonly ConnectionMode _connectionMode;
+#pragma warning restore 618
+        private readonly bool? _directConnection;
         private readonly TimeSpan _connectTimeout;
         private readonly IReadOnlyList<MongoCredential> _credentials;
         private readonly int _hashCode;
@@ -63,9 +66,12 @@ namespace MongoDB.Driver
             string applicationName,
             Action<ClusterBuilder> clusterConfigurator,
             IReadOnlyList<CompressorConfiguration> compressors,
+#pragma warning disable 618
             ConnectionMode connectionMode,
+#pragma warning restore 618
             TimeSpan connectTimeout,
             IReadOnlyList<MongoCredential> credentials,
+            bool? directConnection,
             TimeSpan heartbeatInterval,
             TimeSpan heartbeatTimeout,
             bool ipv6,
@@ -96,6 +102,7 @@ namespace MongoDB.Driver
             _connectionMode = connectionMode;
             _connectTimeout = connectTimeout;
             _credentials = credentials;
+            _directConnection = directConnection;
             _heartbeatInterval = heartbeatInterval;
             _heartbeatTimeout = heartbeatTimeout;
             _ipv6 = ipv6;
@@ -127,9 +134,12 @@ namespace MongoDB.Driver
         public string ApplicationName { get { return _applicationName; } }
         public Action<ClusterBuilder> ClusterConfigurator { get { return _clusterConfigurator; } }
         public IReadOnlyList<CompressorConfiguration> Compressors { get { return _compressors; } }
+#pragma warning disable 618
         public ConnectionMode ConnectionMode { get { return _connectionMode; } }
+#pragma warning restore 618
         public TimeSpan ConnectTimeout { get { return _connectTimeout; } }
         public IReadOnlyList<MongoCredential> Credentials { get { return _credentials; } }
+        public bool? DirectConnection => _directConnection;
         public TimeSpan HeartbeatInterval { get { return _heartbeatInterval; } }
         public TimeSpan HeartbeatTimeout { get { return _heartbeatTimeout; } }
         public bool IPv6 { get { return _ipv6; } }
@@ -179,6 +189,7 @@ namespace MongoDB.Driver
                 _connectionMode == rhs._connectionMode &&
                 _connectTimeout == rhs._connectTimeout &&
                 _credentials.SequenceEqual(rhs._credentials) &&
+                _directConnection == rhs._directConnection &&
                 _heartbeatInterval == rhs._heartbeatInterval &&
                 _heartbeatTimeout == rhs._heartbeatTimeout &&
                 _ipv6 == rhs._ipv6 &&

@@ -31,7 +31,9 @@ namespace MongoDB.Driver.Core.Clusters.ServerSelectors
             var clusterId = new ClusterId();
             _description = new ClusterDescription(
                 clusterId,
+#pragma warning disable 618
                 ClusterConnectionMode.Automatic,
+#pragma warning restore 618
                 ClusterType.Unknown,
                 new[]
                 {

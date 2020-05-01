@@ -106,12 +106,22 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 case "Single":
                     if (cluster is SingleServerCluster singleServerCluster)
                     {
-                        singleServerCluster.Description.ConnectionMode.Should().Be(ClusterConnectionMode.Direct);
+#pragma warning disable 618
+                        singleServerCluster.Description.ConnectionMode.Should().Be(ClusterConnectionMode.Automatic);
+                        singleServerCluster
+                           .Settings
+                           .Should()
+                           .Match<ClusterSettings>(m => !m.DirectConnection.HasValue || m.DirectConnection.Value);
                     }
                     else if (cluster is MultiServerCluster multiServerCluster)
                     {
                         multiServerCluster.Description.ConnectionMode.Should().Be(ClusterConnectionMode.Automatic);
+#pragma warning restore 618
                         multiServerCluster.Description.Type.Should().Be(ClusterType.Standalone);
+                        multiServerCluster
+                            .Settings
+                            .Should()
+                            .Match<ClusterSettings>(m => !m.DirectConnection.HasValue || !m.DirectConnection.Value);
                     }
                     else
                     {
@@ -274,7 +284,10 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             var connectionString = new ConnectionString((string)definition["uri"]);
             var settings = new ClusterSettings(
                 endPoints: Optional.Enumerable(connectionString.Hosts),
+#pragma warning disable 618
                 connectionMode: connectionString.Connect,
+#pragma warning restore 618
+                directConnection: connectionString.DirectConnection,
                 replicaSetName: connectionString.ReplicaSet);
 
             _serverFactory = new MockClusterableServerFactory();

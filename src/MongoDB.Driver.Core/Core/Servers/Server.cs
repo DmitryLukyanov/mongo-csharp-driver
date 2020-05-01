@@ -57,7 +57,9 @@ namespace MongoDB.Driver.Core.Servers
 
         // fields
         private readonly IClusterClock _clusterClock;
+#pragma warning disable 618
         private readonly ClusterConnectionMode _clusterConnectionMode;
+#pragma warning restore 618
         private IConnectionPool _connectionPool;
         private readonly EndPoint _endPoint;
         private readonly IServerMonitor _monitor;
@@ -75,7 +77,9 @@ namespace MongoDB.Driver.Core.Servers
         public event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;
 
         // constructors
+#pragma warning disable 618
         public Server(ClusterId clusterId, IClusterClock clusterClock, ClusterConnectionMode clusterConnectionMode, ServerSettings settings, EndPoint endPoint, IConnectionPoolFactory connectionPoolFactory, IServerMonitorFactory serverMonitorFactory, IEventSubscriber eventSubscriber)
+#pragma warning restore 618
         {
             Ensure.IsNotNull(clusterId, nameof(clusterId));
             _clusterClock = Ensure.IsNotNull(clusterClock, nameof(clusterClock));
@@ -1103,7 +1107,9 @@ namespace MongoDB.Driver.Core.Servers
 
             private ReadPreference GetEffectiveReadPreference(bool slaveOk, ReadPreference readPreference)
             {
+#pragma warning disable 618
                 if (_server._clusterConnectionMode == ClusterConnectionMode.Direct && _server.Description.Type != ServerType.ShardRouter)
+#pragma warning restore 618
                 {
                     return ReadPreference.PrimaryPreferred;
                 }
@@ -1124,7 +1130,9 @@ namespace MongoDB.Driver.Core.Servers
 
             private bool GetEffectiveSlaveOk(bool slaveOk)
             {
+#pragma warning disable 618
                 if (_server._clusterConnectionMode == ClusterConnectionMode.Direct && _server.Description.Type != ServerType.ShardRouter)
+#pragma warning restore 618
                 {
                     return true;
                 }

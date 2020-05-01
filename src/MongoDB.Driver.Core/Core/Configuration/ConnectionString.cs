@@ -68,10 +68,12 @@ namespace MongoDB.Driver.Core.Configuration
         private string _applicationName;
         private string _authMechanism;
         private string _authSource;
+#pragma warning disable 618
         private ClusterConnectionMode? _connect;
+#pragma warning restore 618
         private TimeSpan? _connectTimeout;
         private string _databaseName;
-        private bool? _directConnection; // this option covers several cases from _connect. It won't be available outside of this class
+        private bool? _directConnection;
         private bool? _fsync;
         private TimeSpan? _heartbeatInterval;
         private TimeSpan? _heartbeatTimeout;
@@ -205,10 +207,13 @@ namespace MongoDB.Driver.Core.Configuration
         /// <summary>
         /// Gets the connection mode.
         /// </summary>
+#pragma warning disable 618
+        [Obsolete("Use DirectConnection instead.")]
         public ClusterConnectionMode Connect
         {
             get { return _connect.GetValueOrDefault(); }
         }
+#pragma warning restore 618
 
         /// <summary>
         /// Gets the connect timeout.
@@ -225,6 +230,11 @@ namespace MongoDB.Driver.Core.Configuration
         {
             get { return _databaseName; }
         }
+
+        /// <summary>
+        /// Get the directConnection.
+        /// </summary>
+        public bool? DirectConnection => _directConnection;
 
         /// <summary>
         /// Gets the fsync value of the write concern.
@@ -810,9 +820,8 @@ namespace MongoDB.Driver.Core.Configuration
 
             if (_connect.HasValue && _directConnection.HasValue)
             {
-                throw new MongoConfigurationException("Connect and directConnection cannot both be specified.");
+                throw new MongoConfigurationException("Specifying both connect and directConnection is invalid.");
             }
-            _connect = GetEffectiveConnectionMode(_connect, _directConnection, _replicaSet);
 
             if (_journal.HasValue && _journal.Value && _w != null && _w.Equals(0))
             {
@@ -825,15 +834,17 @@ namespace MongoDB.Driver.Core.Configuration
                     "Specifying both tlsInsecure and tlsDisableCertificateRevocationCheck is invalid.");
             }
 
-            if (_scheme == ConnectionStringScheme.MongoDBPlusSrv && _connect == ClusterConnectionMode.Direct)
+#pragma warning disable 618
+            if (_scheme == ConnectionStringScheme.MongoDBPlusSrv && _directConnection.GetValueOrDefault())
             {
-                throw new MongoConfigurationException("Direct connect cannot be used with SRV.");
+                throw new MongoConfigurationException("DirectConnection cannot be used with SRV.");
             }
 
-            if (_hosts.Count > 1 && _connect == ClusterConnectionMode.Direct)
+            if (_hosts.Count > 1 && _directConnection.GetValueOrDefault())
             {
-                throw new MongoConfigurationException("Direct connect cannot be used with multiple host names.");
+                throw new MongoConfigurationException("DirectConnection cannot be used with multiple host names.");
             }
+#pragma warning restore 618
 
             string protectConnectionString(string connectionString)
             {
@@ -1103,6 +1114,7 @@ namespace MongoDB.Driver.Core.Configuration
             }
         }
 
+#pragma warning disable 618
         private static ClusterConnectionMode ParseClusterConnectionMode(string name, string value)
         {
             if (value.Equals("shardrouter", StringComparison.OrdinalIgnoreCase))
@@ -1111,6 +1123,7 @@ namespace MongoDB.Driver.Core.Configuration
             }
             return ParseEnum<ClusterConnectionMode>(name, value);
         }
+#pragma warning restore 618
 
         private static int ParseInt32(string name, string value)
         {
@@ -1217,25 +1230,6 @@ namespace MongoDB.Driver.Core.Configuration
             }
 
             return value;
-        }
-
-        private ClusterConnectionMode? GetEffectiveConnectionMode(ClusterConnectionMode? connect, bool? directConnection, string replicaSet)
-        {
-            if (directConnection.HasValue)
-            {
-                if (directConnection.Value)
-                {
-                    return ClusterConnectionMode.Direct;
-                }
-                else
-                {
-                    return replicaSet != null ? ClusterConnectionMode.ReplicaSet : ClusterConnectionMode.Automatic;
-                }
-            }
-            else
-            {
-                return connect;
-            }
         }
 
         private List<string> GetHostsFromSrvRecords(IEnumerable<SrvRecord> srvRecords)

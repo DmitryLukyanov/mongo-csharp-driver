@@ -85,9 +85,11 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData(ClusterConnectionMode.Direct)]
         [InlineData(ClusterConnectionMode.Standalone)]
         public void Constructor_should_throw_if_cluster_connection_mode_is_not_supported(ClusterConnectionMode mode)
+#pragma warning restore 618
         {
             var settings = new ClusterSettings(
                 endPoints: new[] { new DnsEndPoint("localhost", 27017) },
@@ -323,6 +325,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(-1, -1, ClusterType.Sharded, ServerType.ShardRouter, true)]
         [InlineData(-1, -1, ClusterType.Sharded, ServerType.Standalone, false)]
         [InlineData(-1, -1, ClusterType.Sharded, ServerType.Unknown, false)]
+#pragma warning disable 618
         [InlineData(-1, ClusterConnectionMode.Automatic, ClusterType.Unknown, ServerType.ReplicaSetArbiter, true)]
         [InlineData(-1, ClusterConnectionMode.Automatic, ClusterType.Unknown, ServerType.ReplicaSetGhost, true)]
         [InlineData(-1, ClusterConnectionMode.Automatic, ClusterType.Unknown, ServerType.ReplicaSetOther, true)]
@@ -333,6 +336,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(ConnectionStringScheme.MongoDBPlusSrv, ClusterConnectionMode.Automatic, ClusterType.Unknown, ServerType.Standalone, true)]
         [InlineData(-1, ClusterConnectionMode.Automatic, ClusterType.Unknown, ServerType.Unknown, false)]
         public void IsServerValidForCluster_should_return_expected_result(ConnectionStringScheme scheme, ClusterConnectionMode connectionMode, ClusterType clusterType, ServerType serverType, bool expectedResult)
+#pragma warning restore 618
         {
             var settings = new ClusterSettings(scheme: scheme);
             using (var subject = CreateSubject(settings: settings))
@@ -344,9 +348,11 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData(-1, ClusterConnectionMode.Automatic)]
         [InlineData(ClusterType.Unknown, -1)]
         public void IsServerValidForCluster_should_throw_when_any_argument_value_is_unexpected(ClusterType clusterType, ClusterConnectionMode connectionMode)
+#pragma warning restore 618
         {
             using (var subject = CreateSubject())
             {
@@ -713,6 +719,7 @@ namespace MongoDB.Driver.Core.Clusters
         }
 
         [Theory]
+#pragma warning disable 618
         [InlineData(ClusterConnectionMode.ReplicaSet, ServerType.ShardRouter)]
         [InlineData(ClusterConnectionMode.ReplicaSet, ServerType.Standalone)]
         [InlineData(ClusterConnectionMode.Sharded, ServerType.ReplicaSetArbiter)]
@@ -722,6 +729,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(ClusterConnectionMode.Sharded, ServerType.ReplicaSetSecondary)]
         [InlineData(ClusterConnectionMode.Sharded, ServerType.Standalone)]
         public void Should_hide_a_seedlist_server_of_the_wrong_type(ClusterConnectionMode connectionMode, ServerType wrongType)
+#pragma warning restore 618
         {
             _settings = _settings.With(
                 endPoints: new[] { _firstEndPoint, _secondEndPoint, _thirdEndPoint },
@@ -1217,8 +1225,10 @@ namespace MongoDB.Driver.Core.Clusters
         public static List<IClusterableServer> _servers(this MultiServerCluster cluster) => (List<IClusterableServer>)Reflector.GetFieldValue(cluster, nameof(_servers));
         public static InterlockedInt32 _state(this MultiServerCluster cluster) => (InterlockedInt32)Reflector.GetFieldValue(cluster, nameof(_state));
 
+#pragma warning disable 618
         public static bool IsServerValidForCluster(this MultiServerCluster cluster, ClusterType clusterType, ClusterConnectionMode connectionMode, ServerType serverType)
             => (bool)Reflector.Invoke(cluster, nameof(IsServerValidForCluster), clusterType, connectionMode, serverType);
+#pragma warning restore 618
         public static void ProcessServerDescriptionChanged(this MultiServerCluster cluster, ServerDescriptionChangedEventArgs args)
             => Reflector.Invoke(cluster, nameof(ProcessServerDescriptionChanged), args);
     }

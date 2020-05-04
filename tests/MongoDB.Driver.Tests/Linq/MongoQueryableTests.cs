@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Linq;
 using MongoDB.Driver.Tests.Linq;
@@ -515,6 +516,21 @@ namespace Tests.MongoDB.Driver.Linq
                 2,
                 "{ $lookup: { from: 'testcollection_other', localField: '_id', foreignField: '_id', as: 'joined' } }",
                 "{ $project: { A: '$A', SumCEF: { $sum: '$joined.CEF' }, _id: 0 } }");
+        }
+
+        [SkippableFact]
+        public void GroupJoin_syntax_with_convert()
+        {
+            RequireServer.Check().Supports(Feature.AggregateConvert);
+
+            var query = from p in CreateQuery()
+                        join o in CreateOtherQuery() on p.Id equals o.Id into joined
+                        select new { A = p.A, SumCEF = (long)joined.Sum(x => x.CEF) };
+
+            Assert(query,
+                2,
+                "{ $lookup : { from : 'testcollection_other', localField : '_id', foreignField : '_id', as : 'joined' } }",
+                "{ $project : { A : '$A', SumCEF : { $convert : { input : { $sum : '$joined.CEF' }, to : 'long' } }, _id : 0 } }");
         }
 
         [SkippableFact]

@@ -20,7 +20,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using MongoDB.Bson;
 using MongoDB.Driver.Linq.Expressions;
 using MongoDB.Driver.Linq.Expressions.ResultOperators;
@@ -67,7 +66,7 @@ namespace MongoDB.Driver.Linq.Translators
                     return TranslateConstant(node);
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    return TranslateValue(((UnaryExpression)node).Operand);
+                    return TranslateConvert((UnaryExpression)node);
                 case ExpressionType.Divide:
                     return TranslateOperation((BinaryExpression)node, "$divide", false);
                 case ExpressionType.Equal:
@@ -249,6 +248,40 @@ namespace MongoDB.Driver.Linq.Translators
             // NOTE: there may be other instances where we should use a literal...
             // but I can't think of any yet.
             return value;
+        }
+
+        private BsonValue TranslateConvert(UnaryExpression node)
+        {
+            var translatedValue = TranslateValue(node.Operand);
+            var to = GetMongoQueryType(node.Type);
+            if (to == null)
+            {
+                return translatedValue;
+            }
+
+            return new BsonDocument(
+                "$convert",
+                new BsonDocument
+                {
+                    { "input", translatedValue },
+                    { "to", to }
+                });
+
+            string GetMongoQueryType(Type type)
+            {
+                switch (type)
+                {
+                    case Type _ when type == typeof(double): return "double";
+                    case Type _ when type == typeof(string): return "string";
+                    case Type _ when type == typeof(ObjectId): return "objectId";
+                    case Type _ when type == typeof(bool): return "bool";
+                    case Type _ when type == typeof(DateTime): return "date";
+                    case Type _ when type == typeof(int): return "int";
+                    case Type _ when type == typeof(long): return "long";
+                    case Type _ when type == typeof(decimal): return "decimal";
+                    default: return null;
+                }
+            }
         }
 
         private BsonValue TranslateDocumentWrappedField(FieldAsDocumentExpression expression)

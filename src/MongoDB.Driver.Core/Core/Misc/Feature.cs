@@ -28,6 +28,7 @@ namespace MongoDB.Driver.Core.Misc
         private static readonly Feature __aggregateAddFields = new Feature("AggregateAddFields", new SemanticVersion(3, 4, 0));
         private static readonly Feature __aggregateAllowDiskUse = new Feature("AggregateAllowDiskUse", new SemanticVersion(2, 6, 0));
         private static readonly Feature __aggregateBucketStage = new Feature("AggregateBucketStage", new SemanticVersion(3, 3, 11));
+        private static readonly Feature __aggregateConvert = new Feature("AggregateConvert", new SemanticVersion(4, 0, 0));
         private static readonly Feature __aggregateComment = new Feature("AggregateComment", new SemanticVersion(3, 6, 0, "rc0"));
         private static readonly Feature __aggregateCountStage = new Feature("AggregateCountStage", new SemanticVersion(3, 3, 11));
         private static readonly Feature __aggregateCursorResult = new Feature("AggregateCursorResult", new SemanticVersion(2, 6, 0));
@@ -120,6 +121,11 @@ namespace MongoDB.Driver.Core.Misc
         /// Gets the aggregate bucket stage feature.
         /// </summary>
         public static Feature AggregateBucketStage => __aggregateBucketStage;
+
+        /// <summary>
+        /// Gets the aggregate convert feature.
+        /// </summary>
+        public static Feature AggregateConvert => __aggregateConvert;
 
         /// <summary>
         /// Gets the aggregate comment feature.

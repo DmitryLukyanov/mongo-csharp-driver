@@ -496,9 +496,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [Fact]
         public void Should_translate_divide()
         {
+            RequireServer.Check().Supports(Feature.AggregateConvert);
+
             var result = Project(x => new { Result = (double)x.C.E.F / x.C.E.H });
 
-            result.Projection.Should().Be("{ Result: { \"$divide\": [\"$C.E.F\", \"$C.E.H\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $divide : [ { $convert : { input : '$C.E.F', to : 'double' } }, { $convert : { input : '$C.E.H', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().Be(0.5);
         }
@@ -506,9 +508,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [Fact]
         public void Should_translate_divide_3_numbers()
         {
+            RequireServer.Check().Supports(Feature.AggregateConvert);
+
             var result = Project(x => new { Result = (double)x.Id / x.C.E.F / x.C.E.H });
 
-            result.Projection.Should().Be("{ Result: { \"$divide\": [{ \"$divide\": [\"$_id\", \"$C.E.F\"] }, \"$C.E.H\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $divide : [ { $divide : [ { $convert : { input : '$_id', to : 'double' } }, { $convert : { input : '$C.E.F', to : 'double' } } ] }, { $convert : { input : '$C.E.H', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().BeApproximately(0.04, .01);
         }
@@ -548,11 +552,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_exp()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Exp(x.C.E.F) });
 
-            result.Projection.Should().Be("{ Result: { \"$exp\": [\"$C.E.F\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $exp : [ { $convert : { input : '$C.E.F', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().BeApproximately(59874.1417151978, .0001);
         }
@@ -706,11 +710,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_ln()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Log(x.C.E.F) });
 
-            result.Projection.Should().Be("{ Result: { \"$ln\": [\"$C.E.F\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $ln : [ { $convert : { input : '$C.E.F', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().BeApproximately(2.39789527279837, .0001);
         }
@@ -718,11 +722,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_log()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Log(x.C.E.F, 11) });
 
-            result.Projection.Should().Be("{ Result: { \"$log\": [\"$C.E.F\", 11.0] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $log : [ { $convert : { input : '$C.E.F', to : 'double' } }, 11.0 ] }, _id : 0 }");
 
             result.Value.Result.Should().Be(1);
         }
@@ -730,11 +734,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_log10()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Log10(x.C.E.F) });
 
-            result.Projection.Should().Be("{ Result: { \"$log10\": [\"$C.E.F\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $log10 : [ { $convert : { input : '$C.E.F', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().BeApproximately(1.0413928515823, .0001);
         }
@@ -980,11 +984,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_pow()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Pow(x.C.E.F, 5) });
 
-            result.Projection.Should().Be("{ Result: { \"$pow\": [\"$C.E.F\", 5.0] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $pow : [ { $convert : { input : '$C.E.F', to : 'double' } }, 5.0 ] }, '_id' : 0 }");
 
             result.Value.Result.Should().Be(161051);
         }
@@ -1232,11 +1236,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_sqrt()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.1.6");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = Math.Sqrt(x.C.E.F) });
 
-            result.Projection.Should().Be("{ Result: { \"$sqrt\": [\"$C.E.F\"] }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $sqrt : [ { $convert : { input : '$C.E.F', to : 'double' } } ] }, _id : 0 }");
 
             result.Value.Result.Should().BeApproximately(3.31662479, .0001);
         }
@@ -1613,11 +1617,11 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         [SkippableFact]
         public void Should_translate_zip_with_operation()
         {
-            RequireServer.Check().VersionGreaterThanOrEqualTo("3.3.4");
+            RequireServer.Check().Supports(Feature.AggregateConvert);
 
             var result = Project(x => new { Result = x.M.Zip(x.O, (a, b) => a + b) });
 
-            result.Projection.Should().Be("{ Result: { \"$map\": { input: { \"$zip\": { inputs: [\"$M\", \"$O\"] } }, as: \"a_b\", in: { $add: [{ $arrayElemAt: [\"$$a_b\", 0] }, { $arrayElemAt: [\"$$a_b\", 1] }] } } }, _id: 0 }");
+            result.Projection.Should().Be("{ Result : { $map : { input : { $zip : { inputs : [ '$M', '$O' ] } }, as : 'a_b', in : { $add : [ { $convert : { input : { $arrayElemAt : [ '$$a_b', 0 ] }, to : 'long' } }, { $arrayElemAt : [ '$$a_b', 1 ] } ] } } }, _id : 0 }");
 
             result.Value.Result.Should().BeEquivalentTo(12L, 24L, 35L);
         }

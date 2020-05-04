@@ -33,8 +33,27 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
         [ClassData(typeof(TestCaseFactory))]
         public void RunTestDefinition(JsonDrivenTestCase testCase)
         {
+            var shared = testCase.Shared;
             var test = testCase.Test;
-            var testType = test["type"].AsString;
+
+            JsonDrivenHelper.EnsureAllFieldsAreValid(shared, "_path", "description", "type", "valid", "decodeErrors", "parseErrors", "bson_type", "test_key", "deprecated");
+
+            if (shared.Contains("bson_type"))
+            {
+                // todo: add logic to handle or explicitly say that it's skipped
+            }
+
+            if (shared.Contains("test_key"))
+            {
+                // todo: add logic to handle or explicitly say that it's skipped
+            }
+
+            if (shared.Contains("deprecated"))
+            {
+                // todo: add logic to handle or explicitly say that it's skipped
+            }
+
+            var testType = shared["type"].AsString;
 
             switch (testType)
             {
@@ -140,7 +159,7 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
 
         private void RunDecodeErrorsTest(BsonDocument test)
         {
-            JsonDrivenHelper.EnsureAllFieldsAreValid(test, "type", "bson_type", "test_key","description", "bson");
+            JsonDrivenHelper.EnsureAllFieldsAreValid(test, "description", "bson");
 
             var bson = BsonUtils.ParseHexString(test["bson"].AsString);
 
@@ -161,7 +180,7 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
 
         private void RunParseErrorsTest(BsonDocument test)
         {
-            JsonDrivenHelper.EnsureAllFieldsAreValid(test, "type", "bson_type", "test_key", "description", "string");
+            JsonDrivenHelper.EnsureAllFieldsAreValid(test, "description", "string");
 
             var json = test["string"].AsString;
 
@@ -174,9 +193,6 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
         {
             JsonDrivenHelper.EnsureAllFieldsAreValid(
                 test,
-                "type",
-                "bson_type",
-                "test_key",
                 "description",
                 "canonical_bson",
                 "canonical_extjson",
@@ -276,7 +292,7 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
             {
                 "dbpointer.json", // dbpointer not supported
                 "Bad DBpointer (extra field)", // dbpointer not supported
-                "double.json:-0.0", // minus zero equals zero in .NET
+                "Double type:-0.0", // minus zero equals zero in .NET
                 "All BSON types", // dbpointer not supported
                 "Bad $date (number, not string or hash)", // requires breaking change
                 "Bad $numberDecimal (number, not string)", // requires breaking change
@@ -291,7 +307,7 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
 
             // protected properties
             protected override string PathPrefix => "MongoDB.Bson.Tests.Specifications.bson_corpus.tests.";
-
+            
             // protected methods
             protected override IEnumerable<JsonDrivenTestCase> CreateTestCases(BsonDocument document)
             {
@@ -324,21 +340,23 @@ namespace MongoDB.Bson.Tests.Specifications.bson_corpus
                     {
                         var name = GetTestCaseName(shared, test, i);
                         var enrichedName = $"{name}:type={testSection.Name}";
-                        var enrichedTest = EnrichTestCase(test.DeepClone().AsBsonDocument, shared, testSection.Name);
-                        return new JsonDrivenTestCase(enrichedName, shared, enrichedTest);
+                        var enrichedShared = EnrichShared(shared.DeepClone().AsBsonDocument, testSection.Name);
+                        return new JsonDrivenTestCase(enrichedName, enrichedShared, test.DeepClone().AsBsonDocument);
                     });
             }
 
-            private BsonDocument EnrichTestCase(BsonDocument test, BsonDocument shared, string testSectionName)
+            private BsonDocument EnrichShared(BsonDocument shared, string testSectionName)
             {
-                test.Add("type", testSectionName);
-                test.Add("bson_type", shared["bson_type"]);
-                if (shared.TryGetValue("test_key", out var testKey))
-                {
-                    test.Add("test_key", testKey);
-                }
+                shared.Add("type", testSectionName);
+                return shared;
+            }
 
-                return test;
+            protected override string GetTestCaseName(BsonDocument shared, BsonDocument test, int index)
+            {
+                var path = shared["_path"].AsString;
+                var sharedDescription = shared["description"].AsString;
+                var name = GetTestName(test, index);
+                return $"{path}:{sharedDescription}:{name}";
             }
         }
     }

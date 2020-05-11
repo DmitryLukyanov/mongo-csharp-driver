@@ -136,14 +136,20 @@ Task("Test")
             Console.WriteLine($"MONGO_X509_CLIENT_CERTIFICATE_PASSWORD={mongoX509ClientCertificatePassword}");
         }
 
+        var targetFramework = target.ToLowerInvariant();
+        var testProjectDirectory = testProject.GetDirectory();
+        var testProjectTestsResultDirectory = testProjectDirectory.Combine("TestResults");
+
         var settings = new DotNetCoreTestSettings
         {
             NoBuild = true,
             NoRestore = true,
             Configuration = configuration,
-            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64")
+            ArgumentCustomization = args => args.Append("-- RunConfiguration.TargetPlatform=x64"),
+            ResultsDirectory = testProjectTestsResultDirectory,
+            Logger = $"trx;logfilename=TEST-{System.DateTime.UtcNow.ToString("Mddyyyyhhmmsstt")}-{targetFramework}.xml"
         };
-        switch (target.ToLowerInvariant())
+        switch (targetFramework)
         {
             case "testnet452": settings.Framework = "net452"; break;
             case "testnetstandard15": settings.Framework = "netcoreapp1.1"; break;

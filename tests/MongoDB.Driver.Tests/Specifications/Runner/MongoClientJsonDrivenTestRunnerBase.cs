@@ -292,6 +292,22 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     }
                     break;
 
+                case "retryReads":
+                    settings.RetryReads = option.Value.ToBoolean();
+                    break;
+
+                case "appname":
+                    settings.ApplicationName = option.Value.ToString();
+                    break;
+
+                case "connectTimeoutMS":
+                    settings.ConnectTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                    break;
+
+                case "heartbeatFrequencyMS":
+                    settings.HeartbeatInterval = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                    break;
+
                 default:
                     return false;
             }

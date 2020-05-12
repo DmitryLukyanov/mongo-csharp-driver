@@ -192,6 +192,13 @@ functions:
         content_type: ${content_type|application/x-gzip}
         display_name: "drivers-dir.tar.gz"
 
+  find-test-results:
+    - command: shell.exec
+      params:
+        script: |
+          ${PREPARE_SHELL}
+          find ./mongo-csharp-driver/tests/ 
+
   upload-test-results:
     - command: attach.xunit_results
       params:
@@ -591,6 +598,7 @@ post:
   # Removed, causing timeouts
   # - func: upload-working-dir
   - func: upload-mo-artifacts
+  - func: find-test-results
   - func: upload-test-results
   - func: cleanup
 

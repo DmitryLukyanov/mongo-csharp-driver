@@ -115,6 +115,10 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
             {
                 flags |= OpMsgFlags.MoreToCome;
             }
+            if (message.ExhaustAllowed)
+            {
+                flags |= OpMsgFlags.ExhaustedAllowed;
+            }
             return flags;
         }
 

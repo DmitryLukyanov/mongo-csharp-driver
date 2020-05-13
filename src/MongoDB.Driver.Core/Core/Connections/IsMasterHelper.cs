@@ -13,14 +13,18 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Configuration;
+using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.WireProtocol;
 
 namespace MongoDB.Driver.Core.Connections
@@ -39,9 +43,16 @@ namespace MongoDB.Driver.Core.Connections
             return command.Add("compression", compressorsArray);
         }
 
-        internal static BsonDocument CreateCommand()
+        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion = null, TimeSpan? maxAwaitTime = null)
         {
-            return new BsonDocument { { "isMaster", 1 } };
+            var doc = new BsonDocument
+            {
+                { "isMaster", 1 },
+                // TODO
+                { "topologyVersion", topologyVersion?.ToBsonDocument(), topologyVersion != null },
+                { "maxAwaitTimeMS", maxAwaitTime?.TotalMilliseconds, maxAwaitTime.HasValue }
+            };
+            return doc;
         }
 
         internal static BsonDocument CustomizeCommand(BsonDocument command, IReadOnlyList<IAuthenticator> authenticators)
@@ -59,6 +70,16 @@ namespace MongoDB.Driver.Core.Connections
                 messageEncoderSettings: null);
         }
 
+        //internal static CommandWireProtocol<IsMasterResult> CreateProtocol2(BsonDocument isMasterCommand)
+        //{
+        //    return new CommandWireProtocol<IsMasterResult>(
+        //        databaseNamespace: DatabaseNamespace.Admin,
+        //        command: isMasterCommand,
+        //        slaveOk: true,
+        //        resultSerializer: BsonSerializer.SerializerRegistry.GetSerializer<IsMasterResult>(), // TODO: validate!
+        //        messageEncoderSettings: null);
+        //}
+
         internal static IsMasterResult GetResult(
             IConnection connection,
             CommandWireProtocol<BsonDocument> isMasterProtocol,
@@ -66,7 +87,11 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
-                return new IsMasterResult(isMasterProtocol.Execute(connection, cancellationToken));
+                // TODO
+                var stopwatch = Stopwatch.StartNew();
+                var isMasterResult = isMasterProtocol.Execute(connection, cancellationToken);
+                stopwatch.Stop();
+                return new IsMasterResult(isMasterResult, stopwatch.Elapsed);
             }
             catch (MongoCommandException ex) when (ex.Code == 11)
             {
@@ -84,8 +109,10 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
+                var stopwatch = Stopwatch.StartNew();
                 var isMasterResult = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
-                return new IsMasterResult(isMasterResult);
+                stopwatch.Stop();
+                return new IsMasterResult(isMasterResult, stopwatch.Elapsed);
             }
             catch (MongoCommandException ex) when (ex.Code == 11)
             {

@@ -187,9 +187,19 @@ namespace MongoDB.Driver.Core.Servers
                         // if we are cancelling, it's because the server has
                         // been shut down and we really don't need to wait.
                         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                        heartbeatInfo = new HeartbeatInfo
+                        {
+                            BuildInfoResult = connection.Description.BuildInfoResult,
+                            IsMasterResult = connection.Description.IsMasterResult,
+                            // TODO
+                            RoundTripTime = connection.Description.IsMasterResult.InitialRoundTripTime.Value
+                        };
+                    }
+                    else
+                    {
+                        heartbeatInfo = await GetHeartbeatInfoAsync(connection, cancellationToken).ConfigureAwait(false);
                     }
 
-                    heartbeatInfo = await GetHeartbeatInfoAsync(connection, cancellationToken).ConfigureAwait(false);
                     heartbeatException = null;
 
                     _connection = connection;
@@ -252,20 +262,18 @@ namespace MongoDB.Driver.Core.Servers
             cancellationToken.ThrowIfCancellationRequested();
             if (_heartbeatStartedEventHandler != null)
             {
-                _heartbeatStartedEventHandler(new ServerHeartbeatStartedEvent(connection.ConnectionId));
+                _heartbeatStartedEventHandler(new ServerHeartbeatStartedEvent(connection.ConnectionId, connection.Description.IsMasterResult.TopologyVersion != null));
             }
 
             try
             {
-                var isMasterCommand = new CommandWireProtocol<BsonDocument>(
-                    DatabaseNamespace.Admin,
-                    new BsonDocument("isMaster", 1),
-                    true,
-                    BsonDocumentSerializer.Instance,
-                    null);
+                var isMasterCommand = IsMasterHelper.CreateCommand(
+                    connection.Description.IsMasterResult.TopologyVersion,
+                    _heartbeatInterval);
+                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
 
                 var stopwatch = Stopwatch.StartNew();
-                var isMasterResultDocument = await isMasterCommand.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
+                var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
                 var isMasterResult = new IsMasterResult(isMasterResultDocument);
 
@@ -281,7 +289,7 @@ namespace MongoDB.Driver.Core.Servers
 
                 if (_heartbeatSucceededEventHandler != null)
                 {
-                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, stopwatch.Elapsed));
+                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, stopwatch.Elapsed, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
 
                 return new HeartbeatInfo
@@ -295,7 +303,7 @@ namespace MongoDB.Driver.Core.Servers
             {
                 if (_heartbeatFailedEventHandler != null)
                 {
-                    _heartbeatFailedEventHandler(new ServerHeartbeatFailedEvent(connection.ConnectionId, ex));
+                    _heartbeatFailedEventHandler(new ServerHeartbeatFailedEvent(connection.ConnectionId, ex, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
                 throw;
             }
@@ -354,6 +362,14 @@ namespace MongoDB.Driver.Core.Servers
             public TimeSpan RoundTripTime;
             public IsMasterResult IsMasterResult;
             public BuildInfoResult BuildInfoResult;
+        }
+    }
+
+    internal class RoundTripTimeMonitor : IDisposable
+    {
+
+        public void Dispose()
+        {
         }
     }
 }

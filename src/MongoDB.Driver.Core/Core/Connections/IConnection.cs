@@ -105,11 +105,37 @@ namespace MongoDB.Driver.Core.Connections
         /// <param name="responseTo">The id of the sent message for which a response is to be received.</param>
         /// <param name="encoderSelector">The encoder selector.</param>
         /// <param name="messageEncoderSettings">The message encoder settings.</param>
+        /// <param name="maxAwaiterTimeout">TODO</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>
+        /// The response message.
+        /// </returns>
+        ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaiterTimeout, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Receives a message.
+        /// </summary>
+        /// <param name="responseTo">The id of the sent message for which a response is to be received.</param>
+        /// <param name="encoderSelector">The encoder selector.</param>
+        /// <param name="messageEncoderSettings">The message encoder settings.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>
         /// A Task whose result is the response message.
         /// </returns>
         Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Receives a message.
+        /// </summary>
+        /// <param name="responseTo">The id of the sent message for which a response is to be received.</param>
+        /// <param name="encoderSelector">The encoder selector.</param>
+        /// <param name="messageEncoderSettings">The message encoder settings.</param>
+        /// <param name="maxAwaitTimwout">TODO</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>
+        /// A Task whose result is the response message.
+        /// </returns>
+        Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaitTimwout, CancellationToken cancellationToken);
 
         /// <summary>
         /// Sends the messages.

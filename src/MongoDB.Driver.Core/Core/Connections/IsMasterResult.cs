@@ -25,12 +25,19 @@ using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.Connections
 {
+    internal interface IWithMoreToComeResult<T>
+    {
+        T WithMoreToCome(bool moreToCome);
+    }
+
     /// <summary>
     /// Represents the result of an isMaster command.
     /// </summary>
-    public sealed class IsMasterResult : IEquatable<IsMasterResult>
+    public sealed class IsMasterResult : IEquatable<IsMasterResult>, IWithMoreToComeResult<IsMasterResult>
     {
         // fields
+        private readonly TimeSpan? _initialRoundTripTime; // TODO
+        private readonly bool _hasMoreToCome;
         private readonly BsonDocument _wrapped;
 
         // constructors
@@ -38,8 +45,14 @@ namespace MongoDB.Driver.Core.Connections
         /// Initializes a new instance of the <see cref="IsMasterResult"/> class.
         /// </summary>
         /// <param name="wrapped">The wrapped result document.</param>
-        public IsMasterResult(BsonDocument wrapped)
+        public IsMasterResult(BsonDocument wrapped) : this(wrapped, null, false)
         {
+        }
+
+        internal IsMasterResult(BsonDocument wrapped, TimeSpan? initialRoundTripTime, bool hasMoreToCome = false) // TODO
+        {
+            _hasMoreToCome = hasMoreToCome;
+            _initialRoundTripTime = initialRoundTripTime;
             _wrapped = Ensure.IsNotNull(wrapped, nameof(wrapped));
         }
 
@@ -365,6 +378,23 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         /// <summary>
+        /// Gets the topology version.
+        /// </summary>
+        /// <value>
+        /// The topology version value.
+        /// </value>
+        public TopologyVersion TopologyVersion
+        {
+            get
+            {
+                return
+                    _wrapped.TryGetValue("topologyVersion", out var topologyDescription)
+                    ? TopologyVersion.Parse(topologyDescription.AsBsonDocument)
+                    : null;
+            }
+        }
+
+        /// <summary>
         /// Gets the maximum wire version.
         /// </summary>
         /// <value>
@@ -387,6 +417,11 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public bool HasMoreToCome => _wrapped.GetValue("moreToCome", false).ToBoolean();
+
+        /// <summary>
         /// Gets the wrapped result document.
         /// </summary>
         /// <value>
@@ -396,6 +431,9 @@ namespace MongoDB.Driver.Core.Connections
         {
             get { return _wrapped; }
         }
+
+        // internal properties
+        internal TimeSpan? InitialRoundTripTime => _initialRoundTripTime; // TODO
 
         // methods
         /// <inheritdoc/>
@@ -468,6 +506,16 @@ namespace MongoDB.Driver.Core.Connections
             var version = _wrapped.Contains("setVersion") ? (int?)_wrapped["setVersion"].ToInt32() : null;
 
             return new ReplicaSetConfig(members, name, primary, version);
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="hasMoreToCome"></param>
+        /// <returns></returns>
+        public IsMasterResult WithMoreToCome(bool hasMoreToCome)
+        {
+            return new IsMasterResult(_wrapped, _initialRoundTripTime, hasMoreToCome);
         }
     }
 }

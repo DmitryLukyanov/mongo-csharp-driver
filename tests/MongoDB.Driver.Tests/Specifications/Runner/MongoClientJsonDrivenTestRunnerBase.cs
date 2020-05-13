@@ -255,7 +255,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         {
             using (var client = CreateDisposableClient(test, eventCapturer))
             {
-                ExecuteOperations(client, null, test);
+                ExecuteOperations(client, null, test, eventCapturer);
             }
         }
 
@@ -377,6 +377,11 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 useMultipleShardRouters);
         }
 
+        protected virtual EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
+        {
+            return eventCapturer.Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
+        }
+
         protected void SetupAndRunTest(JsonDrivenTestCase testCase)
         {
             CheckServerRequirements(testCase.Shared);
@@ -459,7 +464,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 EventCapturer eventCapturer = null;
                 if (ShouldEventsBeChecked)
                 {
-                    eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
+                    eventCapturer = InitializeEventCapturer(new EventCapturer());
                 }
 
                 RunTest(shared, test, eventCapturer);

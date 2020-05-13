@@ -21,6 +21,7 @@ using System.Linq;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
+using System.Threading;
 
 namespace MongoDB.Driver.Examples
 {
@@ -32,46 +33,50 @@ namespace MongoDB.Driver.Examples
 
         public DocumentationExamples()
         {
-            var connectionString = CoreTestConfiguration.ConnectionString.ToString();
-            client = new MongoClient(connectionString);
+            //var connectionString = "";//CoreTestConfiguration.ConnectionString.ToString();
+            client = new MongoClient();
+           // System.Threading.Thread.Sleep(40000);
             database = client.GetDatabase("test");
             collection = database.GetCollection<BsonDocument>("inventory");
-            database.DropCollection("inventory");
+            //database.DropCollection("inventory");
         }
 
         [Fact]
         public void Example_1()
         {
-            // db.inventory.insertOne( { item: "canvas", qty: 100, tags: ["cotton"], size: { h: 28, w: 35.5, uom: "cm" } } ) 
+            //// db.inventory.insertOne( { item: "canvas", qty: 100, tags: ["cotton"], size: { h: 28, w: 35.5, uom: "cm" } } ) 
 
-            // Start Example 1
-            var document = new BsonDocument
-            {
-                { "item", "canvas" },
-                { "qty", 100 },
-                { "tags", new BsonArray { "cotton" } },
-                { "size", new BsonDocument { { "h", 28 }, { "w", 35.5 }, { "uom", "cm" } } }
-            };
-            collection.InsertOne(document);
-            // End Example 1
+            //// Start Example 1
+            //var document = new BsonDocument
+            //{
+            //    { "item", "canvas" },
+            //    { "qty", 100 },
+            //    { "tags", new BsonArray { "cotton" } },
+            //    { "size", new BsonDocument { { "h", 28 }, { "w", 35.5 }, { "uom", "cm" } } }
+            //};
+            //collection.InsertOne(document);
+            //// End Example 1
 
-            var result = collection.Find("{}").ToList();
-            RemoveIds(result);
-            result.Should().Equal(ParseMultiple(
-                "{ item: \"canvas\", qty: 100, tags: [\"cotton\"], size: { h: 28, w: 35.5, uom: \"cm\" } }"));
+            //var result = collection.Find("{}").ToList();
+            //RemoveIds(result);
+            //result.Should().Equal(ParseMultiple(
+            //    "{ item: \"canvas\", qty: 100, tags: [\"cotton\"], size: { h: 28, w: 35.5, uom: \"cm\" } }"));
+            var res = database.RunCommand<BsonDocument>(
+                "{ isMaster: 1, maxAwaitTimeMS: 10000, topologyVersion: { processId :  ObjectId('5ebed5610b0f7b9b07dad04c'), counter : NumberLong(0)} }");
         }
 
         [Fact]
         public void Example_2()
         {
-            // db.inventory.find( { item: "canvas" } )
+            Thread.Sleep(100000);
+            //// db.inventory.find( { item: "canvas" } )
 
-            // Start Example 2
-            var filter = Builders<BsonDocument>.Filter.Eq("item", "canvas");
-            var result = collection.Find(filter).ToList();
-            // End Example 2
+            //// Start Example 2
+            //var filter = Builders<BsonDocument>.Filter.Eq("item", "canvas");
+            //var result = collection.Find(filter).ToList();
+            //// End Example 2
 
-            Render(filter).Should().Be("{ item: \"canvas\" }");
+            //Render(filter).Should().Be("{ item: \"canvas\" }");
         }
 
         [Fact]

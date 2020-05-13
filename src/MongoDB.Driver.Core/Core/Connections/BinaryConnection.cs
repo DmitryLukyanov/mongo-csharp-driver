@@ -450,9 +450,24 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         public ResponseMessage ReceiveMessage(
+           int responseTo,
+           IMessageEncoderSelector encoderSelector,
+           MessageEncoderSettings messageEncoderSettings,
+           CancellationToken cancellationToken)
+        {
+            return ReceiveMessage(
+                responseTo,
+                encoderSelector,
+                messageEncoderSettings,
+                maxAwaitedTimeout: null,
+                cancellationToken);
+        }
+
+        public ResponseMessage ReceiveMessage(
             int responseTo,
             IMessageEncoderSelector encoderSelector,
             MessageEncoderSettings messageEncoderSettings,
+            TimeSpan? maxAwaitedTimeout,
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
@@ -462,6 +477,7 @@ namespace MongoDB.Driver.Core.Connections
             try
             {
                 helper.ReceivingMessage();
+                using (new StreamStateModifier(_stream, maxAwaitedTimeout)) // TODO
                 using (var buffer = ReceiveBuffer(responseTo, cancellationToken))
                 {
                     var message = helper.DecodeMessage(buffer, encoderSelector, cancellationToken);
@@ -476,10 +492,20 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
+        public Task<ResponseMessage> ReceiveMessageAsync(
+            int responseTo,
+            IMessageEncoderSelector encoderSelector,
+            MessageEncoderSettings messageEncoderSettings,
+            CancellationToken cancellationToken)
+        {
+            return ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, maxAwaitedTimeout: null, cancellationToken);
+        }
+
         public async Task<ResponseMessage> ReceiveMessageAsync(
             int responseTo,
             IMessageEncoderSelector encoderSelector,
             MessageEncoderSettings messageEncoderSettings,
+            TimeSpan? maxAwaitedTimeout,
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
@@ -489,6 +515,7 @@ namespace MongoDB.Driver.Core.Connections
             try
             {
                 helper.ReceivingMessage();
+                using (new StreamStateModifier(_stream, maxAwaitedTimeout)) // TODO
                 using (var buffer = await ReceiveBufferAsync(responseTo, cancellationToken).ConfigureAwait(false))
                 {
                     var message = helper.DecodeMessage(buffer, encoderSelector, cancellationToken);
@@ -734,6 +761,33 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         // nested classes
+        private class StreamStateModifier : IDisposable // TODO
+        {
+            private readonly int _initialReadTimeout;
+            private readonly TimeSpan? _maxAwaitTime;
+            private readonly Stream _stream;
+
+            public StreamStateModifier(Stream stream, TimeSpan? maxAwaitTime)
+            {
+                _initialReadTimeout = stream.ReadTimeout;
+                _maxAwaitTime = maxAwaitTime;
+                _stream = stream;
+
+                if (maxAwaitTime.HasValue)
+                {
+                    stream.ReadTimeout += (int)maxAwaitTime.Value.TotalMilliseconds;
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_maxAwaitTime.HasValue)
+                {
+                    _stream.ReadTimeout = _initialReadTimeout;
+                }
+            }
+        }
+
         private class Dropbox
         {
             private readonly ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>> _messages = new ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>>();

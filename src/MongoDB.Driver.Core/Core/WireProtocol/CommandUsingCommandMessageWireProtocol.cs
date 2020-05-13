@@ -94,24 +94,36 @@ namespace MongoDB.Driver.Core.WireProtocol
             try
             {
                 var message = CreateCommandMessage(connection.Description);
-                message = AutoEncryptFieldsIfNecessary(message, connection, cancellationToken);
 
-                try
+                if (message.WrappedMessage.RequestExpected) // no need to create a message
                 {
-                    connection.SendMessage(message, _messageEncoderSettings, cancellationToken);
-                }
-                finally
-                {
-                    if (message.WasSent)
+                    message = AutoEncryptFieldsIfNecessary(message, connection, cancellationToken);
+
+                    try
                     {
-                        MessageWasProbablySent(message);
+                        connection.SendMessage(message, _messageEncoderSettings, cancellationToken);
+                    }
+                    finally
+                    {
+                        if (message.WasSent)
+                        {
+                            MessageWasProbablySent(message);
+                        }
                     }
                 }
 
                 if (message.WrappedMessage.ResponseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken);
+                    TimeSpan? maxAwaitedTimeout = null;
+
+                    if (connection.Description.IsMasterResult.TopologyVersion != null)
+                    {
+                        // TODO: Mocked. Not ready!
+                        maxAwaitedTimeout = TimeSpan.FromSeconds(10);
+                    }
+
+                    var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, maxAwaitedTimeout, cancellationToken);
                     response = AutoDecryptFieldsIfNecessary(response, cancellationToken);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
                 }
@@ -134,24 +146,35 @@ namespace MongoDB.Driver.Core.WireProtocol
             try
             {
                 var message = CreateCommandMessage(connection.Description);
-                message = await AutoEncryptFieldsIfNecessaryAsync(message, connection, cancellationToken).ConfigureAwait(false);
+                if (message.WrappedMessage.RequestExpected) // no need to create a message
+                {
+                    message = await AutoEncryptFieldsIfNecessaryAsync(message, connection, cancellationToken).ConfigureAwait(false);
 
-                try
-                {
-                    await connection.SendMessageAsync(message, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
-                }
-                finally
-                {
-                    if (message.WasSent)
+                    try
                     {
-                        MessageWasProbablySent(message);
+                        await connection.SendMessageAsync(message, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        if (message.WasSent)
+                        {
+                            MessageWasProbablySent(message);
+                        }
                     }
                 }
 
                 if (message.WrappedMessage.ResponseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+
+                    TimeSpan? maxAwaitedTimeout = null;
+                    if (connection.Description.IsMasterResult.TopologyVersion != null)
+                    {
+                        // TODO: Mocked. Not ready!
+                        maxAwaitedTimeout = TimeSpan.FromSeconds(10);
+                    }
+
+                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, maxAwaitedTimeout, cancellationToken).ConfigureAwait(false);
                     response = await AutoDecryptFieldsIfNecessaryAsync(response, cancellationToken).ConfigureAwait(false);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
                 }
@@ -253,8 +276,16 @@ namespace MongoDB.Driver.Core.WireProtocol
             var requestId = RequestMessage.GetNextRequestId();
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
-            var moreToCome = _responseHandling == CommandResponseHandling.NoResponseExpected;
-            var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome)
+
+            var exhaustAllowed = false;
+            if (connectionDescription.IsMasterResult.TopologyVersion != null)
+            {
+                exhaustAllowed = true;
+            }
+            var moreToCome = exhaustAllowed || _responseHandling == CommandResponseHandling.NoResponseExpected;
+            var isRequestExpected = !exhaustAllowed;
+
+            var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome, exhaustAllowed, isRequestExpected)
             {
                 PostWriteAction = _postWriteAction
             };
@@ -490,9 +521,23 @@ namespace MongoDB.Driver.Core.WireProtocol
                     using (var reader = new BsonBinaryReader(stream, binaryReaderSettings))
                     {
                         var context = BsonDeserializationContext.CreateRoot(reader);
-                        return _resultSerializer.Deserialize(context);
+                        var deserialized = _resultSerializer.Deserialize(context);
+                        return SetFlagsIfRequired(deserialized, responseMessage, rawDocument);
                     }
                 }
+            }
+
+            TCommandResult SetFlagsIfRequired(TCommandResult commandResult, CommandMessage message, RawBsonDocument document)
+            {
+                //if (commandResult is IWithMoreToComeResult<TCommandResult> withMoreToCome)
+                //{
+                //    commandResult = withMoreToCome.WithMoreToCome(message.MoreToCome);
+                //}
+                if (commandResult is BsonDocument bsonDocument && document.Contains("ismaster"))
+                {
+                    bsonDocument.Add("moreToCome", message.MoreToCome);
+                }
+                return commandResult;
             }
         }
 

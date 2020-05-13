@@ -88,6 +88,7 @@ namespace MongoDB.Driver.Core.Connections
 
             var description = new ConnectionDescription(connection.ConnectionId, isMasterResult, buildInfoResult);
 
+            // TODO: is it required?
             await AuthenticationHelper.AuthenticateAsync(connection, description, cancellationToken).ConfigureAwait(false);
 
             var connectionIdServerValue = isMasterResult.ConnectionIdServerValue;

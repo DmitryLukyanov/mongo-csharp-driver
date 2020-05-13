@@ -13,15 +13,24 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
+using MongoDB.Driver.Core;
+using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.Clusters.ServerSelectors;
+using MongoDB.Driver.Core.Events;
+using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
-    public class IntegrationTestRunner : MongoClientJsonDrivenTestRunnerBase
+    public class IntegrationTestRunner : MongoClientJsonDrivenTestRunnerBase//, IJsonDrivenTestRunner
     {
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
 
@@ -32,8 +41,13 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
             SetupAndRunTest(testCase);
         }
 
+        protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
+        {
+            return base.InitializeEventCapturer(eventCapturer).Capture<ServerDescriptionChangedEvent>();
+        }
+
         // nested types
-        public class TestCaseFactory : JsonDrivenTestCaseFactory
+        private class TestCaseFactory : JsonDrivenTestCaseFactory
         {
             //#region static
             //private static readonly string[] __ignoredTestNames =
@@ -52,7 +66,7 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                 var testCases = base.CreateTestCases(document);//.Where(test => !__ignoredTestNames.Any(ignoredName => test.Name.EndsWith(ignoredName)));
                 foreach (var testCase in testCases)
                 {
-                    foreach (var async in new[] { false, true })
+                    foreach (var async in new[] { false })
                     {
                         var name = $"{testCase.Name}:async={async}";
                         var test = testCase.Test.DeepClone().AsBsonDocument.Add("async", async);

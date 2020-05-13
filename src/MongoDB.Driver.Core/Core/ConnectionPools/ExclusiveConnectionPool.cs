@@ -593,9 +593,19 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
             }
 
+            public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaiterTimeout, CancellationToken cancellationToken)
+            {
+                return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, maxAwaiterTimeout, cancellationToken);
+            }
+
             public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
                 return _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+            }
+
+            public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaitTimwout, CancellationToken cancellationToken)
+            {
+                return _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, maxAwaitTimwout, cancellationToken);
             }
 
             public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
@@ -707,6 +717,19 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 {
                     throw new ObjectDisposedException(GetType().Name);
                 }
+            }
+
+            // TODO: move above
+            public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaiterTimeout, CancellationToken cancellationToken)
+            {
+                ThrowIfDisposed();
+                return _reference.Instance.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, maxAwaiterTimeout, cancellationToken);
+            }
+
+            public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaitTimwout, CancellationToken cancellationToken)
+            {
+                ThrowIfDisposed();
+                return _reference.Instance.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, maxAwaitTimwout, cancellationToken);
             }
         }
 

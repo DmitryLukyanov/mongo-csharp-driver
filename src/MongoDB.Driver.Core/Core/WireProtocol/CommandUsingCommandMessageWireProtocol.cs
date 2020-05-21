@@ -254,7 +254,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
             var moreToCome = _responseHandling == CommandResponseHandling.NoResponseExpected;
-            var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome)
+            var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome, exhaustAllowed: true)  // TODO: 
             {
                 PostWriteAction = _postWriteAction
             };

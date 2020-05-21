@@ -44,6 +44,7 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         };
 
         // fields
+        private bool _exhaustAllowed;
         private bool _moreToCome;
         private Action<IMessageEncoderPostProcessor> _postWriteAction;
         private readonly int _requestId;
@@ -58,12 +59,15 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         /// <param name="responseTo">The response to.</param>
         /// <param name="sections">The sections.</param>
         /// <param name="moreToCome">if set to <c>true</c> [more to come].</param>
+        /// <param name="exhaustAllowed">TODO</param>
         public CommandMessage(
             int requestId,
             int responseTo,
             IEnumerable<CommandMessageSection> sections,
-            bool moreToCome)
+            bool moreToCome,
+            bool exhaustAllowed = false) 
         {
+            _exhaustAllowed = exhaustAllowed;
             _requestId = requestId;
             _responseTo = responseTo;
             _sections = Ensure.IsNotNull(sections, nameof(sections)).ToList();
@@ -76,6 +80,18 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         }
 
         // public properties
+        /// <summary>
+        /// TODO.
+        /// </summary>
+        /// <value>
+        /// TODO.
+        /// </value>
+        public bool ExhaustAllowed
+        {
+            get { return _exhaustAllowed; }
+            set { _exhaustAllowed = value; }
+        }
+
         /// <inheritdoc />
         public override bool MayBeCompressed
         {

@@ -126,6 +126,11 @@ namespace MongoDB.Driver.Core.Connections
             get { return _endPoint; }
         }
 
+        public int Generation
+        {
+            get => throw new NotImplementedException();
+        }
+
         public bool IsExpired
         {
             get

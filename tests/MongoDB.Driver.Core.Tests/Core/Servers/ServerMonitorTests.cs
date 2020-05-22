@@ -173,7 +173,7 @@ namespace MongoDB.Driver.Core.Servers
             SpinWait.SpinUntil(() => _subject.Description.State == ServerState.Connected, TimeSpan.FromSeconds(5)).Should().BeTrue();
             _capturedEvents.Clear();
 
-            _subject.Invalidate("Test");
+            _subject.Invalidate("Test", responseTopologyVersion: null);
 
             _subject.Description.Type.Should().Be(ServerType.Unknown);
 

@@ -858,7 +858,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_firstEndPoint));
-            mockServer.Verify(s => s.Invalidate("NoLongerPrimary"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("NoLongerPrimary", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
@@ -883,7 +883,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_firstEndPoint));
-            mockServer.Verify(s => s.Invalidate("NoLongerPrimary"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("NoLongerPrimary", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<ClusterDescriptionChangedEvent>();
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
@@ -910,7 +910,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_firstEndPoint));
-            mockServer.Verify(s => s.Invalidate("NoLongerPrimary"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("NoLongerPrimary", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");
@@ -940,7 +940,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_firstEndPoint));
-            mockServer.Verify(s => s.Invalidate("NoLongerPrimary"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("NoLongerPrimary", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");
@@ -969,7 +969,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_secondEndPoint));
-            mockServer.Verify(s => s.Invalidate("ReportedPrimaryIsStale"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("ReportedPrimaryIsStale", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");
@@ -998,7 +998,7 @@ namespace MongoDB.Driver.Core.Clusters
                 _serverDescriptionComparer);
 
             var mockServer = Mock.Get(_serverFactory.GetServer(_secondEndPoint));
-            mockServer.Verify(s => s.Invalidate("ReportedPrimaryIsStale"), Times.Once);
+            mockServer.Verify(s => s.Invalidate("ReportedPrimaryIsStale", null), Times.Once);
 
             _capturedEvents.Next().Should().BeOfType<SdamInformationEvent>()
                 .Subject.Message.Should().Contain("Initializing (maxSetVersion, maxElectionId)");

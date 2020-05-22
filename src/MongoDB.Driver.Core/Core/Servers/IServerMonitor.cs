@@ -23,6 +23,9 @@ namespace MongoDB.Driver.Core.Servers
     /// <seealso cref="System.IDisposable" />
     internal interface IServerMonitor : IDisposable
     {
+        /// <summary>
+        /// The monitor's view of the server, which could be considered stale relative to the <see cref="Server"/>'s view.
+        /// </summary>
         ServerDescription Description { get; }
 
         /// <summary>
@@ -39,7 +42,8 @@ namespace MongoDB.Driver.Core.Servers
         /// Instructs the monitor to refresh its description immediately.
         /// </summary>
         /// <param name="reasonInvalidated">The reason the server was invalidated.</param>
-        void Invalidate(string reasonInvalidated);
+        /// <param name="responseTopologyVersion">The topology version of the response that invalidated the server.</param>
+        void Invalidate(string reasonInvalidated, TopologyVersion responseTopologyVersion);
 
         /// <summary>
         /// Requests a heartbeat as soon as possible.

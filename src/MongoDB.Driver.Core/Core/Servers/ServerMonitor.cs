@@ -176,7 +176,7 @@ namespace MongoDB.Driver.Core.Servers
             const int maxRetryCount = 2;
             HeartbeatInfo heartbeatInfo = null;
             Exception heartbeatException = null;
-            for (var attempt = 1; attempt <= maxRetryCount; attempt++)
+            for (var attempt = 1; attempt <= maxRetryCount; attempt++)     // TODO:?
             {
                 var connection = _connection;
                 try

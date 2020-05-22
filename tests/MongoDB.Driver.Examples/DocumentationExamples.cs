@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Examples
         [Fact]
         public void Example_2()
         {
-            Thread.Sleep(100000);
+            Thread.Sleep(1000000);
             //// db.inventory.find( { item: "canvas" } )
 
             //// Start Example 2

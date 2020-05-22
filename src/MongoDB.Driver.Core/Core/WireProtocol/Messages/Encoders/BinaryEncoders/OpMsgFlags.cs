@@ -23,6 +23,6 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
         ChecksumPresent = 1,
         MoreToCome = 2,
         All = 3,
-        ExhaustedAllowed = 16 // TODO
+        ExhaustedAllowed = 1 << 16 // TODO
     }
 }

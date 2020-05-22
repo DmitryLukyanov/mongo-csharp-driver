@@ -273,7 +273,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)
         {
-            var requestId = RequestMessage.GetNextRequestId();
+            var requestId = RequestMessage.GetNextRequestId();   // response.RequestId
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
 
@@ -282,7 +282,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             {
                 exhaustAllowed = true;
             }
-            var moreToCome = exhaustAllowed || _responseHandling == CommandResponseHandling.NoResponseExpected;
+            var moreToCome = _responseHandling == CommandResponseHandling.NoResponseExpected;
             var isRequestExpected = !exhaustAllowed;
 
             var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome, exhaustAllowed, isRequestExpected)

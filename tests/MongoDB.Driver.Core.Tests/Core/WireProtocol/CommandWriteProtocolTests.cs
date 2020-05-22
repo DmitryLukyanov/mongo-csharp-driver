@@ -50,6 +50,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 NoOpElementNameValidator.Instance,
                 null, // additionalOptions
                 null, // postWriteAction
+                CommandRequestHandling.Send,
                 CommandResponseHandling.Return,
                 BsonDocumentSerializer.Instance,
                 messageEncoderSettings);
@@ -78,6 +79,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 NoOpElementNameValidator.Instance,
                 null, // additionalOptions
                 null, // postWriteAction
+                CommandRequestHandling.Send,
                 CommandResponseHandling.NoResponseExpected,
                 BsonDocumentSerializer.Instance,
                 messageEncoderSettings);
@@ -105,6 +107,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 NoOpElementNameValidator.Instance,
                 null, // additionalOptions
                 null, // postWriteAction
+                CommandRequestHandling.Send,
                 CommandResponseHandling.Return,
                 BsonDocumentSerializer.Instance,
                 messageEncoderSettings);
@@ -133,6 +136,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 NoOpElementNameValidator.Instance,
                 null, // additionalOptions
                 null, // postWriteAction
+                CommandRequestHandling.Send,
                 CommandResponseHandling.NoResponseExpected,
                 BsonDocumentSerializer.Instance,
                 messageEncoderSettings);

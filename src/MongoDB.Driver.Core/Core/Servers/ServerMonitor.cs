@@ -111,6 +111,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             var metronome = new Metronome(_heartbeatInterval);
             var heartbeatCancellationToken = _cancellationTokenSource.Token;
+            //var heartbeatProtocol = new Comm // TODO: safe?
             while (!heartbeatCancellationToken.IsCancellationRequested)
             {
                 try
@@ -170,6 +171,9 @@ namespace MongoDB.Driver.Core.Servers
                 }
             }
         }
+
+        private static bool moreToCome = false;
+        private static int? responseTo;
 
         private async Task<bool> HeartbeatAsync(CancellationToken cancellationToken)
         {
@@ -270,22 +274,25 @@ namespace MongoDB.Driver.Core.Servers
                 var isMasterCommand = IsMasterHelper.CreateCommand(
                     connection.Description.IsMasterResult.TopologyVersion,
                     _heartbeatInterval);
-                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
+                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, !moreToCome, responseTo); //TODO: make protocol global?
 
                 var stopwatch = Stopwatch.StartNew();
                 var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
                 var isMasterResult = new IsMasterResult(isMasterResultDocument);
 
-                var buildInfoCommand = new CommandWireProtocol<BsonDocument>(
-                    DatabaseNamespace.Admin,
-                    new BsonDocument("buildInfo", 1),
-                    true,
-                    BsonDocumentSerializer.Instance,
-                    null);
+                responseTo = (int?)isMasterResultDocument.GetValue("requestId", null); //isMasterProtocol.PreviousRequestId;
 
-                var buildInfoResultRocument = await buildInfoCommand.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
-                var buildInfoResult = new BuildInfoResult(buildInfoResultRocument);
+                moreToCome = isMasterResult.HasMoreToCome;
+                //var buildInfoCommand = new CommandWireProtocol<BsonDocument>(
+                //    DatabaseNamespace.Admin,
+                //    new BsonDocument("buildInfo", 1),
+                //    true,
+                //    BsonDocumentSerializer.Instance,
+                //    null);
+
+                //var buildInfoResultRocument = await buildInfoCommand.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
+                //var buildInfoResult = new BuildInfoResult(buildInfoResultRocument);
 
                 if (_heartbeatSucceededEventHandler != null)
                 {
@@ -296,7 +303,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     RoundTripTime = stopwatch.Elapsed,
                     IsMasterResult = isMasterResult,
-                    BuildInfoResult = buildInfoResult
+                    BuildInfoResult = new BuildInfoResult(new BsonDocument("version", "4.2.0"))
                 };
             }
             catch (Exception ex)

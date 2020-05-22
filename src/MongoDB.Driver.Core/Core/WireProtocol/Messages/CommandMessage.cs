@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         private bool _exhaustAllowed;
         private bool _moreToCome;
         private Action<IMessageEncoderPostProcessor> _postWriteAction;
-        private readonly bool _requestExpected;
+        private bool _requestExpected;
         private readonly int _requestId;
         private readonly int _responseTo;
         private readonly List<CommandMessageSection> _sections;
@@ -60,27 +60,18 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         /// <param name="responseTo">The response to.</param>
         /// <param name="sections">The sections.</param>
         /// <param name="moreToCome">if set to <c>true</c> [more to come].</param>
-        /// <param name="exhaustAllowed"></param>
-        /// <param name="requestExpected">TODO</param>
         public CommandMessage(
             int requestId,
             int responseTo,
             IEnumerable<CommandMessageSection> sections,
-            bool moreToCome,
-            bool exhaustAllowed = false,
-            bool requestExpected = true) // TODO: Exhaust = 4?
+            bool moreToCome)
         {
-            _exhaustAllowed = exhaustAllowed;
-            _requestExpected = requestExpected;
             _requestId = requestId;
+            _requestExpected = true; // the default value
             _responseTo = responseTo;
             _sections = Ensure.IsNotNull(sections, nameof(sections)).ToList();
             _moreToCome = moreToCome;
 
-            //if (_sections.Count == 1 && ((sections.First() as Type0CommandMessageSection).Document as BsonDocument).Contains("isMaster"))
-            //{
-            //    _exhaustAllowed = true;
-            //}
             if (_sections.Count(s => s.PayloadType == PayloadType.Type0) != 1)
             {
                 throw new ArgumentException("There must be exactly one type 0 payload.", nameof(sections));
@@ -156,7 +147,11 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         /// <summary>
         /// TODO
         /// </summary>
-        public bool RequestExpected => _requestExpected; //TODO 
+        public bool RequestExpected
+        {
+            get => _requestExpected;
+            set => _requestExpected = value;
+        }
 
         /// <summary>
         /// Gets a value indicating whether a response is expected.
@@ -164,8 +159,6 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         /// <value>
         ///   <c>true</c> if a response is expected; otherwise, <c>false</c>.
         /// </value>
-        //TODO: add exhaustAllowed
-        //TODO: is the prvious impl correct?
         public bool ResponseExpected => !_moreToCome; 
 
         /// <summary>

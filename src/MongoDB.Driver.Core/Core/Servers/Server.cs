@@ -541,6 +541,7 @@ namespace MongoDB.Driver.Core.Servers
                     commandValidator,
                     additionalOptions,
                     postWriteAction,
+                    CommandRequestHandling.Send, // TODO
                     responseHandling,
                     resultSerializer,
                     messageEncoderSettings);
@@ -642,6 +643,7 @@ namespace MongoDB.Driver.Core.Servers
                     commandValidator,
                     additionalOptions,
                     postWriteAction,
+                    CommandRequestHandling.Send, // TODO
                     responseHandling,
                     resultSerializer,
                     messageEncoderSettings);

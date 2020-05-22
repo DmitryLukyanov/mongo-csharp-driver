@@ -1,4 +1,4 @@
-﻿/* Copyright 2018-present MongoDB Inc.
+﻿/* Copyright 2020-present MongoDB Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -13,16 +13,20 @@
 * limitations under the License.
 */
 
-using System;
-
-namespace MongoDB.Driver.Core.WireProtocol.Messages.Encoders.BinaryEncoders
+namespace MongoDB.Driver.Core.WireProtocol
 {
-    [Flags]
-    internal enum OpMsgFlags
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public enum CommandRequestHandling
     {
-        ChecksumPresent = 1,
-        MoreToCome = 2,
-        All = 3,
-        ExhaustedAllowed = 1 << 16
+        /// <summary>
+        /// TODO
+        /// </summary>
+        Send,
+        /// <summary>
+        /// TODO
+        /// </summary>
+        Skip
     }
 }

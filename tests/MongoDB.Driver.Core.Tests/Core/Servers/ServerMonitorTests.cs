@@ -19,10 +19,7 @@ using System.Net;
 using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
-using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Helpers;
@@ -39,7 +36,6 @@ namespace MongoDB.Driver.Core.Servers
         private EventCapturer _capturedEvents;
         private ServerId _serverId;
         private ServerMonitor _subject;
-
 
         public ServerMonitorTests()
         {
@@ -110,7 +106,7 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         [Fact]
-        public void DescriptionChanged_should_be_raised_when_moving_from_disconnected_to_connected()
+        public void DescriptionChanged_should_not_be_raised_during_initial_handshake()
         {
             var changes = new List<ServerDescriptionChangedEventArgs>();
             _subject.DescriptionChanged += (o, e) => changes.Add(e);
@@ -123,8 +119,6 @@ namespace MongoDB.Driver.Core.Servers
             changes[0].OldServerDescription.State.Should().Be(ServerState.Disconnected);
             changes[0].NewServerDescription.State.Should().Be(ServerState.Connected);
 
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatSucceededEvent>();
             _capturedEvents.Any().Should().BeFalse();
         }
 
@@ -138,8 +132,7 @@ namespace MongoDB.Driver.Core.Servers
             _subject.Description.State.Should().Be(ServerState.Connected);
             _subject.Description.Type.Should().Be(ServerType.Standalone);
 
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatSucceededEvent>();
+            // no ServerHeartbeat events should be triggered during initial handshake
             _capturedEvents.Any().Should().BeFalse();
         }
 
@@ -157,9 +150,6 @@ namespace MongoDB.Driver.Core.Servers
             // go back to disconnected
             SpinWait.SpinUntil(() => _subject.Description.State == ServerState.Disconnected, TimeSpan.FromSeconds(5)).Should().BeTrue();
 
-            // when heart fails, we immediately attempt a second, hence the multiple events...
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatFailedEvent>();
             _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
             _capturedEvents.Next().Should().BeOfType<ServerHeartbeatFailedEvent>();
             _capturedEvents.Any().Should().BeFalse();
@@ -167,13 +157,10 @@ namespace MongoDB.Driver.Core.Servers
 
         private void SetupHeartbeatConnection()
         {
-            var isMasterReply = MessageHelper.BuildReply<RawBsonDocument>(
-                RawBsonDocumentHelper.FromJson("{ ok: 1 }"));
-            var buildInfoReply = MessageHelper.BuildReply<RawBsonDocument>(
-                RawBsonDocumentHelper.FromJson("{ ok: 1, version: \"2.6.3\" }"));
-
-            _connection.EnqueueReplyMessage(isMasterReply);
-            _connection.EnqueueReplyMessage(buildInfoReply);
+            _connection.Description = new ConnectionDescription(
+                _connection.ConnectionId,
+                new IsMasterResult(BsonDocument.Parse("{ ok : 1 }")),
+                new BuildInfoResult(BsonDocument.Parse("{ ok : 1, version : '2.6.3' }")));
         }
     }
 }

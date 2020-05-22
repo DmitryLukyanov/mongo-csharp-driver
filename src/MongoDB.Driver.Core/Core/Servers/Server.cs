@@ -293,6 +293,14 @@ namespace MongoDB.Driver.Core.Servers
             {
                 return; // stale generation number
             }
+
+            if (ex is MongoConnectionException mongoConnectionException &&
+                mongoConnectionException.IsNetworkException &&
+                !mongoConnectionException.ContainsSocketTimeoutException)
+            {
+                _monitor.CurrentCheckCancel();
+            }
+
             var description = Description; // use Description property to access _description value safely
             if (ShouldInvalidateServer(connection, ex, description, out TopologyVersion responseTopologyVersion))
             {

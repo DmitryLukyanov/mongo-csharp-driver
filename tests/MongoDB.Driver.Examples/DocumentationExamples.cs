@@ -21,6 +21,7 @@ using System.Linq;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
+using System.Threading;
 
 namespace MongoDB.Driver.Examples
 {
@@ -32,11 +33,9 @@ namespace MongoDB.Driver.Examples
 
         public DocumentationExamples()
         {
-            var connectionString = CoreTestConfiguration.ConnectionString.ToString();
-            client = new MongoClient(connectionString);
+            client = new MongoClient("mongodb://localhost:27017");
             database = client.GetDatabase("test");
             collection = database.GetCollection<BsonDocument>("inventory");
-            database.DropCollection("inventory");
         }
 
         [Fact]
@@ -116,6 +115,8 @@ namespace MongoDB.Driver.Examples
                "{ item: \"journal\", qty: 25, tags: [\"blank\", \"red\"], size: { h: 14, w: 21, uom: \"cm\" } }",
                "{ item: \"mat\", qty: 85, tags: [\"gray\"], size: { h: 27.9, w: 35.5, uom: \"cm\" } }",
                "{ item: \"mousepad\", qty: 25, tags: [\"gel\", \"blue\"], size: { h: 19, w: 22.85, uom: \"cm\" } }"));
+
+            Thread.Sleep(40000);
         }
 
         [Fact]

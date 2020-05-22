@@ -17,13 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public sealed class JsonDrivenRunCommandTest : JsonDrivenDatabaseTest
+    public class JsonDrivenRunCommandTest : JsonDrivenDatabaseTest
     {
         // private fields
         private BsonDocument _command;

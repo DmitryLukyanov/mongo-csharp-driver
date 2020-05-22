@@ -612,6 +612,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
             {
                 return _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken);
             }
+
+            public void AddAdditionalReadTimeout(TimeSpan timeout)
+            {
+                _connection.AddAdditionalReadTimeout(timeout);
+            }
         }
 
         private sealed class AcquiredConnection : IConnectionHandle
@@ -709,6 +714,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
             {
                 ThrowIfDisposed();
                 return _reference.Instance.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken);
+            }
+
+            public void AddAdditionalReadTimeout(TimeSpan timeout)
+            {
+                ThrowIfDisposed();
+                _reference.Instance.AddAdditionalReadTimeout(timeout);
             }
 
             private void ThrowIfDisposed()

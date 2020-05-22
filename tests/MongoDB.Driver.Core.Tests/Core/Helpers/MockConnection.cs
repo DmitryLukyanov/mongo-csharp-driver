@@ -123,6 +123,11 @@ namespace MongoDB.Driver.Core.Helpers
         public ConnectionSettings Settings => _connectionSettings;
 
         // methods
+        public void AddAdditionalReadTimeout(TimeSpan timeout)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Dispose()
         {
             _closingEventHandler?.Invoke(new ConnectionClosingEvent(_connectionId, EventContext.OperationId));

@@ -29,6 +29,11 @@ namespace MongoDB.Driver.Core.Servers
         ServerDescription Description { get; }
 
         /// <summary>
+        /// Cancel the current heartbeat.
+        /// </summary>
+        void CurrentCheckCancel();
+
+        /// <summary>
         /// Occurs when the server description changes.
         /// </summary>
         event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;

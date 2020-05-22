@@ -159,6 +159,12 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         // methods
+        public void AddAdditionalReadTimeout(TimeSpan timeout)
+        {
+            ThrowIfDisposed();
+            _stream.ReadTimeout += (int)timeout.TotalMilliseconds;
+        }
+
         private void ConnectionFailed(Exception exception)
         {
             if (!_state.TryChange(State.Open, State.Failed) && !_state.TryChange(State.Initializing, State.Failed))

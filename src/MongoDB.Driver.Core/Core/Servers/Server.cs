@@ -62,6 +62,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly EndPoint _endPoint;
         private readonly IServerMonitor _monitor;
         private readonly ServerId _serverId;
+        private ServerDescription _currentDescription;
         private readonly ServerSettings _settings;
         private readonly InterlockedInt32 _state;
 
@@ -515,6 +516,7 @@ namespace MongoDB.Driver.Core.Servers
                 nonStaleResponseTopologyVersion = isStale ? null : responseTopologyVersion;
                 return isStale;
             }
+
         }
 
         private void ThrowIfDisposed()

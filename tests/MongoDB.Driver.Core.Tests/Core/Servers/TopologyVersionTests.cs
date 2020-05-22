@@ -23,6 +23,7 @@ using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
 using Xunit;
 
+
 namespace MongoDB.Driver.Core.Servers
 {
     public class TopologyVersionTests
@@ -104,7 +105,6 @@ namespace MongoDB.Driver.Core.Servers
             TopologyVersion.IsStalerThan(newer, older).Should().BeFalse();
             TopologyVersion.IsFresherThan(newer, older).Should().BeTrue();
         }
-
         [Fact]
         public void CompareTopologyVersion_should_return_zero_when_topologies_are_equal()
         {

@@ -92,6 +92,16 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
+        public void Invalidate(string reasonInvalidated, TopologyVersion responseTopologyVersion)
+        {
+            var newDescription = _baseDescription.With(
+                    $"InvalidatedBecause:{reasonInvalidated}",
+                    lastUpdateTimestamp: DateTime.UtcNow,
+                    topologyVersion: responseTopologyVersion);
+            SetDescription(newDescription);
+            RequestHeartbeat();
+        }
+
         public void RequestHeartbeat()
         {
             ThrowIfNotOpen();

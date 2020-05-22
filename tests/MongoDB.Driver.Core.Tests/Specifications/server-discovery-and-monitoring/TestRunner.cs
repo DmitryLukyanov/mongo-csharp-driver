@@ -129,9 +129,13 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
 
+        }
+
+
         private void ApplyPhase(BsonDocument phase)
         {
             JsonDrivenHelper.EnsureAllFieldsAreValid(phase, "applicationErrors", "description", "outcome", "responses");
+
 
             if (phase.Contains("responses"))
             {
@@ -148,6 +152,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 {
                     ApplyApplicationError(applicationError);
                 }
+            }
             }
 
             var outcome = (BsonDocument)phase["outcome"];

@@ -315,6 +315,12 @@ namespace MongoDB.Driver.Core.Servers
             subject.Description.Type.Should().Be(ServerType.Unknown);
             subject.Description.ReasonChanged.Should().Contain("ChannelException during handshake");
             mockConnectionPool.Verify(p => p.Clear(), Times.Once);
+                var descriptionChangedEventArgs = new ServerDescriptionChangedEventArgs(oldDescription, newDescription);
+                mockServerMonitor
+                    .SetupGet(m => m.Description)
+                    .Returns(newDescription);
+
+                mockServerMonitor.Raise(m => m.DescriptionChanged += null, descriptionChangedEventArgs);
         }
 
         [Theory]
@@ -376,6 +382,10 @@ namespace MongoDB.Driver.Core.Servers
             else
             {
                 subject.Description.Should().Be(heartbeatDescription);
+                var newDescription = oldDescription.With(reason, type: ServerType.Unknown, topologyVersion: responseTopology);
+                var descriptionChangedEventArgs = new ServerDescriptionChangedEventArgs(oldDescription, newDescription);
+
+                mockServerMonitor.Raise(m => m.DescriptionChanged += null, descriptionChangedEventArgs);
             }
         }
 

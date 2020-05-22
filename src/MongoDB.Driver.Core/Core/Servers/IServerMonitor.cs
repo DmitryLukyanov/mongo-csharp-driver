@@ -39,6 +39,7 @@ namespace MongoDB.Driver.Core.Servers
         void Initialize();
 
         /// <summary>
+        void Invalidate(string reasonInvalidated, TopologyVersion responseTopologyVersion);
         /// Requests a heartbeat as soon as possible.
         /// </summary>
         void RequestHeartbeat();

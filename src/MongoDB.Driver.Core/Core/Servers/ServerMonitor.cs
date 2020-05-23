@@ -19,11 +19,9 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
-using MongoDB.Driver.Core.WireProtocol;
 
 namespace MongoDB.Driver.Core.Servers
 {
@@ -190,7 +188,7 @@ namespace MongoDB.Driver.Core.Servers
                         connection = _connectionFactory.CreateConnection(_serverId, _endPoint);
                         // if we are cancelling, it's because the server has
                         // been shut down and we really don't need to wait.
-                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false); //TODO: cancellation token?
                         heartbeatInfo = new HeartbeatInfo
                         {
                             BuildInfoResult = connection.Description.BuildInfoResult,
@@ -374,9 +372,56 @@ namespace MongoDB.Driver.Core.Servers
 
     internal class RoundTripTimeMonitor : IDisposable
     {
+        private readonly CancellationToken _cancellationToken;
+        private readonly IConnectionFactory _connectionFactory;
+        private readonly EndPoint _endPoint;
+        private IConnection _roundTripTimeConnection;
+        private readonly ServerId _serverId;
+
+        public RoundTripTimeMonitor(IConnectionFactory connectionFactory, ServerId serverId, EndPoint endpoint, CancellationToken cancellationToken)
+        {
+            _cancellationToken = cancellationToken;
+            _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
+            _serverId = serverId;
+            _endPoint = endpoint;
+        }
+
+        public async Task Initialize()
+        {
+            _roundTripTimeConnection = _connectionFactory.CreateConnection(_serverId, _endPoint);
+            // if we are cancelling, it's because the server has
+            // been shut down and we really don't need to wait.
+            await _roundTripTimeConnection.OpenAsync(_cancellationToken).ConfigureAwait(false); //TODO: cancellation token?
+            //heartbeatInfo = new HeartbeatInfo
+            //{
+            //    BuildInfoResult = connection.Description.BuildInfoResult,
+            //    IsMasterResult = connection.Description.IsMasterResult,
+            //    // TODO
+            //    RoundTripTime = connection.Description.IsMasterResult.InitialRoundTripTime.Value
+            //};
+        }
+
+        public async Task Run()
+        {
+            while (true) //TODO: not disposed
+            {
+                if (_roundTripTimeConnection == null)
+                {
+                    await Initialize();
+                }
+                else
+                {
+                    // fill: averageRoundTripTime!
+                }
+            }
+        }
 
         public void Dispose()
         {
+            if (_roundTripTimeConnection != null)
+            {
+                _roundTripTimeConnection.Dispose();      //TODO: try/catch?
+            }
         }
     }
 }

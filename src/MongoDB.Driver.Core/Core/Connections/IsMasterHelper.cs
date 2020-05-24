@@ -24,6 +24,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Configuration;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.WireProtocol;
 
@@ -43,12 +44,15 @@ namespace MongoDB.Driver.Core.Connections
             return command.Add("compression", compressorsArray);
         }
 
-        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion = null, TimeSpan? maxAwaitTime = null)
+        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion, TimeSpan? maxAwaitTime)
         {
+            Ensure.That(
+                (topologyVersion != null && maxAwaitTime.HasValue) || (topologyVersion == null && !maxAwaitTime.HasValue),
+                "Both topologyVersion and maxAwaitTime must be filled or null."); // TODO: message?
+
             var doc = new BsonDocument
             {
                 { "isMaster", 1 },
-                // TODO
                 { "topologyVersion", topologyVersion?.ToBsonDocument(), topologyVersion != null },
                 { "maxAwaitTimeMS", maxAwaitTime?.TotalMilliseconds, maxAwaitTime.HasValue }
             };
@@ -95,7 +99,6 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
-                // TODO
                 var stopwatch = Stopwatch.StartNew();
                 var isMasterResult = isMasterProtocol.Execute(connection, cancellationToken);
                 stopwatch.Stop();

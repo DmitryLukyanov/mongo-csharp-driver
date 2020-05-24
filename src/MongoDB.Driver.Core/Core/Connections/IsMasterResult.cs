@@ -25,19 +25,20 @@ using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.Connections
 {
-    internal interface IWithMoreToComeResult<T>
-    {
-        T WithMoreToCome(bool moreToCome);
-    }
+    // TODO: remove
+    //internal interface IWithMoreToComeResult<T>
+    //{
+    //    T WithMoreToCome(bool moreToCome);
+    //}
 
     /// <summary>
     /// Represents the result of an isMaster command.
     /// </summary>
-    public sealed class IsMasterResult : IEquatable<IsMasterResult>, IWithMoreToComeResult<IsMasterResult>
+    public sealed class IsMasterResult : IEquatable<IsMasterResult> //, IWithMoreToComeResult<IsMasterResult>
     {
         // fields
-        private readonly TimeSpan? _initialRoundTripTime; // TODO
         private readonly bool _hasMoreToCome;
+        private readonly TimeSpan _roundTripTime;
         private readonly BsonDocument _wrapped;
 
         // constructors
@@ -45,14 +46,21 @@ namespace MongoDB.Driver.Core.Connections
         /// Initializes a new instance of the <see cref="IsMasterResult"/> class.
         /// </summary>
         /// <param name="wrapped">The wrapped result document.</param>
-        public IsMasterResult(BsonDocument wrapped) : this(wrapped, null, false)
+        //[Obsolete("Use constructor with RoundTripTime argument.")]
+        public IsMasterResult(BsonDocument wrapped) : this(wrapped, TimeSpan.Zero /*todo*/, false)
         {
         }
 
-        internal IsMasterResult(BsonDocument wrapped, TimeSpan? initialRoundTripTime, bool hasMoreToCome = false) // TODO
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="wrapped">TODO</param>
+        /// <param name="roundTripTime">TODO</param>
+        /// <param name="hasMoreToCome">TODO</param>
+        public IsMasterResult(BsonDocument wrapped, TimeSpan roundTripTime, bool hasMoreToCome = false) // TODO
         {
             _hasMoreToCome = hasMoreToCome;
-            _initialRoundTripTime = initialRoundTripTime;
+            _roundTripTime = roundTripTime;
             _wrapped = Ensure.IsNotNull(wrapped, nameof(wrapped));
         }
 
@@ -432,8 +440,11 @@ namespace MongoDB.Driver.Core.Connections
             get { return _wrapped; }
         }
 
-        // internal properties
-        internal TimeSpan? InitialRoundTripTime => _initialRoundTripTime; // TODO
+        // TODO: internal? nullable?
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan RoundTripTime => _roundTripTime;
 
         // methods
         /// <inheritdoc/>
@@ -508,14 +519,14 @@ namespace MongoDB.Driver.Core.Connections
             return new ReplicaSetConfig(members, name, primary, version);
         }
 
-        /// <summary>
-        /// TODO
-        /// </summary>
-        /// <param name="hasMoreToCome"></param>
-        /// <returns></returns>
-        public IsMasterResult WithMoreToCome(bool hasMoreToCome)
-        {
-            return new IsMasterResult(_wrapped, _initialRoundTripTime, hasMoreToCome);
-        }
+        ///// <summary>
+        ///// TODO
+        ///// </summary>
+        ///// <param name="hasMoreToCome"></param>
+        ///// <returns></returns>
+        //public IsMasterResult WithMoreToCome(bool hasMoreToCome)
+        //{
+        //    return new IsMasterResult(_wrapped, _initialRoundTripTime, hasMoreToCome);
+        //}
     }
 }

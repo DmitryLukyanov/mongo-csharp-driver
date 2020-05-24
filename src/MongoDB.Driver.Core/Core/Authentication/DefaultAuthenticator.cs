@@ -73,7 +73,9 @@ namespace MongoDB.Driver.Core.Authentication
                 var command = CustomizeInitialIsMasterCommand(IsMasterHelper.CreateCommand());
                 var isMasterProtocol = IsMasterHelper.CreateProtocol(command);
                 var isMasterResult = IsMasterHelper.GetResult(connection, isMasterProtocol, cancellationToken);
-                var mergedIsMasterResult = new IsMasterResult(description.IsMasterResult.Wrapped.Merge(isMasterResult.Wrapped));
+                var mergedIsMasterResult = new IsMasterResult(
+                    description.IsMasterResult.Wrapped.Merge(isMasterResult.Wrapped),
+                    description.IsMasterResult.RoundTripTime);
                 description = new ConnectionDescription(
                     description.ConnectionId,
                     mergedIsMasterResult,

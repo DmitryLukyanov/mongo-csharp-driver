@@ -1,10 +1,24 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver.Core.Misc;
+﻿/* Copyright 2020-present MongoDB Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+using MongoDB.Bson;
 
 namespace MongoDB.Driver.Core.Servers
 {
     /// <summary>
-    /// 
+    /// TODO: TopologyDescription?
     /// </summary>
     public class TopologyVersion : IConvertibleToBsonDocument
     {
@@ -16,9 +30,8 @@ namespace MongoDB.Driver.Core.Servers
         /// <returns></returns>
         public static TopologyVersion Parse(BsonDocument document)
         {
-            // TODO
-            var processId = Ensure.IsNotNull(document.GetValue("processId", null), nameof(document)).AsObjectId;
-            var counter = Ensure.IsNotNull(document.GetValue("counter", null), nameof(document)).AsInt64;
+            var processId = document.GetValue("processId").AsObjectId;
+            var counter = document.GetValue("counter").AsInt64;
 
             return new TopologyVersion(processId, counter);
         }
@@ -51,8 +64,8 @@ namespace MongoDB.Driver.Core.Servers
         /// <summary>
         /// TODO
         /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
+        /// <param name="obj">TODO</param>
+        /// <returns>TODO</returns>
         public override bool Equals(object obj)
         {
             //TODO
@@ -60,9 +73,9 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         /// <summary>
-        /// 
+        /// TODO
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TODO</returns>
         public override int GetHashCode()
         {
             // TODO
@@ -70,9 +83,9 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         /// <summary>
-        /// 
+        /// TODO
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TODO</returns>
         public BsonDocument ToBsonDocument()
         {
             return new BsonDocument

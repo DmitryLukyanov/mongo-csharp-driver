@@ -45,9 +45,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly IBinaryCommandFieldEncryptor _documentFieldEncryptor;
         private readonly MessageEncoderSettings _messageEncoderSettings;
         private readonly Action<IMessageEncoderPostProcessor> _postWriteAction;
-        private readonly int? _previousResponseId;
         private readonly ReadPreference _readPreference;
-        private readonly CommandRequestHandling _requestHandling;
         private readonly CommandResponseHandling _responseHandling;
         private readonly IBsonSerializer<TCommandResult> _resultSerializer;
         private readonly ICoreSession _session;
@@ -65,46 +63,10 @@ namespace MongoDB.Driver.Core.WireProtocol
             IBsonSerializer<TCommandResult> resultSerializer,
             MessageEncoderSettings messageEncoderSettings,
             Action<IMessageEncoderPostProcessor> postWriteAction)
-            : this(
-                  session,
-                  readPreference,
-                  databaseNamespace,
-                  command,
-                  commandPayloads,
-                  commandValidator,
-                  additionalOptions,
-                  requestHandling: CommandRequestHandling.Send,
-                  responseHandling,
-                  resultSerializer,
-                  messageEncoderSettings,
-                  postWriteAction,
-                  previousResponseId: null)
-        {
-        }
-
-        public CommandUsingCommandMessageWireProtocol(
-            ICoreSession session,
-            ReadPreference readPreference,
-            DatabaseNamespace databaseNamespace,
-            BsonDocument command,
-            IEnumerable<Type1CommandMessageSection> commandPayloads,
-            IElementNameValidator commandValidator,
-            BsonDocument additionalOptions,
-            CommandRequestHandling requestHandling,
-            CommandResponseHandling responseHandling,
-            IBsonSerializer<TCommandResult> resultSerializer,
-            MessageEncoderSettings messageEncoderSettings,
-            Action<IMessageEncoderPostProcessor> postWriteAction,
-            int? previousResponseId)
         {
             if (responseHandling != CommandResponseHandling.Return && responseHandling != CommandResponseHandling.NoResponseExpected)
             {
                 throw new ArgumentException("CommandResponseHandling must be Return or NoneExpected.", nameof(responseHandling));
-            }
-
-            if (requestHandling == CommandRequestHandling.Skip && responseHandling == CommandResponseHandling.NoResponseExpected)
-            {
-                throw new ArgumentException("Both CommandRequestHandling and CommandResponseHandling cannot be skipped.");
             }
 
             _session = Ensure.IsNotNull(session, nameof(session));
@@ -114,12 +76,10 @@ namespace MongoDB.Driver.Core.WireProtocol
             _commandPayloads = commandPayloads?.ToList(); // can be null
             _commandValidator = Ensure.IsNotNull(commandValidator, nameof(commandValidator));
             _additionalOptions = additionalOptions; // can be null
-            _requestHandling = requestHandling;
             _responseHandling = responseHandling;
             _resultSerializer = Ensure.IsNotNull(resultSerializer, nameof(resultSerializer));
             _messageEncoderSettings = messageEncoderSettings;
             _postWriteAction = postWriteAction; // can be null
-            _previousResponseId = previousResponseId;
 
             if (messageEncoderSettings != null)
             {
@@ -313,7 +273,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)
         {
-            var requestId = _previousResponseId ?? RequestMessage.GetNextRequestId();
+            var requestId = connectionDescription.IsMasterResult.PreviousResponseId ?? RequestMessage.GetNextRequestId();
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
 
@@ -322,13 +282,13 @@ namespace MongoDB.Driver.Core.WireProtocol
             {
                 exhaustAllowed = true;
             }
-            var moreToCome = _responseHandling == CommandResponseHandling.NoResponseExpected;
+            var moreToCome = _responseHandling == CommandResponseHandling.NoResponseExpected;  // TODO:?
 
             var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToCome)
             {
                 PostWriteAction = _postWriteAction,
                 ExhaustAllowed = exhaustAllowed,
-                RequestExpected = _requestHandling == CommandRequestHandling.Send
+                RequestExpected = !connectionDescription.IsMasterResult.HasMoreToCome
             };
             var shouldBeSent = (Func<bool>)(() => true);
 

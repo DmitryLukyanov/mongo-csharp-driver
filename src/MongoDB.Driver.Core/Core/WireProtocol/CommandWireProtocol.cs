@@ -39,9 +39,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly DatabaseNamespace _databaseNamespace;
         private readonly MessageEncoderSettings _messageEncoderSettings;
         private readonly Action<IMessageEncoderPostProcessor> _postWriteAction;
-        private int? _previousResponseId; // TODO:
         private readonly ReadPreference _readPreference;
-        private readonly CommandRequestHandling _requestHandling;
         private readonly CommandResponseHandling _responseHandling;
         private readonly IBsonSerializer<TCommandResult> _resultSerializer;
         private readonly ICoreSession _session;
@@ -54,23 +52,6 @@ namespace MongoDB.Driver.Core.WireProtocol
             IBsonSerializer<TCommandResult> resultSerializer,
             MessageEncoderSettings messageEncoderSettings)
             : this(
-                databaseNamespace,
-                command,
-                slaveOk,
-                CommandRequestHandling.Send,
-                resultSerializer,
-                messageEncoderSettings)
-        {
-        }
-
-        public CommandWireProtocol(
-            DatabaseNamespace databaseNamespace,
-            BsonDocument command,
-            bool slaveOk,
-            CommandRequestHandling requestHandling,
-            IBsonSerializer<TCommandResult> resultSerializer,
-            MessageEncoderSettings messageEncoderSettings)
-            : this(
                 NoCoreSession.Instance,
                 slaveOk ? ReadPreference.PrimaryPreferred : ReadPreference.Primary,
                 databaseNamespace,
@@ -79,7 +60,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                 NoOpElementNameValidator.Instance,
                 null, // additionalOptions
                 null, // postWriteAction
-                requestHandling,
                 CommandResponseHandling.Return,
                 resultSerializer,
                 messageEncoderSettings)
@@ -95,7 +75,6 @@ namespace MongoDB.Driver.Core.WireProtocol
             IElementNameValidator commandValidator,
             BsonDocument additionalOptions,
             Action<IMessageEncoderPostProcessor> postWriteAction,
-            CommandRequestHandling requestHandling,
             CommandResponseHandling responseHandling,
             IBsonSerializer<TCommandResult> resultSerializer,
             MessageEncoderSettings messageEncoderSettings)
@@ -105,11 +84,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                 throw new ArgumentException("CommandResponseHandling must be Return or NoneExpected.", nameof(responseHandling));
             }
 
-            if (requestHandling == CommandRequestHandling.Skip && responseHandling == CommandResponseHandling.NoResponseExpected)
-            {
-                throw new ArgumentException("Both CommandRequestHandling and CommandResponseHandling cannot be skipped.");
-            }
-
             _session = Ensure.IsNotNull(session, nameof(session));
             _readPreference = readPreference;
             _databaseNamespace = Ensure.IsNotNull(databaseNamespace, nameof(databaseNamespace));
@@ -117,18 +91,10 @@ namespace MongoDB.Driver.Core.WireProtocol
             _commandPayloads = commandPayloads?.ToList(); // can be null
             _commandValidator = Ensure.IsNotNull(commandValidator, nameof(commandValidator));
             _additionalOptions = additionalOptions; // can be null
-            _requestHandling = requestHandling;
             _responseHandling = responseHandling;
             _resultSerializer = Ensure.IsNotNull(resultSerializer, nameof(resultSerializer));
             _messageEncoderSettings = messageEncoderSettings;
             _postWriteAction = postWriteAction; // can be null
-        }
-
-        // public properties
-        public int? PreviousRequestId
-        {
-            get => _previousResponseId;
-            set => _previousResponseId = value;
         }
 
         // public methods
@@ -155,12 +121,10 @@ namespace MongoDB.Driver.Core.WireProtocol
                 _commandPayloads,
                 _commandValidator,
                 _additionalOptions,
-                _requestHandling,
                 _responseHandling,
                 _resultSerializer,
                 _messageEncoderSettings,
-                _postWriteAction,
-                _previousResponseId);
+                _postWriteAction);
         }
 
         private IWireProtocol<TCommandResult> CreateCommandUsingQueryMessageWireProtocol()

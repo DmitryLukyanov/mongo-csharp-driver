@@ -31,7 +31,7 @@ namespace MongoDB.Driver.Core.Connections
         private readonly BuildInfoResult _buildInfoResult;
         private readonly IReadOnlyList<CompressorType> _compressors;
         private readonly ConnectionId _connectionId;
-        private readonly IsMasterResult _isMasterResult;
+        private /*readonly TODO: restore*/IsMasterResult _isMasterResult;
         private readonly int _maxBatchCount;
         private readonly int _maxDocumentSize;
         private readonly int _maxMessageSize;
@@ -97,6 +97,7 @@ namespace MongoDB.Driver.Core.Connections
         public IsMasterResult IsMasterResult
         {
             get { return _isMasterResult; }
+            set { _isMasterResult = value; } //TODO: remove
         }
 
         /// <summary>
@@ -194,5 +195,15 @@ namespace MongoDB.Driver.Core.Connections
         {
             return _connectionId.StructurallyEquals(value) ? this : new ConnectionDescription(value, _isMasterResult, _buildInfoResult);
         }
+
+        ///// <summary>
+        ///// TODO
+        ///// </summary>
+        ///// <param name="isMasterResult">TODO</param>
+        ///// <returns>TODO</returns>
+        //public ConnectionDescription WithIsMasterResult(IsMasterResult isMasterResult)
+        //{
+        //    return isMasterResult != _isMasterResult ? new ConnectionDescription(_connectionId, isMasterResult, _buildInfoResult) : this;
+        //}
     }
 }

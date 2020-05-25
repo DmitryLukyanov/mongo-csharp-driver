@@ -64,33 +64,15 @@ namespace MongoDB.Driver.Core.Connections
             return authenticators.Count == 1 ? authenticators[0].CustomizeInitialIsMasterCommand(command) : command;
         }
 
-        internal static CommandWireProtocol<BsonDocument> CreateProtocol(
-            BsonDocument isMasterCommand,
-            bool isRequestExpected = true,
-            int? previousResponseId = null)
+        internal static CommandWireProtocol<BsonDocument> CreateProtocol(BsonDocument isMasterCommand)
         {
-            var requestHandling = isRequestExpected ? CommandRequestHandling.Send : CommandRequestHandling.Skip;
             return new CommandWireProtocol<BsonDocument>(
                 databaseNamespace: DatabaseNamespace.Admin,
                 command: isMasterCommand,
                 slaveOk: true,
-                requestHandling,
                 resultSerializer: BsonDocumentSerializer.Instance,
-                messageEncoderSettings: null)
-            {
-                PreviousRequestId = previousResponseId
-            };
+                messageEncoderSettings: null);
         }
-
-        //internal static CommandWireProtocol<IsMasterResult> CreateProtocol2(BsonDocument isMasterCommand)
-        //{
-        //    return new CommandWireProtocol<IsMasterResult>(
-        //        databaseNamespace: DatabaseNamespace.Admin,
-        //        command: isMasterCommand,
-        //        slaveOk: true,
-        //        resultSerializer: BsonSerializer.SerializerRegistry.GetSerializer<IsMasterResult>(), // TODO: validate!
-        //        messageEncoderSettings: null);
-        //}
 
         internal static IsMasterResult GetResult(
             IConnection connection,

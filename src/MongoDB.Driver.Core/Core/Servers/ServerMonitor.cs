@@ -116,7 +116,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     try
                     {
-                        await HeartbeatAsync(heartbeatCancellationToken).ConfigureAwait(false);
+                        while (await HeartbeatAsync(heartbeatCancellationToken).ConfigureAwait(false));
                     }
                     catch (OperationCanceledException) when (heartbeatCancellationToken.IsCancellationRequested)
                     {
@@ -242,10 +242,18 @@ namespace MongoDB.Driver.Core.Servers
 
             SetDescription(newDescription);
 
-            return true;
+            if (heartbeatInfo.IsMasterResult.TopologyVersion != null ||
+                heartbeatInfo.IsMasterResult.HasMoreToCome)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
-        private async Task<HeartbeatInfo> GetHeartbeatInfoAsync(HeartbeatInfo heartbeatInfo, IConnection connection, CancellationToken cancellationToken)
+        private async Task<HeartbeatInfo> GetHeartbeatInfoAsync(HeartbeatInfo previousHeartbeatInfo, IConnection connection, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_heartbeatStartedEventHandler != null)
@@ -255,14 +263,16 @@ namespace MongoDB.Driver.Core.Servers
 
             try
             {
+                //connection.Description.IsMasterResult.with
+
                 var isMasterCommand = IsMasterHelper.CreateCommand(
                     connection.Description.IsMasterResult.TopologyVersion,
                     _heartbeatInterval);
-                var isRequestExpected = heartbeatInfo == null ? true : !heartbeatInfo.HasMoreToCome;
-                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, isRequestExpected, heartbeatInfo?.PreviousResponseId); //TODO: make protocol global?
+                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand); //TODO: make protocol global?
 
                 // TODO: validate ex == 11?
                 var isMasterResult = await IsMasterHelper.GetResultAsync(connection, isMasterProtocol, cancellationToken).ConfigureAwait(false);
+                _connection.Description.IsMasterResult = isMasterResult; // TODO: !!!!!
                 //var stopwatch = Stopwatch.StartNew();
                 //var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
                 //stopwatch.Stop();

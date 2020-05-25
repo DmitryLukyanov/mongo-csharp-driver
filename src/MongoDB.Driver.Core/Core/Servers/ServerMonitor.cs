@@ -273,6 +273,7 @@ namespace MongoDB.Driver.Core.Servers
 
             try
             {
+                Console.WriteLine("heartbeat_start");
                 //connection.Description.IsMasterResult.with
 
                 var isMasterCommand = IsMasterHelper.CreateCommand(
@@ -290,6 +291,7 @@ namespace MongoDB.Driver.Core.Servers
                     _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, isMasterResult.RoundTripTime, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
 
+                Console.WriteLine("heartbeat_end");
                 return new HeartbeatInfo
                 {
                     HasMoreToCome = isMasterResult.HasMoreToCome,
@@ -411,6 +413,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     if (_roundTripTimeConnection == null)
                     {
+                        Console.WriteLine("_roundTripTimeConnection == null");
                         await Initialize().ConfigureAwait(false);
                         var roundTripTime = _roundTripTimeConnection.Description.IsMasterResult.RoundTripTime;
                         _averageRoundTripTimeCalculator.AddSample(roundTripTime);
@@ -419,13 +422,15 @@ namespace MongoDB.Driver.Core.Servers
                     {
                         try
                         {
+                            Console.WriteLine("ping");
                             var isMasterCommand = IsMasterHelper.CreateCommand();
                             var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
                             var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
                             _averageRoundTripTimeCalculator.AddSample(isMasterResult.RoundTripTime);
                         }
-                        catch (Exception) // TODO check the spec: MongoSocketException | MongoCommandException e
+                        catch (Exception ex) // TODO check the spec: MongoSocketException | MongoCommandException e
                         {
+                            Console.WriteLine("Ex:" + ex.ToString());
                             _roundTripTimeConnection.Dispose();
                             _roundTripTimeConnection = null;
                         }

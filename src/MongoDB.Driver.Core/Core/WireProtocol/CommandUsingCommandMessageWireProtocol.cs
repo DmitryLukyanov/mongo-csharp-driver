@@ -276,7 +276,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             var sections = CreateSections(connectionDescription);
 
             var exhaustAllowed = false;
-            if (connectionDescription.IsMasterResult.TopologyVersion != null)
+            if (_command.Contains("topologyVersion"))
             {
                 exhaustAllowed = true;
             }

@@ -34,7 +34,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         public JsonDrivenAssertEventCount(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap, EventCapturer eventCapturer) : base(testRunner, objectMap)
         {
-            _eventCapturer = Ensure.IsNotNull(eventCapturer, nameof(eventCapturer)); 
+            _eventCapturer = Ensure.IsNotNull(eventCapturer, nameof(eventCapturer));
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
@@ -52,8 +52,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         {
             var eventCondition = MapEventNameToCondition(_event);
             var actualCount = _eventCapturer
-            .Events
-            .Count(eventCondition);
+                .Events
+                .Count(eventCondition);
 
             actualCount.Should().Be(_count);
         }

@@ -252,8 +252,8 @@ namespace MongoDB.Driver.Core.Servers
 
             SetDescription(newDescription);
 
-            if (heartbeatInfo.IsMasterResult.TopologyVersion != null ||
-                heartbeatInfo.IsMasterResult.HasMoreToCome)
+            if (heartbeatInfo?.IsMasterResult?.TopologyVersion != null ||
+                (heartbeatInfo?.IsMasterResult?.HasMoreToCome ?? false))
             {
                 return true;
             }

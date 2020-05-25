@@ -13,18 +13,12 @@
 * limitations under the License.
 */
 
-using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Linq;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core;
-using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Events;
-using MongoDB.Driver.Core.Servers;
-using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
@@ -43,7 +37,18 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 
         protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
         {
-            return base.InitializeEventCapturer(eventCapturer).Capture<ServerDescriptionChangedEvent>();
+            return base
+                .InitializeEventCapturer(eventCapturer) // CommandStartedEvent is added inside
+                .Capture<ServerDescriptionChangedEvent>()
+                .Capture<ConnectionPoolClearedEvent>();
+        }
+
+        protected override List<object> ExtractEventsForAsserting(EventCapturer eventCapturer)
+        {
+            return base
+                .ExtractEventsForAsserting(eventCapturer)
+                .Where(@event => @event is CommandStartedEvent) // apply events asserting only for this event
+                .ToList();
         }
 
         // nested types

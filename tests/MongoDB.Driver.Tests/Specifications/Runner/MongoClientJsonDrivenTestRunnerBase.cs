@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             if (test.Contains(ExpectationsKey))
             {
                 var expectedEvents = test[ExpectationsKey].AsBsonArray.Cast<BsonDocument>().ToList();
-                var actualEvents = GetEvents(eventCapturer);
+                var actualEvents = ExtractEventsForAsserting(eventCapturer);
 
                 var n = Math.Min(actualEvents.Count, expectedEvents.Count);
                 for (var index = 0; index < n; index++)
@@ -138,8 +138,13 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
 
                 if (actualEvents.Count > expectedEvents.Count)
                 {
-                    throw new Exception($"Unexpected command started event: {actualEvents[n].CommandName}.");
+                    throw new Exception($"Unexpected command started event: {GetEventName(actualEvents[n])}.");
                 }
+            }
+
+            string GetEventName(object @event)
+            {
+                return @event is CommandStartedEvent commandStartedEvent ? commandStartedEvent.CommandName : @event.GetType().Name;
             }
         }
 
@@ -377,6 +382,18 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 useMultipleShardRouters);
         }
 
+        protected virtual List<object> ExtractEventsForAsserting(EventCapturer eventCapturer)
+        {
+            var events = new List<object>();
+
+            while (eventCapturer.Any())
+            {
+                events.Add(eventCapturer.Next());
+            }
+
+            return events;
+        }
+
         protected virtual EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
         {
             return eventCapturer.Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
@@ -412,18 +429,6 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         }
 
         // private methods
-        private List<CommandStartedEvent> GetEvents(EventCapturer eventCapturer)
-        {
-            var events = new List<CommandStartedEvent>();
-
-            while (eventCapturer.Any())
-            {
-                events.Add((CommandStartedEvent)eventCapturer.Next());
-            }
-
-            return events;
-        }
-
         private ReadPreference ReadPreferenceFromBsonValue(BsonValue value)
         {
             if (value.BsonType == BsonType.String)

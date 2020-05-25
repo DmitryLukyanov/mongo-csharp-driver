@@ -65,22 +65,27 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         }
 
         // private methods
-        private Func<object, bool> MapEventNameToCondition(string eventName)
+        private Func<IEnumerable<object>, bool> MapEventNameToCondition(string eventName)
         {
+            Func<object, bool> eventCondition = null;
             switch (eventName)
             {
                 // TODO: Move from here?
                 case "ServerMarkedUnknownEvent":
-                    return @event =>
+                    eventCondition = @event =>
                         @event is ServerDescriptionChangedEvent serverDescriptionChangedEvent &&
                         serverDescriptionChangedEvent.NewDescription.Type == Core.Servers.ServerType.Unknown;
+                    break;
 
                 case "PoolClearedEvent":
-                    return @event => @event is ConnectionPoolClearedEvent;
+                    eventCondition = @event => @event is ConnectionPoolClearedEvent;
+                    break;
 
                 default:
                     throw new Exception("TODO: Unexpected event type.");
             }
+
+            return events => events.Any(eventCondition);
         }
 
         private void Wait()

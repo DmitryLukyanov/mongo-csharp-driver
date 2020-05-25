@@ -45,7 +45,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly IBinaryCommandFieldEncryptor _documentFieldEncryptor;
         private readonly MessageEncoderSettings _messageEncoderSettings;
         private readonly Action<IMessageEncoderPostProcessor> _postWriteAction;
-        private int? previousResponseId;
+        private readonly int? _previousResponseId;
         private readonly ReadPreference _readPreference;
         private readonly CommandRequestHandling _requestHandling;
         private readonly CommandResponseHandling _responseHandling;
@@ -77,7 +77,8 @@ namespace MongoDB.Driver.Core.WireProtocol
                   responseHandling,
                   resultSerializer,
                   messageEncoderSettings,
-                  postWriteAction)
+                  postWriteAction,
+                  previousResponseId: null)
         {
         }
 
@@ -93,7 +94,8 @@ namespace MongoDB.Driver.Core.WireProtocol
             CommandResponseHandling responseHandling,
             IBsonSerializer<TCommandResult> resultSerializer,
             MessageEncoderSettings messageEncoderSettings,
-            Action<IMessageEncoderPostProcessor> postWriteAction)
+            Action<IMessageEncoderPostProcessor> postWriteAction,
+            int? previousResponseId)
         {
             if (responseHandling != CommandResponseHandling.Return && responseHandling != CommandResponseHandling.NoResponseExpected)
             {
@@ -117,18 +119,13 @@ namespace MongoDB.Driver.Core.WireProtocol
             _resultSerializer = Ensure.IsNotNull(resultSerializer, nameof(resultSerializer));
             _messageEncoderSettings = messageEncoderSettings;
             _postWriteAction = postWriteAction; // can be null
+            _previousResponseId = previousResponseId;
 
             if (messageEncoderSettings != null)
             {
                 _documentFieldDecryptor = messageEncoderSettings.GetOrDefault<IBinaryDocumentFieldDecryptor>(MessageEncoderSettingsName.BinaryDocumentFieldDecryptor, null);
                 _documentFieldEncryptor = messageEncoderSettings.GetOrDefault<IBinaryCommandFieldEncryptor>(MessageEncoderSettingsName.BinaryDocumentFieldEncryptor, null);
             }
-        }
-
-        public int? PreviousResponseId
-        {
-            get => previousResponseId;
-            set => previousResponseId = value;
         }
 
         // public methods
@@ -316,7 +313,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)
         {
-            var requestId = PreviousResponseId ?? RequestMessage.GetNextRequestId();   // response.RequestId
+            var requestId = _previousResponseId ?? RequestMessage.GetNextRequestId();
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
 
@@ -566,22 +563,17 @@ namespace MongoDB.Driver.Core.WireProtocol
                     {
                         var context = BsonDeserializationContext.CreateRoot(reader);
                         var deserialized = _resultSerializer.Deserialize(context);
-                        return SetFlagsIfRequired(deserialized, responseMessage, rawDocument);
+                        return SetFlagsIfRequired(deserialized, responseMessage);
                     }
                 }
             }
 
-            TCommandResult SetFlagsIfRequired(TCommandResult commandResult, CommandMessage message, RawBsonDocument document)
+            TCommandResult SetFlagsIfRequired(TCommandResult commandResult, CommandMessage message)
             {
-                //if (commandResult is IWithMoreToComeResult<TCommandResult> withMoreToCome)
-                //{
-                //    commandResult = withMoreToCome.WithMoreToCome(message.MoreToCome);
-                //}
-                if (commandResult is BsonDocument bsonDocument && document.Contains("ismaster"))
+                if (commandResult is BsonDocument bsonDocument && bsonDocument.Contains("ismaster"))
                 {
                     bsonDocument.Add("moreToCome", message.MoreToCome);
-                    bsonDocument.Add("requestId", message.RequestId);
-                    previousResponseId = message.RequestId; // TODO
+                    bsonDocument.Add("previosResponseId", message.RequestId);
                 }
                 return commandResult;
             }

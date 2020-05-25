@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,8 +73,8 @@ namespace MongoDB.Driver.Core.Authentication
                 var isMasterProtocol = IsMasterHelper.CreateProtocol(command);
                 var isMasterResult = IsMasterHelper.GetResult(connection, isMasterProtocol, cancellationToken);
                 var mergedIsMasterResult = new IsMasterResult(
-                    description.IsMasterResult.Wrapped.Merge(isMasterResult.Wrapped),
-                    description.IsMasterResult.RoundTripTime);
+                        description.IsMasterResult.Wrapped.Merge(isMasterResult.Wrapped),
+                        description.IsMasterResult.RoundTripTime);
                 description = new ConnectionDescription(
                     description.ConnectionId,
                     mergedIsMasterResult,

@@ -170,9 +170,6 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
-        private static bool moreToCome = false; // TODO!!!!
-        private static int? responseTo;         // TODO!!!!
-
         private async Task<bool> HeartbeatAsync(CancellationToken cancellationToken)
         {
             HeartbeatInfo heartbeatInfo = null;
@@ -195,7 +192,7 @@ namespace MongoDB.Driver.Core.Servers
                 }
                 else
                 {
-                    heartbeatInfo = await GetHeartbeatInfoAsync(_connection, cancellationToken).ConfigureAwait(false);
+                    heartbeatInfo = await GetHeartbeatInfoAsync(heartbeatInfo, _connection, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -248,7 +245,7 @@ namespace MongoDB.Driver.Core.Servers
             return true;
         }
 
-        private async Task<HeartbeatInfo> GetHeartbeatInfoAsync(IConnection connection, CancellationToken cancellationToken)
+        private async Task<HeartbeatInfo> GetHeartbeatInfoAsync(HeartbeatInfo heartbeatInfo, IConnection connection, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_heartbeatStartedEventHandler != null)
@@ -261,7 +258,8 @@ namespace MongoDB.Driver.Core.Servers
                 var isMasterCommand = IsMasterHelper.CreateCommand(
                     connection.Description.IsMasterResult.TopologyVersion,
                     _heartbeatInterval);
-                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, !moreToCome, responseTo); //TODO: make protocol global?
+                var isRequestExpected = heartbeatInfo == null ? true : !heartbeatInfo.HasMoreToCome;
+                var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, isRequestExpected, heartbeatInfo?.PreviousResponseId); //TODO: make protocol global?
 
                 // TODO: validate ex == 11?
                 var isMasterResult = await IsMasterHelper.GetResultAsync(connection, isMasterProtocol, cancellationToken).ConfigureAwait(false);
@@ -269,9 +267,6 @@ namespace MongoDB.Driver.Core.Servers
                 //var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
                 //stopwatch.Stop();
                 //var isMasterResult = new IsMasterResult(isMasterResultDocument);
-                responseTo = (int?)isMasterResultDocument.GetValue("requestId", null); //isMasterProtocol.PreviousRequestId;
-
-                moreToCome = isMasterResult.HasMoreToCome;
                 //var buildInfoCommand = new CommandWireProtocol<BsonDocument>(
                 //    DatabaseNamespace.Admin,
                 //    new BsonDocument("buildInfo", 1),
@@ -284,14 +279,16 @@ namespace MongoDB.Driver.Core.Servers
 
                 if (_heartbeatSucceededEventHandler != null)
                 {
-                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, stopwatch.Elapsed, connection.Description.IsMasterResult.TopologyVersion != null));
+                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, isMasterResult.RoundTripTime, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
 
                 return new HeartbeatInfo
                 {
-                    RoundTripTime = stopwatch.Elapsed,
+                    HasMoreToCome = isMasterResult.HasMoreToCome,
+                    PreviousResponseId = isMasterResult.PreviousResponseId,
+                    RoundTripTime = isMasterResult.RoundTripTime,
                     IsMasterResult = isMasterResult,
-                    BuildInfoResult = new BuildInfoResult(new BsonDocument("version", "4.2.0"))
+                    BuildInfoResult = new BuildInfoResult(new BsonDocument("version", "4.5.1")) // TODO
                 };
             }
             catch (Exception ex)
@@ -354,9 +351,11 @@ namespace MongoDB.Driver.Core.Servers
 
         private class HeartbeatInfo
         {
-            public TimeSpan RoundTripTime;
+            public BuildInfoResult BuildInfoResult; //TODO:
+            public bool HasMoreToCome;
             public IsMasterResult IsMasterResult;
-            public BuildInfoResult BuildInfoResult;
+            public int? PreviousResponseId;
+            public TimeSpan RoundTripTime;
         }
     }
 
@@ -399,29 +398,31 @@ namespace MongoDB.Driver.Core.Servers
                                                                                                 //};
         }
 
-        public async Task Run()
+        public Task Run()
         {
-            while (true) //TODO: not disposed
-            {
-                if (_roundTripTimeConnection == null)
-                {
-                    await Initialize().ConfigureAwait(false);
-                    _exponentiallyWeightedMovingAverage.AddSample(TimeSpan.FromSeconds(10)); //TODO
-                }
-                else
-                {
-                    var isMasterCommand = IsMasterHelper.CreateCommand(
-                    _roundTripTimeConnection.Description.IsMasterResult.TopologyVersion,
-                    //_heartbeatInterval
-                    TimeSpan.FromSeconds(10)
-                    );
-                    var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, !moreToCome, responseTo); //TODO: make protocol global?
+            // do nothing
+            return Task.FromResult(true);
+            //while (true) //TODO: not disposed
+            //{
+            //    if (_roundTripTimeConnection == null)
+            //    {
+            //        await Initialize().ConfigureAwait(false);
+            //        _exponentiallyWeightedMovingAverage.AddSample(TimeSpan.FromSeconds(10)); //TODO
+            //    }
+            //    else
+            //    {
+            //        var isMasterCommand = IsMasterHelper.CreateCommand(
+            //        _roundTripTimeConnection.Description.IsMasterResult.TopologyVersion,
+            //        //_heartbeatInterval
+            //        TimeSpan.FromSeconds(10)
+            //        );
+            //        var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand, !moreToCome, responseTo); //TODO: make protocol global?
 
-                    var stopwatch = Stopwatch.StartNew();
-                    var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(_roundTripTimeConnection, _cancellationToken).ConfigureAwait(false);
-                    _exponentiallyWeightedMovingAverage.AddSample(TimeSpan.FromSeconds(10)); //TODO
-                }
-            }
+            //        var stopwatch = Stopwatch.StartNew();
+            //        var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(_roundTripTimeConnection, _cancellationToken).ConfigureAwait(false);
+            //        _exponentiallyWeightedMovingAverage.AddSample(TimeSpan.FromSeconds(10)); //TODO
+            //    }
+            //}
         }
 
         public void Dispose()

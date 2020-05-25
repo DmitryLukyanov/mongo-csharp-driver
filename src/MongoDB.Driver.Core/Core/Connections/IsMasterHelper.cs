@@ -44,7 +44,7 @@ namespace MongoDB.Driver.Core.Connections
             return command.Add("compression", compressorsArray);
         }
 
-        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion, TimeSpan? maxAwaitTime)
+        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion = null, TimeSpan? maxAwaitTime = null)
         {
             Ensure.That(
                 (topologyVersion != null && maxAwaitTime.HasValue) || (topologyVersion == null && !maxAwaitTime.HasValue),
@@ -67,7 +67,7 @@ namespace MongoDB.Driver.Core.Connections
         internal static CommandWireProtocol<BsonDocument> CreateProtocol(
             BsonDocument isMasterCommand,
             bool isRequestExpected = true,
-            int? responseTo = null)
+            int? previousResponseId = null)
         {
             var requestHandling = isRequestExpected ? CommandRequestHandling.Send : CommandRequestHandling.Skip;
             return new CommandWireProtocol<BsonDocument>(
@@ -78,7 +78,7 @@ namespace MongoDB.Driver.Core.Connections
                 resultSerializer: BsonDocumentSerializer.Instance,
                 messageEncoderSettings: null)
             {
-                PreviousRequestId = responseTo
+                PreviousRequestId = previousResponseId
             };
         }
 

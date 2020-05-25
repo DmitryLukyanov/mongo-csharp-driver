@@ -147,7 +147,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         // private methods
         private IWireProtocol<TCommandResult> CreateCommandUsingCommandMessageWireProtocol()
         {
-            var res = new CommandUsingCommandMessageWireProtocol<TCommandResult>(
+            return new CommandUsingCommandMessageWireProtocol<TCommandResult>(
                 _session,
                 _readPreference,
                 _databaseNamespace,
@@ -159,12 +159,8 @@ namespace MongoDB.Driver.Core.WireProtocol
                 _responseHandling,
                 _resultSerializer,
                 _messageEncoderSettings,
-                _postWriteAction)
-            {
-                PreviousResponseId = _previousResponseId
-            };
-            _previousResponseId = res.PreviousResponseId;
-            return res;
+                _postWriteAction,
+                _previousResponseId);
         }
 
         private IWireProtocol<TCommandResult> CreateCommandUsingQueryMessageWireProtocol()

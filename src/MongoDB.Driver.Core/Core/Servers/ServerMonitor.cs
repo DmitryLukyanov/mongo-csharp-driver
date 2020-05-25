@@ -207,7 +207,8 @@ namespace MongoDB.Driver.Core.Servers
                         ex is MongoCommandException)
                     {
                         _connection.Dispose();
-                        Invalidate("Heartbeat exception.");
+                        _connection = null;
+                        //Invalidate("Heartbeat exception.");
                         // TODO: clear connection pool
                         // if this was a network error and the server was in a known state before the error, the client MUST NOT sleep and MUST begin the next check immediately. (See retry ismaster calls once and JAVA-1159.)
                     }

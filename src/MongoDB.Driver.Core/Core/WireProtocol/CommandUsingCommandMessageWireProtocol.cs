@@ -115,12 +115,11 @@ namespace MongoDB.Driver.Core.WireProtocol
                 if (message.WrappedMessage.ResponseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    TimeSpan? maxAwaitedTimeout = null;
 
-                    if (connection.Description.IsMasterResult.TopologyVersion != null)
+                    TimeSpan? maxAwaitedTimeout = null;
+                    if (connection.Description.IsMasterResult.TopologyVersion != null && _command.TryGetValue("maxAwaitTimeMS", out var maxAwaitedTime))
                     {
-                        // TODO: Mocked. Not ready!
-                        maxAwaitedTimeout = TimeSpan.FromSeconds(10);
+                        maxAwaitedTimeout = TimeSpan.FromMilliseconds(maxAwaitedTime.ToInt32());
                     }
 
                     var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, maxAwaitedTimeout, cancellationToken);
@@ -168,10 +167,9 @@ namespace MongoDB.Driver.Core.WireProtocol
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
 
                     TimeSpan? maxAwaitedTimeout = null;
-                    if (connection.Description.IsMasterResult.TopologyVersion != null)
+                    if (connection.Description.IsMasterResult.TopologyVersion != null && _command.TryGetValue("maxAwaitTimeMS", out var maxAwaitedTime))
                     {
-                        // TODO: Mocked. Not ready!
-                        maxAwaitedTimeout = TimeSpan.FromSeconds(10);
+                        maxAwaitedTimeout = TimeSpan.FromMilliseconds(maxAwaitedTime.ToInt32());
                     }
 
                     var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, maxAwaitedTimeout, cancellationToken).ConfigureAwait(false);
@@ -273,7 +271,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)
         {
-            var requestId = connectionDescription.IsMasterResult.PreviousResponseId ?? RequestMessage.GetNextRequestId();
+            var requestId = connectionDescription.IsMasterResult.PreviousResponseId ?? RequestMessage.GetNextRequestId(); // TODO
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
 

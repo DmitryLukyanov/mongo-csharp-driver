@@ -760,6 +760,13 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
+        public IConnection With(ConnectionDescription connectionDescription)
+        {
+            // TODO:!!!
+            this._description = connectionDescription;
+            return this;
+        }
+
         // nested classes
         private class StreamStateModifier : IDisposable // TODO
         {

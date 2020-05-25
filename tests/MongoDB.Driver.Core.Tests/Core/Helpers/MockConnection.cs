@@ -187,5 +187,10 @@ namespace MongoDB.Driver.Core.Helpers
         {
             throw new NotImplementedException();
         }
+
+        public IConnection With(ConnectionDescription connectionDescription)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

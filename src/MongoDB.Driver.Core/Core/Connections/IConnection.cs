@@ -153,6 +153,13 @@ namespace MongoDB.Driver.Core.Connections
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A Task.</returns>
         Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="connectionDescription">TODO</param>
+        /// <returns>TODO</returns>
+        IConnection With(ConnectionDescription connectionDescription);
     }
 
     /// <summary>

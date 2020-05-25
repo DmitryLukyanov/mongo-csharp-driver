@@ -617,6 +617,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
             {
                 return _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken);
             }
+
+            public IConnection With(ConnectionDescription connectionDescription)
+            {
+                return _connection.With(connectionDescription);
+            }
         }
 
         private sealed class AcquiredConnection : IConnectionHandle
@@ -730,6 +735,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
             {
                 ThrowIfDisposed();
                 return _reference.Instance.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, maxAwaitTimwout, cancellationToken);
+            }
+
+            public IConnection With(ConnectionDescription connectionDescription)
+            {
+                ThrowIfDisposed();
+                return _reference.Instance.With(connectionDescription);
             }
         }
 

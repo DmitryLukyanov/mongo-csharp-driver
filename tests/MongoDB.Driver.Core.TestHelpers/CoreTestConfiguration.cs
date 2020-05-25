@@ -226,17 +226,26 @@ namespace MongoDB.Driver
 
         private static ConnectionString GetConnectionString()
         {
-            var uri = Environment.GetEnvironmentVariable("MONGODB_URI") ?? Environment.GetEnvironmentVariable("MONGO_URI");
-            if (uri == null)
+            try
             {
-                uri = "mongodb://localhost";
-                if (IsReplicaSet(uri))
+                var uri = Environment.GetEnvironmentVariable("MONGODB_URI") ?? Environment.GetEnvironmentVariable("MONGO_URI");
+                if (uri == null)
                 {
-                    uri += "/?connect=replicaSet";
+                    uri = "mongodb://localhost";
+                    if (IsReplicaSet(uri))
+                    {
+                        uri += "/?connect=replicaSet";
+                    }
                 }
+                return new ConnectionString(uri);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                return null;
             }
 
-            return new ConnectionString(uri);
         }
 
         private static ConnectionString GetConnectionStringWithMultipleShardRouters()

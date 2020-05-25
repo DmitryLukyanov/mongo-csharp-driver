@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Shared;
@@ -193,15 +194,5 @@ namespace MongoDB.Driver.Core.Connections
         {
             return _connectionId.StructurallyEquals(value) ? this : new ConnectionDescription(value, _isMasterResult, _buildInfoResult);
         }
-
-        ///// <summary>
-        ///// TODO
-        ///// </summary>
-        ///// <param name="isMasterResult">TODO</param>
-        ///// <returns>TODO</returns>
-        //public ConnectionDescription WithIsMasterResult(IsMasterResult isMasterResult)
-        //{
-        //    return isMasterResult != _isMasterResult ? new ConnectionDescription(_connectionId, isMasterResult, _buildInfoResult) : this;
-        //}
     }
 }

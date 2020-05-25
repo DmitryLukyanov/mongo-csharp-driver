@@ -74,10 +74,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Specifications\server-discovery-and-monitoring\tests\integration\isMaster-timeout.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="testcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

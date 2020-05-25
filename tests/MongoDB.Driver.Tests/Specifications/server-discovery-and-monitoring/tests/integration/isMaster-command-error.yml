@@ -4,29 +4,29 @@ runOn:
     - minServerVersion: "4.4"
 
 database_name: &database_name "sdam-tests"
-collection_name: &collection_name "isMaster-timeout"
+collection_name: &collection_name "isMaster-command-error"
 
 data: []
 
 tests:
-  - description: Network timeout on Monitor handshake
-    # Configure the initial handshake to fail with a timeout.
-    # Use times: 2 so that the RTT isMaster is blocked as well.
+  - description: Command error on Monitor handshake
+    # Configure the initial handshake to fail with a command error.
+    # Use times: 2 so that the RTT isMaster fails as well.
     failPoint:
       configureFailPoint: failCommand
       mode: { times: 2 }
       data:
           failCommands: ["isMaster"]
-          appName: timeoutMonitorHandshakeTest
-          blockConnection: true
-          blockTimeMS: 1000
+          appName: commandErrorHandshakeTest
+          closeConnection: false
+          errorCode: 91 # ShutdownInProgress
     clientOptions:
       retryWrites: false
       connectTimeoutMS: 250
       heartbeatFrequencyMS: 500
-      appname: timeoutMonitorHandshakeTest
+      appname: commandErrorHandshakeTest
     operations:
-      # The network error on the initial handshake should mark the server
+      # The command error on the initial handshake should mark the server
       # Unknown (emitting a ServerDescriptionChangedEvent) and clear the pool.
       - name: waitForEvent
         object: testRunner
@@ -75,12 +75,12 @@ tests:
           - {_id: 1}
           - {_id: 2}
 
-  - description: Network timeout on Monitor check
+  - description: Command error on Monitor check
     clientOptions:
       retryWrites: false
-      connectTimeoutMS: 750
+      connectTimeoutMS: 1000
       heartbeatFrequencyMS: 500
-      appname: timeoutMonitorCheckTest
+      appname: commandErrorCheckTest
     operations:
       # Perform an operation to ensure the node is discovered.
       - name: insertMany
@@ -89,7 +89,8 @@ tests:
           documents:
             - _id: 1
             - _id: 2
-      # Configure the next streaming isMaster check to fail with a timeout
+      # Configure the next streaming isMaster check to fail with a command
+      # error.
       # Use times: 2 so that the RTT isMaster is blocked as well.
       - name: configureFailPoint
         object: testRunner
@@ -99,10 +100,12 @@ tests:
             mode: { times: 2 }
             data:
                 failCommands: ["isMaster"]
-                appName: timeoutMonitorCheckTest
+                appName: commandErrorCheckTest
+                closeConnection: false
                 blockConnection: true
-                blockTimeMS: 1000
-      # The network error on the next check should mark the server Unknown and
+                blockTimeMS: 750
+                errorCode: 91 # ShutdownInProgress
+      # The command error on the next check should mark the server Unknown and
       # clear the pool.
       - name: waitForEvent
         object: testRunner
@@ -132,71 +135,6 @@ tests:
         arguments:
           event: PoolClearedEvent
           count: 1
-
-    expectations:
-      - command_started_event:
-          command:
-            insert: *collection_name
-            documents:
-              - _id: 1
-              - _id: 2
-          command_name: insert
-          database_name: *database_name
-      - command_started_event:
-          command:
-            insert: *collection_name
-            documents:
-              - _id: 3
-              - _id: 4
-          command_name: insert
-          database_name: *database_name
-
-    outcome:
-      collection:
-        data:
-          - {_id: 1}
-          - {_id: 2}
-          - {_id: 3}
-          - {_id: 4}
-
-  - description: Driver extends timeout while streaming
-    clientOptions:
-      retryWrites: false
-      connectTimeoutMS: 250
-      heartbeatFrequencyMS: 500
-      appname: extendsTimeoutTest
-    operations:
-      # Perform an operation to ensure the node is discovered.
-      - name: insertMany
-        object: collection
-        arguments:
-          documents:
-            - _id: 1
-            - _id: 2
-      # Wait for multiple monitor checks to complete.
-      - name: wait
-        object: testRunner
-        arguments:
-          ms: 2000
-      # Perform an operation to ensure the node is still selectable.
-      - name: insertMany
-        object: collection
-        arguments:
-          documents:
-            - _id: 3
-            - _id: 4
-      # Assert that the server was never marked Unknown and the pool was never
-      # cleared.
-      - name: assertEventCount
-        object: testRunner
-        arguments:
-          event: ServerMarkedUnknownEvent
-          count: 0
-      - name: assertEventCount
-        object: testRunner
-        arguments:
-          event: PoolClearedEvent
-          count: 0
 
     expectations:
       - command_started_event:

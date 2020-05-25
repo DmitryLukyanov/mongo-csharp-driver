@@ -28,7 +28,6 @@ namespace MongoDB.Driver.Core.Servers
     {
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
-        private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
         private readonly ServerDescription _baseDescription;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private volatile IConnection _connection;
@@ -59,7 +58,7 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _averageRoundTripTimeCalculator, _heartbeatInterval, _cancellationTokenSource.Token);
+            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _cancellationTokenSource.Token);
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -191,8 +190,8 @@ namespace MongoDB.Driver.Core.Servers
                     {
                         BuildInfoResult = _connection.Description.BuildInfoResult,
                         IsMasterResult = _connection.Description.IsMasterResult,
-                        RoundTripTime = _connection.Description.IsMasterResult.RoundTripTime
                     };
+                    _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(_connection.Description.IsMasterResult.RoundTripTime);
                 }
                 else
                 {
@@ -218,7 +217,7 @@ namespace MongoDB.Driver.Core.Servers
             ServerDescription newDescription;
             if (heartbeatInfo != null)
             {
-                var averageRoundTripTime = _averageRoundTripTimeCalculator.AddSample(heartbeatInfo.RoundTripTime);
+                var averageRoundTripTime = _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
                 var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
                 var isMasterResult = heartbeatInfo.IsMasterResult;
                 var buildInfoResult = heartbeatInfo.BuildInfoResult;
@@ -295,7 +294,6 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     HasMoreToCome = isMasterResult.HasMoreToCome,
                     PreviousResponseId = isMasterResult.PreviousResponseId,
-                    RoundTripTime = isMasterResult.RoundTripTime,
                     IsMasterResult = isMasterResult,
                     BuildInfoResult = new BuildInfoResult(new BsonDocument("version", "4.5.1")) // TODO
                 };
@@ -364,17 +362,17 @@ namespace MongoDB.Driver.Core.Servers
             public bool HasMoreToCome;
             public IsMasterResult IsMasterResult;
             public int? PreviousResponseId;
-            public TimeSpan RoundTripTime;
         }
     }
 
 
     internal class RoundTripTimeMonitor : IDisposable
     {
+        private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
+
         private readonly CancellationToken _cancellationToken;
         private readonly IConnectionFactory _connectionFactory;
         private readonly EndPoint _endPoint;
-        private readonly ExponentiallyWeightedMovingAverage _exponentiallyWeightedMovingAverage;
         private IConnection _roundTripTimeConnection;
         private readonly ServerId _serverId;
         private readonly TimeSpan _heartbeatFrequency;
@@ -383,19 +381,17 @@ namespace MongoDB.Driver.Core.Servers
             IConnectionFactory connectionFactory,
             ServerId serverId,
             EndPoint endpoint,
-            ExponentiallyWeightedMovingAverage exponentiallyWeightedMovingAverage,
             TimeSpan heartbeatFrequency,
             CancellationToken cancellationToken)
         {
             _cancellationToken = cancellationToken;
             _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
             _endPoint = Ensure.IsNotNull(endpoint, nameof(endpoint));
-            _exponentiallyWeightedMovingAverage = Ensure.IsNotNull(exponentiallyWeightedMovingAverage, nameof(exponentiallyWeightedMovingAverage));
             _heartbeatFrequency = heartbeatFrequency;
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
         }
 
-        public ExponentiallyWeightedMovingAverage ExponentiallyWeightedMovingAverage => _exponentiallyWeightedMovingAverage;
+        public ExponentiallyWeightedMovingAverage ExponentiallyWeightedMovingAverage => _averageRoundTripTimeCalculator;
 
         public async Task Initialize()
         {
@@ -404,6 +400,7 @@ namespace MongoDB.Driver.Core.Servers
             // if we are cancelling, it's because the server has
             // been shut down and we really don't need to wait.
             await _roundTripTimeConnection.OpenAsync(_cancellationToken).ConfigureAwait(false);
+            _averageRoundTripTimeCalculator.AddSample(_roundTripTimeConnection.Description.IsMasterResult.RoundTripTime);
         }
 
         public async Task Run()
@@ -416,15 +413,27 @@ namespace MongoDB.Driver.Core.Servers
                     {
                         await Initialize().ConfigureAwait(false);
                         var roundTripTime = _roundTripTimeConnection.Description.IsMasterResult.RoundTripTime;
-                        _exponentiallyWeightedMovingAverage.AddSample(roundTripTime);
+                        _averageRoundTripTimeCalculator.AddSample(roundTripTime);
                     }
                     else
                     {
-                        var isMasterCommand = IsMasterHelper.CreateCommand();
-                        var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
-                        var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
-                        _exponentiallyWeightedMovingAverage.AddSample(isMasterResult.RoundTripTime);
+                        try
+                        {
+                            var isMasterCommand = IsMasterHelper.CreateCommand();
+                            var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
+                            var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
+                            _averageRoundTripTimeCalculator.AddSample(isMasterResult.RoundTripTime);
+                        }
+                        catch (Exception) // TODO check the spec: MongoSocketException | MongoCommandException e
+                        {
+                            _roundTripTimeConnection.Dispose();
+                            _roundTripTimeConnection = null;
+                        }
                     }
+                }
+                catch (Exception)
+                {
+                    // ignore exceptions
                 }
 
                 await Task.Delay(_heartbeatFrequency).ConfigureAwait(false);

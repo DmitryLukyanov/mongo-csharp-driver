@@ -92,7 +92,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "assertSessionTransactionState": return new JsonDrivenAssertSessionTransactionStateTest(_testRunner, _objectMap);
                         case "wait": return new JsonDrivenWait(_testRunner, _objectMap);
                         case "waitForEvent": return new JsonDrivenWaitForEvent(_testRunner, _objectMap, _eventCapturer); ;
-                        case "assertEventCount": return new JsonDrivenAssertEventCount(_testRunner, _objectMap, _eventCapturer);
+                        case "assertEventCount": return new JsonDrivenAssertEventsCount(_testRunner, _objectMap, _eventCapturer);
                         case "startThread": return new JsonDrivenStartThread(_testRunner, _objectMap, _tasks);
                         case "runOnThread": return new JsonDrivenRunOnThread(_testRunner, _objectMap, _tasks, this);
                         case "waitForThread": return new JsonDrivenWaitForThread(_testRunner, _objectMap, _tasks);

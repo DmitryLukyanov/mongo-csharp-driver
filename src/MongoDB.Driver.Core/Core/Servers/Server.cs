@@ -283,7 +283,14 @@ namespace MongoDB.Driver.Core.Servers
                 return; // stale generation number
             }
 
-            if (ShouldInvalidateServer(connection, ex, Description, out TopologyVersion responseTopologyVersion))
+            if (ex is MongoConnectionException mongoConnectionException &&
+                mongoConnectionException.IsNetworkException &&
+                !mongoConnectionException.ContainsSocketTimeoutException)
+            {
+                _monitor.Cancel();
+            }
+
+                if (ShouldInvalidateServer(connection, ex, Description, out TopologyVersion responseTopologyVersion))
             {
                 var shouldClearConnectionPool = ShouldClearConnectionPoolForChannelException(ex, connection.Description.ServerVersion);
                 Invalidate($"ChannelException:{ex}", shouldClearConnectionPool, responseTopologyVersion);

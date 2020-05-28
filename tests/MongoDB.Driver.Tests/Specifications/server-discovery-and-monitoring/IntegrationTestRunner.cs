@@ -42,7 +42,7 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
         protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
         {
             return base
-                .InitializeEventCapturer(eventCapturer) // CommandStartedEvent is added inside
+                .InitializeEventCapturer(eventCapturer) // CommandStartedEvent is added by default
                 .Capture<ServerDescriptionChangedEvent>()
                 .Capture<ConnectionPoolClearedEvent>();
         }

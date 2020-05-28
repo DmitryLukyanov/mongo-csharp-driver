@@ -27,13 +27,13 @@ using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public class JsonDrivenAssertEventCount : JsonDrivenTestRunnerTest
+    public class JsonDrivenAssertEventsCount : JsonDrivenTestRunnerTest
     {
         private readonly EventCapturer _eventCapturer;
         private int _count;
         private string _event;
 
-        public JsonDrivenAssertEventCount(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap, EventCapturer eventCapturer) : base(testRunner, objectMap)
+        public JsonDrivenAssertEventsCount(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap, EventCapturer eventCapturer) : base(testRunner, objectMap)
         {
             _eventCapturer = Ensure.IsNotNull(eventCapturer, nameof(eventCapturer));
         }
@@ -56,7 +56,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 .Events
                 .Count(eventCondition);
 
-            actualCount.Should().Be(_count);
+            actualCount.Should().Be(_count, $"Because the expected events number for {_event} is {_count}, but found {actualCount}.");
         }
 
         protected override void SetArgument(string name, BsonValue value)
@@ -89,7 +89,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                     return @event => @event is ConnectionPoolClearedEvent;
 
                 default:
-                    throw new Exception("TODO: Unexpected event type.");
+                    throw new Exception($"Unexpected event name {eventName}.");
             }
         }
     }

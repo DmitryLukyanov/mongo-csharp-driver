@@ -103,9 +103,10 @@ namespace MongoDB.Driver.Core.WireProtocol
         // public methods
         public TCommandResult Execute(IConnection connection, CancellationToken cancellationToken)
         {
+            var message = CreateCommandMessage(connection.Description);
+
             try
             {
-                var message = CreateCommandMessage(connection.Description);
 
                 if (message.WrappedMessage.RequestExpected) // no need to create a message
                 {

@@ -42,6 +42,7 @@ namespace MongoDB.Driver.Core.Servers
         private volatile BuildInfoResult _handshakeBuildInfoResult;
         private HeartbeatDelay _heartbeatDelay;
         private readonly TimeSpan _heartbeatInterval;
+        private readonly object _lock = new object();
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
         private readonly TimeSpan _timeout;
@@ -81,7 +82,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (_connection != null)
             {
-                _currentCheckCancelled = true;
+               _cancellationTokenSource.Cancel(); // atomic set
             }
         }
 
@@ -111,9 +112,9 @@ namespace MongoDB.Driver.Core.Servers
         public void Invalidate(string reasonInvalidated, TopologyVersion responseTopologyVersion)
         {
             var newDescription = _baseDescription.With(
-                    $"InvalidatedBecause:{reasonInvalidated}",
-                    lastUpdateTimestamp: DateTime.UtcNow,
-                    topologyVersion: responseTopologyVersion);
+                $"InvalidatedBecause:{reasonInvalidated}",
+                lastUpdateTimestamp: DateTime.UtcNow,
+                topologyVersion: responseTopologyVersion);
             SetDescription(newDescription);
             RequestHeartbeat();
         }
@@ -139,7 +140,10 @@ namespace MongoDB.Driver.Core.Servers
 
         private async Task<IsMasterResult> InitializeConnectionAsync(CancellationToken cancellationToken)
         {
-            _connection = _connectionFactory.CreateConnection(_serverId, _endPoint);
+            lock (_lock)
+            {
+                _connection = _connectionFactory.CreateConnection(_serverId, _endPoint);
+            }
             // if we are cancelling, it's because the server has
             // been shut down and we really don't need to wait.
             var stopwatch = Stopwatch.StartNew();
@@ -166,6 +170,7 @@ namespace MongoDB.Driver.Core.Servers
                     catch (OperationCanceledException) when (heartbeatCancellationToken.IsCancellationRequested)
                     {
                         // ignore OperationCanceledException when heartbeat cancellation is requested
+                        return;
                     }
                     catch (Exception unexpectedException)
                     {
@@ -206,7 +211,7 @@ namespace MongoDB.Driver.Core.Servers
                     {
                         oldHeartbeatDelay.Dispose();
                     }
-                    await newHeartbeatDelay.Task.ConfigureAwait(false); // RequestHeartbeat() !!!
+                    await newHeartbeatDelay.Task.ConfigureAwait(false);
                 }
                 catch
                 {

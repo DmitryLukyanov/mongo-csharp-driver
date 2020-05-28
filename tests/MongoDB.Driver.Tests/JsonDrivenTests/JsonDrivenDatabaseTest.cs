@@ -31,10 +31,17 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _database = database;
         }
 
+        protected JsonDrivenDatabaseTest(IJsonDrivenTestContext testContext, IMongoDatabase database, Dictionary<string, object> objectMap)
+            : base(testContext, objectMap)
+        {
+            _database = database;
+        }
+
         // public methods
         public override void Arrange(BsonDocument document)
         {
-            JsonDrivenHelper.EnsureFieldEquals(document, "object", "database");
+            // TODO
+           // JsonDrivenHelper.EnsureFieldEquals(document, "object", "database");
             base.Arrange(document);
         }
     }

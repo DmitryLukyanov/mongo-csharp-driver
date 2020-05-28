@@ -23,7 +23,7 @@ using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public sealed class JsonDrivenRunCommandTest : JsonDrivenDatabaseTest
+    public class JsonDrivenRunCommandTest : JsonDrivenDatabaseTest
     {
         // private fields
         private BsonDocument _command;
@@ -38,11 +38,17 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         {
         }
 
+        public JsonDrivenRunCommandTest(IJsonDrivenTestContext testContext, IMongoDatabase database, Dictionary<string, object> objectMap)
+            : base(testContext, database, objectMap)
+        {
+        }
+
         // public methods
         public override void Arrange(BsonDocument document)
         {
             var expectedNames = new[] { "name", "object", "command_name", "arguments", "result", "databaseOptions" };
             JsonDrivenHelper.EnsureAllFieldsAreValid(document, expectedNames);
+            //TODO
             base.Arrange(document);
 
             if (document.Contains("command_name"))

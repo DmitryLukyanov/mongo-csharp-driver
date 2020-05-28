@@ -114,7 +114,7 @@ namespace MongoDB.Driver.Tests
             Action<MongoClientSettings> clientSettingsConfigurator,
             bool useMultipleShardRouters = false)
         {
-            if (CoreTestConfiguration.Cluster.Description.Type != ClusterType.Sharded)
+            //if (CoreTestConfiguration.Cluster.Description.Type != ClusterType.Sharded)
             {
                 // This option has no effect for non-sharded topologies.
                 useMultipleShardRouters = false;
@@ -134,7 +134,7 @@ namespace MongoDB.Driver.Tests
             return CreateDisposableClient((ClusterBuilder c) => c.Subscribe(capturer));
         }
 
-        public static DisposableMongoClient CreateDisposableclient(MongoClientSettings settings)
+        public static DisposableMongoClient CreateDisposableClient(MongoClientSettings settings)
         {
             return new DisposableMongoClient(new MongoClient(settings));
         }

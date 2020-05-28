@@ -29,6 +29,11 @@ namespace MongoDB.Driver.Core.Servers
         ServerDescription Description { get; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        void Cancel();
+
+        /// <summary>
         /// Occurs when the server description changes.
         /// </summary>
         event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;
@@ -39,7 +44,6 @@ namespace MongoDB.Driver.Core.Servers
         void Initialize();
 
         /// <summary>
-        void Invalidate(string reasonInvalidated, TopologyVersion responseTopologyVersion);
         /// Requests a heartbeat as soon as possible.
         /// </summary>
         void RequestHeartbeat();

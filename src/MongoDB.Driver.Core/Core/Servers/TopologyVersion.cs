@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Core.Servers
         /// </returns>
         public static int CompareTopologyVersion(TopologyVersion x, TopologyVersion y)
         {
-            if (object.ReferenceEquals(x, null) || object.ReferenceEquals(y, null))
+            if (x == null || y == null)
             {
                 return -1;
             }
@@ -58,27 +58,6 @@ namespace MongoDB.Driver.Core.Servers
             }
 
             return -1;
-        }
-
-        /// <summary>
-        /// Determines whether or not two TopologyVersions are equal.
-        /// </summary>
-        /// <param name="x">The first TopologyVersion.</param>
-        /// <param name="y">The other TopologyVersion.</param>
-        /// <returns>Whether or not the TopologyVersions are equal.</returns>
-        public static bool Equals(TopologyVersion x, TopologyVersion y)
-        {
-            if (object.ReferenceEquals(x, y))
-            {
-                return true;
-            }
-
-            if (object.ReferenceEquals(x, null) || object.ReferenceEquals(y, null))
-            {
-                return false;
-            }
-
-            return x.Equals(y);
         }
 
         /// <summary>
@@ -116,8 +95,8 @@ namespace MongoDB.Driver.Core.Servers
         /// <summary>
         /// Gets whether or not <paramref name="x"/> is fresher than <paramref name="y"/>.
         /// Comparing topology descriptions freshness does not exhibit the reversal property of
-        /// inequalities e.g. a.IsStalerThan(b) (a "&lt;" b) does not imply
-        /// !b.IsStalerThan(a) (b "&gt;" a)
+        /// inequalities e.g. a.IsFresherThan(b) (a "&lt;" b) does not imply
+        /// !b.IsFresherThan(a) (b "&gt;" a)
         /// See <seealso cref="CompareTopologyVersion(TopologyVersion, TopologyVersion)"/> for more information.
         /// In the case that this.Equals(<paramref name="y"/>), <paramref name="y"/> will be considered to be fresher.
         /// </summary>
@@ -131,8 +110,8 @@ namespace MongoDB.Driver.Core.Servers
         /// <summary>
         /// Gets whether or not <paramref name="x"/> is fresher than or Equal to <paramref name="y"/>.
         /// Comparing topology descriptions freshness does not exhibit the reversal property of
-        /// inequalities e.g. a.IsStalerThan(b) (a "&lt;" b) does not imply
-        /// !b.IsStalerThan(a) (b "&gt;" a)
+        /// inequalities e.g. a.IsFresherThan(b) (a "&lt;" b) does not imply
+        /// !b.IsFresherThan(a) (b "&gt;" a)
         /// See <seealso cref="CompareTopologyVersion(TopologyVersion, TopologyVersion)"/> for more information.
         /// In the case that this.Equals(<paramref name="y"/>), <paramref name="y"/> will be considered to be fresher.
         /// </summary>
@@ -156,7 +135,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <returns>
         /// Whether or not this TopologyVersion is staler than <paramref name="y"/>.
         /// </returns>
-        public static bool IsStalerThanOrEqualTo(TopologyVersion x, TopologyVersion y) => CompareTopologyVersion(x, y) <= 0;
+        public static bool IsStalerThan(TopologyVersion x, TopologyVersion y) => CompareTopologyVersion(x, y) < 0;
 
         /// <summary>
         /// Gets whether or not <paramref name="x"/> is staler than or Equal to <paramref name="y"/>.
@@ -171,7 +150,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <returns>
         /// Whether or not this TopologyVersion is staler than <paramref name="y"/>.
         /// </returns>
-        public static bool IsStalerThan(TopologyVersion x, TopologyVersion y) => CompareTopologyVersion(x, y) < 0;
+        public static bool IsStalerThanOrEqualTo(TopologyVersion x, TopologyVersion y) => CompareTopologyVersion(x, y) <= 0;
         #endregion
 
         // private fields

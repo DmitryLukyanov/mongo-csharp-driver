@@ -62,7 +62,6 @@ namespace MongoDB.Driver.Core.Servers
         private readonly EndPoint _endPoint;
         private readonly IServerMonitor _monitor;
         private readonly ServerId _serverId;
-        private ServerDescription _currentDescription;
         private readonly ServerSettings _settings;
         private readonly InterlockedInt32 _state;
 
@@ -294,6 +293,23 @@ namespace MongoDB.Driver.Core.Servers
             {
                 return; // stale generation number
             }
+
+            if (ex is MongoConnectionException mongoConnectionException &&
+                mongoConnectionException.IsNetworkException &&
+                !mongoConnectionException.ContainsSocketTimeoutException)
+            {
+                //_connectionPool.Clear();
+                _monitor.Cancel();
+                //return;
+            }
+
+            //if (ex is MongoNotPrimaryException)
+            //{
+            //    // _monitor.Cancel();
+            //    Invalidate("tata", true, null);
+            //    return;
+            //}
+
             var description = Description; // use Description property to access _description value safely
             if (ShouldInvalidateServer(connection, ex, description, out TopologyVersion responseTopologyVersion))
             {
@@ -516,7 +532,6 @@ namespace MongoDB.Driver.Core.Servers
                 nonStaleResponseTopologyVersion = isStale ? null : responseTopologyVersion;
                 return isStale;
             }
-
         }
 
         private void ThrowIfDisposed()

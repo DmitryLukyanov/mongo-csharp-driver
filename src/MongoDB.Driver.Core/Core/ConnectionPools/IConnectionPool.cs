@@ -31,15 +31,6 @@ namespace MongoDB.Driver.Core.ConnectionPools
     public interface IConnectionPool : IDisposable
     {
         // properties
-
-        /// <summary>
-        /// Gets the generation of the connection pool.
-        /// </summary>
-        /// <value>
-        /// The generation.
-        /// </value>
-        int Generation { get; }
-
         /// <summary>
         /// Gets the generation of the connection pool.
         /// </summary>

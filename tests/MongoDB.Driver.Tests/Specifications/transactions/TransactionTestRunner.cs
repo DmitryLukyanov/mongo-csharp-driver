@@ -365,7 +365,7 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
 
         private void ExecuteOperations(IMongoClient client, Dictionary<string, object> objectMap, BsonDocument test)
         {
-            var factory = new JsonDrivenTestFactory(this, client, _databaseName, _collectionName, bucketName: null, objectMap);
+            var factory = new JsonDrivenTestFactory(this, client, _databaseName, _collectionName, bucketName: null, objectMap, null, null);
 
             foreach (var operation in test["operations"].AsBsonArray.Cast<BsonDocument>())
             {

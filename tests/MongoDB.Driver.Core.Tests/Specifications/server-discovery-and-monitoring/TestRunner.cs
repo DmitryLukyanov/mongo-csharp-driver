@@ -15,10 +15,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Sockets;
-using System.Reflection;
 using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
@@ -129,13 +126,9 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
 
-        }
-
-
         private void ApplyPhase(BsonDocument phase)
         {
             JsonDrivenHelper.EnsureAllFieldsAreValid(phase, "applicationErrors", "description", "outcome", "responses");
-
 
             if (phase.Contains("responses"))
             {
@@ -152,7 +145,6 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 {
                     ApplyApplicationError(applicationError);
                 }
-            }
             }
 
             var outcome = (BsonDocument)phase["outcome"];
@@ -487,7 +479,8 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
     }
-	internal static class MultiServerClusterReflector
+
+    internal static class MultiServerClusterReflector
     {
         public static int _maxElectionInfo_setVersion(this MultiServerCluster obj)
         {

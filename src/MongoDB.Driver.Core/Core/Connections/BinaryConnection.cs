@@ -329,12 +329,20 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private IByteBuffer ReceiveBuffer()
+        private IByteBuffer ReceiveBuffer(TimeSpan? additionalAwaitTime)
         {
             try
             {
+                _backgroundTaskCancellationToken.Register(() =>
+                {
+                    Console.WriteLine("RecBuffAss");
+                });
+
                 var messageSizeBytes = new byte[4];
-                _stream.ReadBytes(messageSizeBytes, 0, 4, _backgroundTaskCancellationToken);
+                using (var effectiveStream = new StreamStateModifier(_stream, additionalAwaitTime))
+                {
+                    effectiveStream.Stream.ReadBytes(messageSizeBytes, 0, 4, _backgroundTaskCancellationToken);
+                }
                 var messageSize = BitConverter.ToInt32(messageSizeBytes, 0);
                 EnsureMessageSizeIsValid(messageSize);
                 var inputBufferChunkSource = new InputBufferChunkSource(BsonChunkPool.Default);
@@ -354,8 +362,13 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private IByteBuffer ReceiveBuffer(int responseTo, CancellationToken cancellationToken)
+        private IByteBuffer ReceiveBuffer(int responseTo, TimeSpan? additionalAwaitTime, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                Console.WriteLine("ReceiveBuffer");
+            });
+
             using (var receiveLockRequest = new SemaphoreSlimRequest(_receiveLock, cancellationToken))
             {
                 var messageTask = _dropbox.GetMessageAsync(responseTo);
@@ -370,7 +383,7 @@ namespace MongoDB.Driver.Core.Connections
                     receiveLockRequest.Task.GetAwaiter().GetResult(); // propagate exceptions
                     while (true)
                     {
-                        var buffer = ReceiveBuffer();
+                        var buffer = ReceiveBuffer(additionalAwaitTime);
                         _dropbox.AddMessage(buffer);
 
                         if (messageTask.IsCompleted)
@@ -391,12 +404,27 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private async Task<IByteBuffer> ReceiveBufferAsync()
+        private async Task<IByteBuffer> ReceiveBufferAsync(TimeSpan? additionalAwaitTime)
         {
             try
             {
+                _backgroundTaskCancellationToken.Register(() =>
+                {
+                    Console.WriteLine("RecBuffAss");
+                });
                 var messageSizeBytes = new byte[4];
-                var readTimeout = _stream.CanTimeout ? TimeSpan.FromMilliseconds(_stream.ReadTimeout) : Timeout.InfiniteTimeSpan;
+                TimeSpan readTimeout;
+                if (_stream.CanTimeout)
+                {
+                    using (var effectiveStream = new StreamStateModifier(_stream, additionalAwaitTime))
+                    {
+                        readTimeout = TimeSpan.FromMilliseconds(effectiveStream.Stream.ReadTimeout);
+                    }
+                }
+                else
+                {
+                    readTimeout = Timeout.InfiniteTimeSpan;
+                }
                 await _stream.ReadBytesAsync(messageSizeBytes, 0, 4, readTimeout, _backgroundTaskCancellationToken).ConfigureAwait(false);
                 var messageSize = BitConverter.ToInt32(messageSizeBytes, 0);
                 EnsureMessageSizeIsValid(messageSize);
@@ -417,8 +445,13 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private async Task<IByteBuffer> ReceiveBufferAsync(int responseTo, CancellationToken cancellationToken)
+        private async Task<IByteBuffer> ReceiveBufferAsync(int responseTo, TimeSpan? additionalAwaitTime, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                Console.WriteLine("ReceiveBufferAsync");
+            });
+
             using (var receiveLockRequest = new SemaphoreSlimRequest(_receiveLock, cancellationToken))
             {
                 var messageTask = _dropbox.GetMessageAsync(responseTo);
@@ -433,7 +466,7 @@ namespace MongoDB.Driver.Core.Connections
                     receiveLockRequest.Task.GetAwaiter().GetResult(); // propagate exceptions
                     while (true)
                     {
-                        var buffer = await ReceiveBufferAsync().ConfigureAwait(false);
+                        var buffer = await ReceiveBufferAsync(additionalAwaitTime).ConfigureAwait(false);
                         _dropbox.AddMessage(buffer);
 
                         if (messageTask.IsCompleted)
@@ -455,9 +488,24 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         public ResponseMessage ReceiveMessage(
+           int responseTo,
+           IMessageEncoderSelector encoderSelector,
+           MessageEncoderSettings messageEncoderSettings,
+           CancellationToken cancellationToken)
+        {
+            return ReceiveMessage(
+                responseTo,
+                encoderSelector,
+                messageEncoderSettings,
+                maxAwaitedTimeout: null,
+                cancellationToken);
+        }
+
+        public ResponseMessage ReceiveMessage(
             int responseTo,
             IMessageEncoderSelector encoderSelector,
             MessageEncoderSettings messageEncoderSettings,
+            TimeSpan? maxAwaitedTimeout,
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
@@ -467,7 +515,7 @@ namespace MongoDB.Driver.Core.Connections
             try
             {
                 helper.ReceivingMessage();
-                using (var buffer = ReceiveBuffer(responseTo, cancellationToken))
+                using (var buffer = ReceiveBuffer(responseTo, maxAwaitedTimeout, cancellationToken))
                 {
                     var message = helper.DecodeMessage(buffer, encoderSelector, cancellationToken);
                     helper.ReceivedMessage(buffer, message);
@@ -481,10 +529,20 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
+        public Task<ResponseMessage> ReceiveMessageAsync(
+            int responseTo,
+            IMessageEncoderSelector encoderSelector,
+            MessageEncoderSettings messageEncoderSettings,
+            CancellationToken cancellationToken)
+        {
+            return ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, maxAwaitedTimeout: null, cancellationToken);
+        }
+
         public async Task<ResponseMessage> ReceiveMessageAsync(
             int responseTo,
             IMessageEncoderSelector encoderSelector,
             MessageEncoderSettings messageEncoderSettings,
+            TimeSpan? maxAwaitedTimeout,
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
@@ -494,7 +552,7 @@ namespace MongoDB.Driver.Core.Connections
             try
             {
                 helper.ReceivingMessage();
-                using (var buffer = await ReceiveBufferAsync(responseTo, cancellationToken).ConfigureAwait(false))
+                using (var buffer = await ReceiveBufferAsync(responseTo, maxAwaitedTimeout, cancellationToken).ConfigureAwait(false))
                 {
                     var message = helper.DecodeMessage(buffer, encoderSelector, cancellationToken);
                     helper.ReceivedMessage(buffer, message);
@@ -739,6 +797,51 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         // nested classes
+        private class StreamStateModifier : IDisposable
+        {
+            private readonly int _initialReadTimeout;
+            private readonly TimeSpan? _maxAwaitTime;
+            private bool _modified;
+            private readonly Stream _stream;
+
+            public StreamStateModifier(Stream stream, TimeSpan? maxAwaitTime)
+            {
+                _initialReadTimeout = stream.ReadTimeout;
+                _maxAwaitTime = maxAwaitTime;
+                _stream = Ensure.IsNotNull(stream, nameof(stream));
+            }
+
+            public Stream Stream
+            {
+                get
+                {
+                    ModifyStreamSettingsIfNotModified();
+                    return _stream;
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_maxAwaitTime.HasValue)
+                {
+                    _stream.ReadTimeout = _initialReadTimeout;
+                }
+            }
+
+            // private methods
+            private void ModifyStreamSettingsIfNotModified()
+            {
+                if (!_modified)
+                {
+                    _modified = true;
+                    if (_maxAwaitTime.HasValue)
+                    {
+                        _stream.ReadTimeout += (int)_maxAwaitTime.Value.TotalMilliseconds;
+                    }
+                }
+            }
+        }
+
         private class Dropbox
         {
             private readonly ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>> _messages = new ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>>();

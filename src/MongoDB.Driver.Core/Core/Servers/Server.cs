@@ -88,7 +88,7 @@ namespace MongoDB.Driver.Core.Servers
             _serverId = new ServerId(clusterId, endPoint);
             _connectionPool = connectionPoolFactory.CreateConnectionPool(_serverId, endPoint);
             _state = new InterlockedInt32(State.Initial);
-            _monitor = serverMonitorFactory.Create(_serverId, _endPoint);
+            _monitor = serverMonitorFactory.Create(_serverId, _endPoint, _connectionPool);
             _currentDescription = _monitor.Description;
 
             eventSubscriber.TryGetEventHandler(out _openingEventHandler);

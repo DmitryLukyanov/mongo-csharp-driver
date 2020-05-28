@@ -43,7 +43,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
 
         public RequireServer()
         {
-            _serverVersion = CoreTestConfiguration.ServerVersion;
+            _serverVersion = new SemanticVersion(4,5,1);// CoreTestConfiguration.ServerVersion;
         }
 
         public RequireServer Authentication(bool authentication)
@@ -79,13 +79,13 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
 
         public RequireServer RunOn(BsonArray requirements)
         {
-            var cluster = CoreTestConfiguration.Cluster;
-            if (requirements.Any(requirement => CanRunOn(cluster, requirement.AsBsonDocument)))
-            {
-                return this;
-            }
+            //var cluster = CoreTestConfiguration.Cluster;
+            //if (requirements.Any(requirement => CanRunOn(cluster, requirement.AsBsonDocument)))
+            //{
+            return this;
+            //}
 
-            throw new SkipException($"Test skipped because cluster does not meet runOn requirements: {requirements}.");
+            //throw new SkipException($"Test skipped because cluster does not meet runOn requirements: {requirements}.");
         }
 
         public RequireServer Supports(Feature feature)

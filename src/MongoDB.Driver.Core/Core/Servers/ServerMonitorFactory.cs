@@ -15,6 +15,7 @@
 
 using System.Net;
 using MongoDB.Driver.Core.Configuration;
+using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
@@ -35,9 +36,9 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         /// <inheritdoc/>
-        public IServerMonitor Create(ServerId serverId, EndPoint endPoint)
+        public IServerMonitor Create(ServerId serverId, EndPoint endPoint, IConnectionPool connectionPool)
         {
-            return new ServerMonitor(serverId, endPoint, _connectionFactory, _settings.HeartbeatInterval, _settings.HeartbeatTimeout, _eventSubscriber);
+            return new ServerMonitor(serverId, endPoint, _connectionFactory, connectionPool, _settings.HeartbeatInterval, _settings.HeartbeatTimeout, _eventSubscriber);
         }
     }
 }

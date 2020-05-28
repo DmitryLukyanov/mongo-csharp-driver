@@ -182,5 +182,15 @@ namespace MongoDB.Driver.Core.Helpers
             _sentMessages.AddRange(messages);
             return Task.FromResult<object>(null);
         }
+
+        public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaiterTimeout, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, TimeSpan? maxAwaitTimwout, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

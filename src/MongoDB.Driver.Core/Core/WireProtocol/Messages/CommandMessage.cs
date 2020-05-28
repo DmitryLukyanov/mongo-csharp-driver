@@ -44,8 +44,10 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         };
 
         // fields
+        private bool _exhaustAllowed;
         private bool _moreToCome;
         private Action<IMessageEncoderPostProcessor> _postWriteAction;
+        private bool _requestExpected;
         private readonly int _requestId;
         private readonly int _responseTo;
         private readonly List<CommandMessageSection> _sections;
@@ -65,6 +67,7 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
             bool moreToCome)
         {
             _requestId = requestId;
+            _requestExpected = true; // the default value
             _responseTo = responseTo;
             _sections = Ensure.IsNotNull(sections, nameof(sections)).ToList();
             _moreToCome = moreToCome;
@@ -76,6 +79,18 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         }
 
         // public properties
+        /// <summary>
+        /// TODO.
+        /// </summary>
+        /// <value>
+        /// TODO.
+        /// </value>
+        public bool ExhaustAllowed
+        {
+            get { return _exhaustAllowed; }
+            set { _exhaustAllowed = value; }
+        }
+
         /// <inheritdoc />
         public override bool MayBeCompressed
         {
@@ -130,12 +145,21 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         public int RequestId => _requestId;
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public bool RequestExpected
+        {
+            get => _requestExpected;
+            set => _requestExpected = value;
+        }
+
+        /// <summary>
         /// Gets a value indicating whether a response is expected.
         /// </summary>
         /// <value>
         ///   <c>true</c> if a response is expected; otherwise, <c>false</c>.
         /// </value>
-        public bool ResponseExpected => !_moreToCome;
+        public bool ResponseExpected => !_moreToCome; 
 
         /// <summary>
         /// Gets the response to.

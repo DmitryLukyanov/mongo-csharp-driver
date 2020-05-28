@@ -15,19 +15,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Sockets;
-using System.Reflection;
 using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
-using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Helpers;
@@ -62,101 +57,18 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
 
-        private void ApplyApplicationError(BsonDocument applicationError)
-        {
-            var expectedKeys = new[]
-            {
-                "address",
-                "generation", // optional
-                "maxWireVersion",
-                "when",
-                "type",
-                "response" // optional
-            };
-            JsonDrivenHelper.EnsureAllFieldsAreValid(applicationError, expectedKeys);
-            var address = applicationError["address"].AsString;
-            var endPoint = EndPointHelper.Parse(address);
-            var server = (Server)_serverFactory.GetServer(endPoint);
-            var connectionId = new ConnectionId(server.ServerId);
-            var type = applicationError["type"].AsString;
-            var maxWireVersion = applicationError["maxWireVersion"].AsInt32;
-            Exception simulatedException = null;
-            switch (type)
-            {
-                case "command":
-                    var response = applicationError["response"].AsBsonDocument;
-                    var command = new BsonDocument("Link", "start!");
-                    simulatedException = ExceptionMapper.MapNotPrimaryOrNodeIsRecovering(connectionId, command, response, "errmsg");
-                    Ensure.IsNotNull(simulatedException, nameof(simulatedException));
-                    break;
-                case "network":
-                {
-                    var innermostException = new SocketException(errorCode: (int)SocketError.NetworkUnreachable);
-                    var innerException = new IOException("Emotion, yet peace.", innermostException);
-                    simulatedException = new MongoConnectionException(connectionId, "Ignorance, yet knowledge.", innerException);
-                    break;
-                }
-                case "timeout":
-                {
-                    var innermostException = new SocketException(errorCode: (int)SocketError.TimedOut);
-                    var innerException = new IOException("Passion, yet serenity.", innermostException);
-                    simulatedException = new MongoConnectionException(connectionId, "Chaos, yet harmony.", innerException);
-                    break;
-
-                }
-                default:
-                    throw new ArgumentException($"Unsupported value of {type} for type");
-            }
-
-            var mockConnection = new Mock<IConnectionHandle>();
-            var isMasterResult = new IsMasterResult(new BsonDocument { { "compressors", new BsonArray() } });
-            var serverVersion = WireVersionHelper.MapWireVersionToServerVersion(maxWireVersion);
-            var buildInfoResult = new BuildInfoResult(new BsonDocument { { "version", serverVersion } });
-            mockConnection.SetupGet(c => c.Description)
-                .Returns(new ConnectionDescription(connectionId, isMasterResult, buildInfoResult));
-            var generation = applicationError.Contains("generation") ? applicationError["generation"].AsInt32 : 0;
-            mockConnection.SetupGet(c => c.Generation).Returns(generation);
-            var when = applicationError["when"].AsString;
-            switch (when)
-            {
-                case "beforeHandshakeCompletes":
-                    server.HandleBeforeHandshakeCompletesException(mockConnection.Object, simulatedException);
-                    break;
-                case "afterHandshakeCompletes":
-                    server.HandleChannelException(mockConnection.Object, simulatedException);
-                    break;
-                default:
-                    throw new ArgumentException($"Unsupported value of {when} for when");
-            }
-        }
-
-
         private void ApplyPhase(BsonDocument phase)
         {
-            JsonDrivenHelper.EnsureAllFieldsAreValid(phase, "applicationErrors", "description", "outcome", "responses");
+            JsonDrivenHelper.EnsureAllFieldsAreValid(phase, "outcome", "responses");
 
-
-            if (phase.Contains("responses"))
+            var responses = phase["responses"].AsBsonArray;
+            foreach (BsonArray response in responses)
             {
-                var responses = phase["responses"].AsBsonArray;
-                foreach (BsonArray response in responses)
-                {
-                    ApplyResponse(response);
-                }
-            }
-
-            if (phase.Contains("applicationErrors"))
-            {
-                var applicationErrors = phase["applicationErrors"].AsBsonArray;
-                foreach (BsonDocument applicationError in applicationErrors)
-                {
-                    ApplyApplicationError(applicationError);
-                }
+                ApplyResponse(response);
             }
 
             var outcome = (BsonDocument)phase["outcome"];
-            var description = phase.Contains("description") ? phase["description"].AsString : "";
-            VerifyOutcome(outcome, description);
+            VerifyOutcome(outcome);
         }
 
         private void ApplyResponse(BsonArray response)
@@ -168,30 +80,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
 
             var address = response[0].AsString;
             var isMasterDocument = response[1].AsBsonDocument;
-            var expectedNames = new[]
-            {
-                "arbiterOnly",
-                "arbiters",
-                "electionId",
-                "hidden",
-                "hosts",
-                "ismaster",
-                "isreplicaset",
-                "logicalSessionTimeoutMinutes",
-                "maxWireVersion",
-                "me",
-                "minWireVersion",
-                "msg",
-                "ok",
-                "passive",
-                "passives",
-                "primary",
-                "secondary",
-                "setName",
-                "setVersion",
-                "topologyVersion"
-            };
-            JsonDrivenHelper.EnsureAllFieldsAreValid(isMasterDocument, expectedNames);
+            JsonDrivenHelper.EnsureAllFieldsAreValid(isMasterDocument, "arbiterOnly", "arbiters", "electionId", "hidden", "hosts", "ismaster", "isreplicaset", "logicalSessionTimeoutMinutes", "maxWireVersion", "me", "minWireVersion", "msg", "ok", "passive", "passives", "primary", "secondary", "setName", "setVersion");
 
             var endPoint = EndPointHelper.Parse(address);
             var isMasterResult = new IsMasterResult(isMasterDocument);
@@ -202,7 +91,6 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 logicalSessionTimeout: isMasterResult.LogicalSessionTimeout,
                 replicaSetConfig: isMasterResult.GetReplicaSetConfig(),
                 state: isMasterResult.Wrapped.GetValue("ok", false).ToBoolean() ? ServerState.Connected : ServerState.Disconnected,
-                topologyVersion: isMasterResult.TopologyVersion,
                 type: isMasterResult.ServerType,
                 wireVersionRange: new Range<int>(isMasterResult.MinWireVersion, isMasterResult.MaxWireVersion));
 
@@ -211,7 +99,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             SpinWait.SpinUntil(() => !object.ReferenceEquals(_cluster.Description, currentClusterDescription), 100); // sometimes returns false and that's OK
         }
 
-        private void VerifyTopology(ICluster cluster, string expectedType, string phaseDescription)
+        private void VerifyTopology(ICluster cluster, string expectedType)
         {
             switch (expectedType)
             {
@@ -221,12 +109,12 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 case "ReplicaSetWithPrimary":
                     cluster.Should().BeOfType<MultiServerCluster>();
                     cluster.Description.Type.Should().Be(ClusterType.ReplicaSet);
-                    cluster.Description.Servers.Should().ContainSingle(x => x.Type == ServerType.ReplicaSetPrimary, phaseDescription);
+                    cluster.Description.Servers.Should().ContainSingle(x => x.Type == ServerType.ReplicaSetPrimary);
                     break;
                 case "ReplicaSetNoPrimary":
-                    cluster.Should().BeOfType<MultiServerCluster>(phaseDescription);
+                    cluster.Should().BeOfType<MultiServerCluster>();
                     cluster.Description.Type.Should().Be(ClusterType.ReplicaSet);
-                    cluster.Description.Servers.Should().NotContain(x => x.Type == ServerType.ReplicaSetPrimary, because: $"because of {phaseDescription}");
+                    cluster.Description.Servers.Should().NotContain(x => x.Type == ServerType.ReplicaSetPrimary);
                     break;
                 case "Sharded":
                     cluster.Should().BeOfType<MultiServerCluster>();
@@ -240,43 +128,30 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
 
-        private void VerifyOutcome(BsonDocument outcome, string phaseDescription)
+        private void VerifyOutcome(BsonDocument outcome)
         {
-            var expectedNames = new[]
-            {
-                "compatible",
-                "logicalSessionTimeoutMinutes",
-                "pool",
-                "servers",
-                "setName",
-                "topologyType",
-                "topologyVersion",
-                "maxSetVersion",
-                "maxElectionId"
-            };
-            JsonDrivenHelper.EnsureAllFieldsAreValid(outcome, expectedNames);
+            JsonDrivenHelper.EnsureAllFieldsAreValid(outcome, "compatible", "logicalSessionTimeoutMinutes", "servers", "setName", "topologyType", "maxSetVersion", "maxElectionId");
 
             var expectedTopologyType = (string)outcome["topologyType"];
-            VerifyTopology(_cluster, expectedTopologyType, phaseDescription);
+            VerifyTopology(_cluster, expectedTopologyType);
 
             var actualDescription = _cluster.Description;
 
-            var actualServersEndpoints = actualDescription.Servers.Select(x => x.EndPoint).ToList();
+            var actualServers = actualDescription.Servers.Select(x => x.EndPoint);
             var expectedServers = outcome["servers"].AsBsonDocument.Elements.Select(x => new
             {
                 EndPoint = EndPointHelper.Parse(x.Name),
                 Description = (BsonDocument)x.Value
             });
-            actualServersEndpoints.WithComparer(EndPointHelper.EndPointEqualityComparer).Should().BeEquivalentTo(expectedServers.Select(x => x.EndPoint).WithComparer(EndPointHelper.EndPointEqualityComparer));
+            actualServers.WithComparer(EndPointHelper.EndPointEqualityComparer).Should().BeEquivalentTo(expectedServers.Select(x => x.EndPoint).WithComparer(EndPointHelper.EndPointEqualityComparer));
 
-            var actualServers = actualServersEndpoints.Select(endpoint => _serverFactory.GetServer(endpoint));
-            foreach (var actualServerDescription in actualDescription.Servers)
+            foreach (var actualServer in actualDescription.Servers)
             {
-                var expectedServer = expectedServers.Single(x => EndPointHelper.EndPointEqualityComparer.Equals(x.EndPoint, actualServerDescription.EndPoint));
-                VerifyServerDescription(actualServerDescription, expectedServer.Description, phaseDescription);
-                VerifyServerPropertiesNotInServerDescription(_serverFactory.GetServer(actualServerDescription.EndPoint), expectedServer.Description, phaseDescription);
+                var expectedServer = expectedServers.Single(x => EndPointHelper.EndPointEqualityComparer.Equals(x.EndPoint, actualServer.EndPoint));
+                VerifyServerDescription(actualServer, expectedServer.Description);
             }
-			if (outcome.TryGetValue("maxSetVersion", out var maxSetVersion))
+
+            if (outcome.TryGetValue("maxSetVersion", out var maxSetVersion))
             {
                 if (_cluster is MultiServerCluster multiServerCluster)
                 {
@@ -329,9 +204,9 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
 
-        private void VerifyServerDescription(ServerDescription actualDescription, BsonDocument expectedDescription, string phaseDescription)
+        private void VerifyServerDescription(ServerDescription actualDescription, BsonDocument expectedDescription)
         {
-            JsonDrivenHelper.EnsureAllFieldsAreValid(expectedDescription, "electionId", "pool", "setName", "setVersion", "topologyVersion", "type");
+            JsonDrivenHelper.EnsureAllFieldsAreValid(expectedDescription, "electionId", "setName", "setVersion", "type");
 
             var expectedType = (string)expectedDescription["type"];
             switch (expectedType)
@@ -403,53 +278,6 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 }
                 actualDescription.ElectionId.Should().Be(expectedElectionId);
             }
-
-            if (expectedDescription.Contains("topologyVersion"))
-            {
-                switch(expectedDescription["topologyVersion"])
-                {
-                    case BsonDocument topologyVersion:
-                        TopologyVersion expectedTopologyType = TopologyVersion.FromBsonDocument(topologyVersion);
-                        expectedTopologyType.Should().NotBeNull();
-                        actualDescription.TopologyVersion.Should().Be(expectedTopologyType, phaseDescription);
-                        break;
-                    case BsonNull _:
-                        actualDescription.TopologyVersion.Should().BeNull();
-                        break;
-                    default: throw new FormatException($"Invalid topologyVersion BSON type: {expectedDescription["topologyVersion"].BsonType}.");
-                }
-            }
-        }
-
-        private void VerifyServerPropertiesNotInServerDescription(IClusterableServer actualServer, BsonDocument expectedServer, string phaseDescription)
-        {
-            if (expectedServer.Contains("pool"))
-            {
-                switch (expectedServer["pool"])
-                {
-                    case BsonDocument poolDocument:
-                        if (poolDocument.Values.Count() == 1 &&
-                            poolDocument.Contains("generation") &&
-                            poolDocument["generation"] is BsonInt32 generation)
-                        {
-                            VerifyServerGeneration(actualServer, generation.Value, phaseDescription);
-                            break;
-                        }
-                        throw new FormatException($"Invalid schema for pool.");
-                    default: throw new FormatException($"Invalid topologyVersion BSON type: {expectedServer["pool"].BsonType}.");
-                }
-            }
-        }
-
-        private void VerifyServerGeneration(IClusterableServer actualServer, int poolGeneration, string phaseDescription)
-        {
-            switch (actualServer)
-            {
-                case Server server:
-                    server._connectionPool().Generation.Should().Be(poolGeneration, phaseDescription);
-                    break;
-                default: throw new Exception("Verifying pool generation with mock servers is currently unsupported.");
-            }
         }
 
         private ICluster BuildCluster(BsonDocument definition)
@@ -460,8 +288,7 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
                 connectionMode: connectionString.Connect,
                 replicaSetName: connectionString.ReplicaSet);
 
-            // Passing in an eventCapturer results in Server being used instead of a Mock
-            _serverFactory = new MockClusterableServerFactory(new EventCapturer());
+            _serverFactory = new MockClusterableServerFactory();
             _eventSubscriber = new Mock<IEventSubscriber>().Object;
             return new ClusterFactory(settings, _serverFactory, _eventSubscriber)
                 .CreateCluster();
@@ -486,7 +313,8 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
             }
         }
     }
-	internal static class MultiServerClusterReflector
+
+    internal static class MultiServerClusterReflector
     {
         public static int _maxElectionInfo_setVersion(this MultiServerCluster obj)
         {
@@ -503,23 +331,6 @@ namespace MongoDB.Driver.Specifications.server_discovery_and_monitoring
         private static object _maxElectionInfo(MultiServerCluster obj)
         {
             return Reflector.GetFieldValue(obj, nameof(_maxElectionInfo));
-        }
-    }
-
-    internal static class ServerReflector
-    {
-        public static IConnectionPool _connectionPool(this Server server)
-        {
-            return (IConnectionPool)Reflector.GetFieldValue(server, nameof(_connectionPool));
-        }
-        public static void HandleBeforeHandshakeCompletesException(this Server server, IConnection connection, Exception ex)
-        {
-            Reflector.Invoke(server, nameof(HandleBeforeHandshakeCompletesException), connection, ex);
-        }
-
-        public static void HandleChannelException(this Server server, IConnection connection, Exception ex)
-        {
-            Reflector.Invoke(server, nameof(HandleChannelException), connection, ex);
         }
     }
 }

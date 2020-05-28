@@ -14,6 +14,7 @@
 */
 
 using System.Net;
+using MongoDB.Driver.Core.ConnectionPools;
 
 namespace MongoDB.Driver.Core.Servers
 {
@@ -27,7 +28,8 @@ namespace MongoDB.Driver.Core.Servers
         /// </summary>
         /// <param name="serverId">The server identifier.</param>
         /// <param name="endPoint">The end point.</param>
+        /// <param name="connectionPool">TODO</param>
         /// <returns>A server monitor.</returns>
-        IServerMonitor Create(ServerId serverId, EndPoint endPoint);
+        IServerMonitor Create(ServerId serverId, EndPoint endPoint, IConnectionPool connectionPool);
     }
 }

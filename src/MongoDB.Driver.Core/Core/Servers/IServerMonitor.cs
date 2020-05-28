@@ -26,6 +26,11 @@ namespace MongoDB.Driver.Core.Servers
         ServerDescription Description { get; }
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        void Cancel();
+
+        /// <summary>
         /// Occurs when the server description changes.
         /// </summary>
         event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;

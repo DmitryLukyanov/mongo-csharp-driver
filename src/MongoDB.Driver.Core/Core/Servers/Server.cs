@@ -258,6 +258,15 @@ namespace MongoDB.Driver.Core.Servers
                 return;
             }
 
+            // TODO: check once again
+            if (ex is MongoConnectionException mongoConnectionException &&
+                mongoConnectionException.IsNetworkException &&
+                !mongoConnectionException.ContainsSocketTimeoutException)
+            {
+                _monitor.Cancel();
+                return;
+            }
+
             if (ShouldInvalidateServer(ex))
             {
                 var shouldClearConnectionPool = ShouldClearConnectionPoolForChannelException(ex, connection.Description.ServerVersion);

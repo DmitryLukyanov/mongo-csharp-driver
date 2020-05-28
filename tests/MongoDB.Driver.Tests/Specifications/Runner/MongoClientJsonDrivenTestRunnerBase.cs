@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             if (test.Contains(ExpectationsKey))
             {
                 var expectedEvents = test[ExpectationsKey].AsBsonArray.Cast<BsonDocument>().ToList();
-                var actualEvents = GetEvents(eventCapturer);
+                var actualEvents = ExtractEventsForAsserting(eventCapturer);
 
                 var n = Math.Min(actualEvents.Count, expectedEvents.Count);
                 for (var index = 0; index < n; index++)
@@ -138,8 +138,13 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
 
                 if (actualEvents.Count > expectedEvents.Count)
                 {
-                    throw new Exception($"Unexpected command started event: {actualEvents[n].CommandName}.");
+                    throw new Exception($"Unexpected command started event: {GetEventName(actualEvents[n])}.");
                 }
+            }
+
+            string GetEventName(object @event)
+            {
+                return @event is CommandStartedEvent commandStartedEvent ? commandStartedEvent.CommandName : @event.GetType().Name;
             }
         }
 
@@ -200,6 +205,11 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             // do nothing by default.
         }
 
+        protected virtual JsonDrivenTestFactory CreateJsonFactory(IMongoClient mongoClient, string databaseName, string collectionName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
+        {
+            return new JsonDrivenTestFactory(mongoClient, databaseName, collectionName, bucketName: null, objectMap, eventCapturer);
+        }
+
         protected virtual void DropCollection(MongoClient client, string databaseName, string collectionName, BsonDocument test, BsonDocument shared)
         {
             var database = client.GetDatabase(databaseName).WithWriteConcern(WriteConcern.WMajority);
@@ -210,7 +220,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         {
             _objectMap = objectMap;
 
-            var factory = new JsonDrivenTestFactory(client, DatabaseName, CollectionName, bucketName: null, objectMap, eventCapturer);
+            var factory = CreateJsonFactory(client, DatabaseName, CollectionName, objectMap, eventCapturer);
 
             foreach (var operation in test[OperationsKey].AsBsonArray.Cast<BsonDocument>())
             {
@@ -255,7 +265,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         {
             using (var client = CreateDisposableClient(test, eventCapturer))
             {
-                ExecuteOperations(client, null, test);
+                ExecuteOperations(client, null, test, eventCapturer);
             }
         }
 
@@ -290,6 +300,26 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     {
                         settings.WriteConcern = new WriteConcern(option.Value.ToInt32());
                     }
+                    break;
+
+                case "retryReads":
+                    settings.RetryReads = option.Value.ToBoolean();
+                    break;
+
+                case "appname":
+                    settings.ApplicationName = option.Value.ToString();
+                    break;
+
+                case "connectTimeoutMS":
+                    settings.ConnectTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                    break;
+
+                case "heartbeatFrequencyMS":
+                    settings.HeartbeatInterval = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                    break;
+
+                case "serverSelectionTimeoutMS":
+                    settings.ServerSelectionTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
                     break;
 
                 default:
@@ -361,6 +391,23 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 useMultipleShardRouters);
         }
 
+        protected virtual List<object> ExtractEventsForAsserting(EventCapturer eventCapturer)
+        {
+            var events = new List<object>();
+
+            while (eventCapturer.Any())
+            {
+                events.Add(eventCapturer.Next());
+            }
+
+            return events;
+        }
+
+        protected virtual EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
+        {
+            return eventCapturer.Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
+        }
+
         protected void SetupAndRunTest(JsonDrivenTestCase testCase)
         {
             CheckServerRequirements(testCase.Shared);
@@ -391,18 +438,6 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         }
 
         // private methods
-        private List<CommandStartedEvent> GetEvents(EventCapturer eventCapturer)
-        {
-            var events = new List<CommandStartedEvent>();
-
-            while (eventCapturer.Any())
-            {
-                events.Add((CommandStartedEvent)eventCapturer.Next());
-            }
-
-            return events;
-        }
-
         private ReadPreference ReadPreferenceFromBsonValue(BsonValue value)
         {
             if (value.BsonType == BsonType.String)
@@ -443,7 +478,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                 EventCapturer eventCapturer = null;
                 if (ShouldEventsBeChecked)
                 {
-                    eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => !DefaultCommandsToNotCapture.Contains(e.CommandName));
+                    eventCapturer = InitializeEventCapturer(new EventCapturer());
                 }
 
                 RunTest(shared, test, eventCapturer);

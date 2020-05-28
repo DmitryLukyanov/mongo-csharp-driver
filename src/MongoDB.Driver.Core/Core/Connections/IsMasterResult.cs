@@ -365,6 +365,23 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         /// <summary>
+        /// Gets the topology version.
+        /// </summary>
+        /// <value>
+        /// The topology version value.
+        /// </value>
+        public TopologyVersion TopologyVersion
+        {
+            get
+            {
+                return
+                    _wrapped.TryGetValue("topologyVersion", out var topologyDescription)
+                    ? TopologyVersion.Parse(topologyDescription.AsBsonDocument)
+                    : null;
+            }
+        }
+
+        /// <summary>
         /// Gets the maximum wire version.
         /// </summary>
         /// <value>

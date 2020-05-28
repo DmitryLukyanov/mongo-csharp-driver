@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,6 +22,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Configuration;
+using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.WireProtocol;
 
 namespace MongoDB.Driver.Core.Connections
@@ -39,9 +41,16 @@ namespace MongoDB.Driver.Core.Connections
             return command.Add("compression", compressorsArray);
         }
 
-        internal static BsonDocument CreateCommand()
+        internal static BsonDocument CreateCommand(TopologyVersion topologyVersion = null, TimeSpan? maxAwaitTime = null)
         {
-            return new BsonDocument { { "isMaster", 1 } };
+            return new BsonDocument
+            {
+                { "isMaster", 1 },
+                // both topologyVersion and maxAwaitTimeMS must be filled or not, but maxAwaitTime will have a value
+                // under some circumstances even for non streamable protocol
+                { "topologyVersion", topologyVersion?.ToBsonDocument(), topologyVersion != null },
+                { "maxAwaitTimeMS", maxAwaitTime?.TotalMilliseconds, maxAwaitTime.HasValue && topologyVersion != null }
+            };
         }
 
         internal static BsonDocument CustomizeCommand(BsonDocument command, IReadOnlyList<IAuthenticator> authenticators)
@@ -84,8 +93,8 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
-                var isMasterResult = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
-                return new IsMasterResult(isMasterResult);
+                var isMasterResultDocument = await isMasterProtocol.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
+                return new IsMasterResult(isMasterResultDocument);
             }
             catch (MongoCommandException ex) when (ex.Code == 11)
             {

@@ -19,7 +19,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
@@ -31,18 +31,20 @@ namespace MongoDB.Driver.Core.Servers
     {
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
-        private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
         private readonly ServerDescription _baseDescription;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
+        private volatile bool _currentCheckCancelled;
         private ServerDescription _currentDescription;
         private readonly EndPoint _endPoint;
+        private volatile BuildInfoResult _handshakeBuildInfoResult;
         private HeartbeatDelay _heartbeatDelay;
         private readonly TimeSpan _heartbeatInterval;
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
         private readonly TimeSpan _timeout;
+        private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
 
         private readonly Action<ServerHeartbeatStartedEvent> _heartbeatStartedEventHandler;
         private readonly Action<ServerHeartbeatSucceededEvent> _heartbeatSucceededEventHandler;
@@ -61,6 +63,8 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
+            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _cancellationTokenSource.Token);
+
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
             eventSubscriber.TryGetEventHandler(out _heartbeatSucceededEventHandler);
@@ -69,6 +73,15 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         public ServerDescription Description => Interlocked.CompareExchange(ref _currentDescription, null, null);
+
+        // public methods
+        public void Cancel()
+        {
+            if (_connection != null)
+            {
+                _currentCheckCancelled = true;
+            }
+        }
 
         public void Dispose()
         {
@@ -80,6 +93,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     _connection.Dispose();
                 }
+                _roundTripTimeMonitor.Dispose();
             }
         }
 
@@ -88,6 +102,7 @@ namespace MongoDB.Driver.Core.Servers
             if (_state.TryChange(State.Initial, State.Open))
             {
                 MonitorServerAsync().ConfigureAwait(false);
+                _roundTripTimeMonitor.Run().ConfigureAwait(false);
             }
         }
 
@@ -105,6 +120,29 @@ namespace MongoDB.Driver.Core.Servers
             {
                 heartbeatDelay.RequestHeartbeat();
             }
+        }
+
+        // private methods
+        private CommandWireProtocol<BsonDocument> CreateIsMasterProtocol(IConnection connection)
+        {
+            var isMasterCommand = IsMasterHelper.CreateCommand(
+                connection.Description.IsMasterResult.TopologyVersion,  // can be null
+                _heartbeatInterval);
+            return IsMasterHelper.CreateProtocol(isMasterCommand);
+        }
+
+        private async Task<IsMasterResult> InitializeConnectionAsync(CancellationToken cancellationToken)
+        {
+            _connection = _connectionFactory.CreateConnection(_serverId, _endPoint);
+            // if we are cancelling, it's because the server has
+            // been shut down and we really don't need to wait.
+            var stopwatch = Stopwatch.StartNew();
+            await _connection.OpenAsync(cancellationToken).ConfigureAwait(false); //TODO: cancellation token?
+            stopwatch.Stop();
+
+            _handshakeBuildInfoResult = _connection.Description.BuildInfoResult;
+            _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(stopwatch.Elapsed);
+            return _connection.Description.IsMasterResult;
         }
 
         private async Task MonitorServerAsync()
@@ -162,7 +200,7 @@ namespace MongoDB.Driver.Core.Servers
                     {
                         oldHeartbeatDelay.Dispose();
                     }
-                    await newHeartbeatDelay.Task.ConfigureAwait(false);
+                    await newHeartbeatDelay.Task.ConfigureAwait(false); // RequestHeartbeat() !!!
                 }
                 catch
                 {
@@ -171,131 +209,126 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
-        private async Task<bool> HeartbeatAsync(CancellationToken cancellationToken)
+        private async Task HeartbeatAsync(CancellationToken cancellationToken)
         {
-            const int maxRetryCount = 2;
-            HeartbeatInfo heartbeatInfo = null;
+            IsMasterResult heartbeatIsMasterResult = null;
             Exception heartbeatException = null;
-            for (var attempt = 1; attempt <= maxRetryCount; attempt++)
+
+            CommandWireProtocol<BsonDocument> isMasterProtocol = null;
+
+            do
             {
-                var connection = _connection;
                 try
                 {
-                    if (connection == null)
+                    if (_connection == null)
                     {
-                        connection = _connectionFactory.CreateConnection(_serverId, _endPoint);
-                        // if we are cancelling, it's because the server has
-                        // been shut down and we really don't need to wait.
-                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                        heartbeatIsMasterResult = await InitializeConnectionAsync(cancellationToken).ConfigureAwait(false);
                     }
-
-                    heartbeatInfo = await GetHeartbeatInfoAsync(connection, cancellationToken).ConfigureAwait(false);
-                    heartbeatException = null;
-
-                    _connection = connection;
-                    break;
+                    else
+                    {
+                        isMasterProtocol = isMasterProtocol ?? CreateIsMasterProtocol(_connection);
+                        heartbeatIsMasterResult = await GetHeartbeatInfoAsync(isMasterProtocol, _connection, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex)
                 {
                     heartbeatException = ex;
-                    _connection = null;
-                    if (connection != null)
+                    if (_connection != null)
                     {
-                        connection.Dispose();
+                        if ((ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException) ||
+                            ex is MongoCommandException)
+                        {
+                            _connection.Dispose();
+                            _connection = null;
+                            _handshakeBuildInfoResult = null;
+                            //_connectionPool.Clear(); // Think about inderect way
+                            //Invalidate("Heartbeat exception.");
+                            // TODO: clear connection pool
+                            // if this was a network error and the server was in a known state before the error, the client MUST NOT sleep and MUST begin the next check immediately. (See retry ismaster calls once and JAVA-1159.)
+                        }
                     }
                 }
+
+                if (_handshakeBuildInfoResult == null)
+                {
+                    // we can be here only if there is a bug in the driver
+                    throw new ArgumentNullException("BuildInfo has been lost.");
+                }
+
+                if (_currentCheckCancelled)
+                {
+                    _currentCheckCancelled = false;
+                    return;
+                }
+
+                ServerDescription newDescription;
+                if (heartbeatIsMasterResult != null)
+                {
+                    var averageRoundTripTime = _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
+                    var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
+
+                    newDescription = _baseDescription.With(
+                        averageRoundTripTime: averageRoundTripTimeRounded,
+                        canonicalEndPoint: heartbeatIsMasterResult.Me,
+                        electionId: heartbeatIsMasterResult.ElectionId,
+                        lastWriteTimestamp: heartbeatIsMasterResult.LastWriteTimestamp,
+                        logicalSessionTimeout: heartbeatIsMasterResult.LogicalSessionTimeout,
+                        maxBatchCount: heartbeatIsMasterResult.MaxBatchCount,
+                        maxDocumentSize: heartbeatIsMasterResult.MaxDocumentSize,
+                        maxMessageSize: heartbeatIsMasterResult.MaxMessageSize,
+                        replicaSetConfig: heartbeatIsMasterResult.GetReplicaSetConfig(),
+                        state: ServerState.Connected,
+                        tags: heartbeatIsMasterResult.Tags,
+                        type: heartbeatIsMasterResult.ServerType,
+                        version: _handshakeBuildInfoResult.ServerVersion,
+                        wireVersionRange: new Range<int>(heartbeatIsMasterResult.MinWireVersion, heartbeatIsMasterResult.MaxWireVersion));
+                }
+                else
+                {
+                    newDescription = _baseDescription.With(lastUpdateTimestamp: DateTime.UtcNow);
+                }
+
+                if (heartbeatException != null)
+                {
+                    newDescription = newDescription.With(heartbeatException: heartbeatException);
+                }
+
+                newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);
+
+                SetDescription(newDescription);
             }
-
-            ServerDescription newDescription;
-            if (heartbeatInfo != null)
-            {
-                var averageRoundTripTime = _averageRoundTripTimeCalculator.AddSample(heartbeatInfo.RoundTripTime);
-                var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
-                var isMasterResult = heartbeatInfo.IsMasterResult;
-                var buildInfoResult = heartbeatInfo.BuildInfoResult;
-
-                newDescription = _baseDescription.With(
-                    averageRoundTripTime: averageRoundTripTimeRounded,
-                    canonicalEndPoint: isMasterResult.Me,
-                    electionId: isMasterResult.ElectionId,
-                    lastWriteTimestamp: isMasterResult.LastWriteTimestamp,
-                    logicalSessionTimeout: isMasterResult.LogicalSessionTimeout,
-                    maxBatchCount: isMasterResult.MaxBatchCount,
-                    maxDocumentSize: isMasterResult.MaxDocumentSize,
-                    maxMessageSize: isMasterResult.MaxMessageSize,
-                    replicaSetConfig: isMasterResult.GetReplicaSetConfig(),
-                    state: ServerState.Connected,
-                    tags: isMasterResult.Tags,
-                    type: isMasterResult.ServerType,
-                    version: buildInfoResult.ServerVersion,
-                    wireVersionRange: new Range<int>(isMasterResult.MinWireVersion, isMasterResult.MaxWireVersion));
-            }
-            else
-            {
-                newDescription = _baseDescription.With(lastUpdateTimestamp: DateTime.UtcNow);
-            }
-
-            if (heartbeatException != null)
-            {
-                newDescription = newDescription.With(heartbeatException: heartbeatException);
-            }
-
-            newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);
-
-            SetDescription(newDescription);
-
-            return true;
+            while (heartbeatException == null && isMasterProtocol != null && isMasterProtocol.MoreResponsesExpected); // true for stremable isMaster
         }
 
-        private async Task<HeartbeatInfo> GetHeartbeatInfoAsync(IConnection connection, CancellationToken cancellationToken)
+        private async Task<IsMasterResult> GetHeartbeatInfoAsync(
+            CommandWireProtocol<BsonDocument> isMasterProtocol,
+            IConnection connection,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_heartbeatStartedEventHandler != null)
             {
-                _heartbeatStartedEventHandler(new ServerHeartbeatStartedEvent(connection.ConnectionId));
+                _heartbeatStartedEventHandler(new ServerHeartbeatStartedEvent(connection.ConnectionId, connection.Description.IsMasterResult.TopologyVersion != null));
             }
 
             try
             {
-                var isMasterCommand = new CommandWireProtocol<BsonDocument>(
-                    DatabaseNamespace.Admin,
-                    new BsonDocument("isMaster", 1),
-                    true,
-                    BsonDocumentSerializer.Instance,
-                    null);
-
                 var stopwatch = Stopwatch.StartNew();
-                var isMasterResultDocument = await isMasterCommand.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
+                var isMasterResult = await IsMasterHelper.GetResultAsync(connection, isMasterProtocol, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
-                var isMasterResult = new IsMasterResult(isMasterResultDocument);
-
-                var buildInfoCommand = new CommandWireProtocol<BsonDocument>(
-                    DatabaseNamespace.Admin,
-                    new BsonDocument("buildInfo", 1),
-                    true,
-                    BsonDocumentSerializer.Instance,
-                    null);
-
-                var buildInfoResultRocument = await buildInfoCommand.ExecuteAsync(connection, cancellationToken).ConfigureAwait(false);
-                var buildInfoResult = new BuildInfoResult(buildInfoResultRocument);
 
                 if (_heartbeatSucceededEventHandler != null)
                 {
-                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, stopwatch.Elapsed));
+                    _heartbeatSucceededEventHandler(new ServerHeartbeatSucceededEvent(connection.ConnectionId, stopwatch.Elapsed, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
 
-                return new HeartbeatInfo
-                {
-                    RoundTripTime = stopwatch.Elapsed,
-                    IsMasterResult = isMasterResult,
-                    BuildInfoResult = buildInfoResult
-                };
+                return isMasterResult;
             }
             catch (Exception ex)
             {
                 if (_heartbeatFailedEventHandler != null)
                 {
-                    _heartbeatFailedEventHandler(new ServerHeartbeatFailedEvent(connection.ConnectionId, ex));
+                    _heartbeatFailedEventHandler(new ServerHeartbeatFailedEvent(connection.ConnectionId, ex, connection.Description.IsMasterResult.TopologyVersion != null));
                 }
                 throw;
             }
@@ -348,12 +381,107 @@ namespace MongoDB.Driver.Core.Servers
             public const int Open = 1;
             public const int Disposed = 2;
         }
+    }
 
-        private class HeartbeatInfo
+    internal class RoundTripTimeMonitor : IDisposable
+    {
+        private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
+
+        private readonly CancellationToken _cancellationToken;
+        private readonly IConnectionFactory _connectionFactory;
+        private readonly EndPoint _endPoint;
+        private IConnection _roundTripTimeConnection;
+        private readonly ServerId _serverId;
+        private readonly TimeSpan _heartbeatFrequency;
+
+        public RoundTripTimeMonitor(
+            IConnectionFactory connectionFactory,
+            ServerId serverId,
+            EndPoint endpoint,
+            TimeSpan heartbeatFrequency,
+            CancellationToken cancellationToken)
         {
-            public TimeSpan RoundTripTime;
-            public IsMasterResult IsMasterResult;
-            public BuildInfoResult BuildInfoResult;
+            _cancellationToken = cancellationToken;
+            _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
+            _endPoint = Ensure.IsNotNull(endpoint, nameof(endpoint));
+            _heartbeatFrequency = heartbeatFrequency;
+            _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
+        }
+
+        public ExponentiallyWeightedMovingAverage ExponentiallyWeightedMovingAverage => _averageRoundTripTimeCalculator;
+
+        public async Task InitializeConnectionAsync()
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+
+            _roundTripTimeConnection = _connectionFactory.CreateConnection(_serverId, _endPoint);
+            // if we are cancelling, it's because the server has
+            // been shut down and we really don't need to wait.
+            var stopwatch = Stopwatch.StartNew();
+            await _roundTripTimeConnection.OpenAsync(_cancellationToken).ConfigureAwait(false);
+            stopwatch.Stop();
+            _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
+        }
+
+        public async Task Run()
+        {
+            while (!_cancellationToken.IsCancellationRequested) // TODO: different token?
+            {
+                try
+                {
+                    if (_roundTripTimeConnection == null)
+                    {
+                        await InitializeConnectionAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var isMasterCommand = IsMasterHelper.CreateCommand();
+                            var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
+
+                            var stopwatch = Stopwatch.StartNew();
+                            var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
+                            stopwatch.Stop();
+                            _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
+                        }
+                        catch (Exception ex) when (ShouldCloseRoundTripConnection(ex))
+                        {
+                            _roundTripTimeConnection.Dispose();
+                            _roundTripTimeConnection = null;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignore exceptions
+                }
+
+                await Task.Delay(_heartbeatFrequency).ConfigureAwait(false);
+            }
+
+            bool ShouldCloseRoundTripConnection(Exception ex)
+            {
+                return
+                    ex is MongoCommandException ||
+                    (ex is MongoConnectionException mongoConnectionException &&
+                    mongoConnectionException.ContainsSocketTimeoutException); // TODO: check
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_roundTripTimeConnection != null)
+            {
+                try
+                {
+                    _roundTripTimeConnection.Dispose();
+                }
+                catch
+                {
+                    // ignore it
+                }
+            }
         }
     }
 }

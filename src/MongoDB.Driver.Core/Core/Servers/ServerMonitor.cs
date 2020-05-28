@@ -32,7 +32,8 @@ namespace MongoDB.Driver.Core.Servers
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
         private readonly ServerDescription _baseDescription;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _monitorCancelationSource = new CancellationTokenSource();
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
         private readonly IConnectionPool _connectionPool;
@@ -66,7 +67,7 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _cancellationTokenSource.Token);
+            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationToken.Token);
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -82,7 +83,8 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (_connection != null)
             {
-               _cancellationTokenSource.Cancel(); // atomic set
+                _operationCancelationSource.Cancel();
+                //_currentCheckCancelled = true;   // atomic set
             }
         }
 
@@ -90,8 +92,10 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (_state.TryChange(State.Disposed))
             {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
+                _operationCancelationSource.Cancel();
+                _operationCancelationSource.Dispose();
+                _monitorCancelationSource.Cancel();
+                _monitorCancelationSource.Dispose();
                 if (_connection != null)
                 {
                     _connection.Dispose();
@@ -158,19 +162,20 @@ namespace MongoDB.Driver.Core.Servers
         private async Task MonitorServerAsync()
         {
             var metronome = new Metronome(_heartbeatInterval);
-            var heartbeatCancellationToken = _cancellationTokenSource.Token;
-            while (!heartbeatCancellationToken.IsCancellationRequested)
+            var monitorCancellationToken = _monitorCancelationSource.Token;
+            var operationCancellationToken = _operationCancelationSource.Token;
+
+            while (!monitorCancellationToken.IsCancellationRequested)
             {
                 try
                 {
                     try
                     {
-                        await HeartbeatAsync(heartbeatCancellationToken).ConfigureAwait(false);
+                        await HeartbeatAsync(operationCancellationToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (heartbeatCancellationToken.IsCancellationRequested)
+                    catch (OperationCanceledException) when (operationCancellationToken.IsCancellationRequested)
                     {
                         // ignore OperationCanceledException when heartbeat cancellation is requested
-                        return;
                     }
                     catch (Exception unexpectedException)
                     {

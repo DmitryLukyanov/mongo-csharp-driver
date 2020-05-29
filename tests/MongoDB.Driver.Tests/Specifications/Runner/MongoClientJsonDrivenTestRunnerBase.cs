@@ -473,6 +473,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             CreateCollection(client, DatabaseName, CollectionName, test, shared);
             InsertData(client, DatabaseName, CollectionName, shared);
 
+            client.Cluster.Dispose();
             Thread.Sleep(10000);
 
             using (ConfigureFailPoint(test))

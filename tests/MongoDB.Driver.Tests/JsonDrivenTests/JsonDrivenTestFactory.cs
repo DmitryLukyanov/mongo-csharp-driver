@@ -78,7 +78,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "targetedFailPoint": //TODO: merge?
                             return new JsonDrivenTargetedFailPointTest(_testRunner, _objectMap);
                         case "configureFailPoint": //TODO: merge?
-                            return new JsonDrivenConfigureFailPoint(_testRunner, _objectMap);
+                            return new JsonDrivenConfigureFailPoint(_testRunner, _client, _objectMap);
                         case "assertCollectionExists": return new JsonDrivenAssertCollectionExists(_testRunner, _objectMap);
                         case "assertCollectionNotExists": return new JsonDrivenAssertCollectionNotExists(_testRunner, _objectMap);
                         case "assertDifferentLsidOnLastTwoCommands": return new JsonDrivenAssertDifferentLsidOnLastTwoCommandsTest(_testRunner, _eventCapturer, _objectMap);

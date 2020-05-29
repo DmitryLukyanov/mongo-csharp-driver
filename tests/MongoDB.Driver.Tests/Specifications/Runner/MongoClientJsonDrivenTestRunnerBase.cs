@@ -473,6 +473,8 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             CreateCollection(client, DatabaseName, CollectionName, test, shared);
             InsertData(client, DatabaseName, CollectionName, shared);
 
+            Thread.Sleep(10000);
+
             using (ConfigureFailPoint(test))
             {
                 EventCapturer eventCapturer = null;

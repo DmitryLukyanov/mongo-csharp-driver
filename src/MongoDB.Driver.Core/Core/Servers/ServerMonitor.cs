@@ -32,7 +32,7 @@ namespace MongoDB.Driver.Core.Servers
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
         private readonly ServerDescription _baseDescription;
-        private readonly CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
+        private CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
         private readonly CancellationTokenSource _monitorCancelationSource = new CancellationTokenSource();
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
@@ -67,7 +67,7 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationToken.Token);
+            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationSource.Token);
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -163,12 +163,21 @@ namespace MongoDB.Driver.Core.Servers
         {
             var metronome = new Metronome(_heartbeatInterval);
             var monitorCancellationToken = _monitorCancelationSource.Token;
-            var operationCancellationToken = _operationCancelationSource.Token;
 
             while (!monitorCancellationToken.IsCancellationRequested)
             {
                 try
                 {
+                    CancellationToken operationCancellationToken;
+                    lock (_lock)
+                    {
+                        if (_operationCancelationSource.IsCancellationRequested)
+                        {
+                            _operationCancelationSource = new CancellationTokenSource();
+                            operationCancellationToken = _operationCancelationSource.Token;
+                        }
+                    }
+
                     try
                     {
                         await HeartbeatAsync(operationCancellationToken).ConfigureAwait(false);

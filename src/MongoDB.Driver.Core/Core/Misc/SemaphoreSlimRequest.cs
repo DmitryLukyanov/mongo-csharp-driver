@@ -41,11 +41,17 @@ namespace MongoDB.Driver.Core.Misc
         /// <param name="cancellationToken">The cancellation token.</param>
         public SemaphoreSlimRequest(SemaphoreSlim semaphore, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                Console.WriteLine("test");
+            });
 
             _semaphore = Ensure.IsNotNull(semaphore, nameof(semaphore));
 
             _disposeCancellationTokenSource = new CancellationTokenSource();
             _linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCancellationTokenSource.Token);
+
+
             _task = semaphore.WaitAsync(_linkedCancellationTokenSource.Token);
         }
 

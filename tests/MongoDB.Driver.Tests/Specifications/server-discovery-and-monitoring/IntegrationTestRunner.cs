@@ -41,8 +41,9 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 
         protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
         {
-            return base
-                .InitializeEventCapturer(eventCapturer) // CommandStartedEvent is added by default
+            var doNotCaptureEvents = DefaultCommandsToNotCapture;
+            doNotCaptureEvents.Add("configureFailPoint");
+            return eventCapturer.Capture<CommandStartedEvent>(e => !doNotCaptureEvents.Contains(e.CommandName))
                 .Capture<ServerDescriptionChangedEvent>()
                 .Capture<ConnectionPoolClearedEvent>();
         }

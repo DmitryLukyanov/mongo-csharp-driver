@@ -32,11 +32,10 @@ namespace MongoDB.Driver.Core.Servers
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
         private readonly ServerDescription _baseDescription;
-        private CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
-        private readonly CancellationTokenSource _monitorCancelationSource = new CancellationTokenSource();
+        // private CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
-        private readonly IConnectionPool _connectionPool;
         private volatile bool _currentCheckCancelled;
         private ServerDescription _currentDescription;
         private readonly EndPoint _endPoint;
@@ -47,7 +46,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
         private readonly TimeSpan _timeout;
-        private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
+        //private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
 
         private readonly Action<ServerHeartbeatStartedEvent> _heartbeatStartedEventHandler;
         private readonly Action<ServerHeartbeatSucceededEvent> _heartbeatSucceededEventHandler;
@@ -61,13 +60,12 @@ namespace MongoDB.Driver.Core.Servers
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
             _endPoint = Ensure.IsNotNull(endPoint, nameof(endPoint));
             _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
-            _connectionPool = Ensure.IsNotNull(connectionPool, nameof(connectionPool));
             Ensure.IsNotNull(eventSubscriber, nameof(eventSubscriber));
 
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationSource.Token);
+           // _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationSource.Token);
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -81,10 +79,15 @@ namespace MongoDB.Driver.Core.Servers
         // public methods
         public void Cancel()
         {
+            //if (_connection != null)
+            //{
+            //    _operationCancelationSource.Cancel();
+            //    //_currentCheckCancelled = true;   // atomic set
+            //}
             if (_connection != null)
             {
-                _operationCancelationSource.Cancel();
-                //_currentCheckCancelled = true;   // atomic set
+                _currentCheckCancelled = true;
+                _connection.Dispose();
             }
         }
 
@@ -92,15 +95,13 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (_state.TryChange(State.Disposed))
             {
-                _operationCancelationSource.Cancel();
-                _operationCancelationSource.Dispose();
-                _monitorCancelationSource.Cancel();
-                _monitorCancelationSource.Dispose();
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
                 if (_connection != null)
                 {
                     _connection.Dispose();
                 }
-                _roundTripTimeMonitor.Dispose();
+               // _roundTripTimeMonitor.Dispose();
             }
         }
 
@@ -109,7 +110,7 @@ namespace MongoDB.Driver.Core.Servers
             if (_state.TryChange(State.Initial, State.Open))
             {
                 MonitorServerAsync().ConfigureAwait(false);
-                _roundTripTimeMonitor.Run().ConfigureAwait(false);
+               // _roundTripTimeMonitor.Run().ConfigureAwait(false);
             }
         }
 
@@ -155,34 +156,23 @@ namespace MongoDB.Driver.Core.Servers
             stopwatch.Stop();
 
             _handshakeBuildInfoResult = _connection.Description.BuildInfoResult;
-            _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(stopwatch.Elapsed);
+            //_roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(stopwatch.Elapsed);
             return _connection.Description.IsMasterResult;
         }
 
         private async Task MonitorServerAsync()
         {
             var metronome = new Metronome(_heartbeatInterval);
-            var monitorCancellationToken = _monitorCancelationSource.Token;
-
-            while (!monitorCancellationToken.IsCancellationRequested)
+            var heartbeatCancellationToken = _cancellationTokenSource.Token;
+            while (!heartbeatCancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    CancellationToken operationCancellationToken;
-                    lock (_lock)
-                    {
-                        if (_operationCancelationSource.IsCancellationRequested)
-                        {
-                            _operationCancelationSource = new CancellationTokenSource();
-                            operationCancellationToken = _operationCancelationSource.Token;
-                        }
-                    }
-
                     try
                     {
-                        await HeartbeatAsync(operationCancellationToken).ConfigureAwait(false);
+                        await HeartbeatAsync(heartbeatCancellationToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (operationCancellationToken.IsCancellationRequested)
+                    catch (OperationCanceledException) when (heartbeatCancellationToken.IsCancellationRequested)
                     {
                         // ignore OperationCanceledException when heartbeat cancellation is requested
                     }
@@ -226,6 +216,7 @@ namespace MongoDB.Driver.Core.Servers
                         oldHeartbeatDelay.Dispose();
                     }
                     await newHeartbeatDelay.Task.ConfigureAwait(false);
+                    //await Task.Delay(10000).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -254,6 +245,12 @@ namespace MongoDB.Driver.Core.Servers
                         isMasterProtocol = isMasterProtocol ?? CreateIsMasterProtocol(_connection);
                         heartbeatIsMasterResult = await GetHeartbeatInfoAsync(isMasterProtocol, _connection, cancellationToken).ConfigureAwait(false);
                     }
+                }
+                catch (ObjectDisposedException) when (_currentCheckCancelled)
+                {
+                    _currentCheckCancelled = false;
+                    _connection = null;
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -289,7 +286,7 @@ namespace MongoDB.Driver.Core.Servers
                 ServerDescription newDescription;
                 if (heartbeatIsMasterResult != null)
                 {
-                    var averageRoundTripTime = _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
+                    var averageRoundTripTime = TimeSpan.FromSeconds(1);//_roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
                     var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
 
                     newDescription = _baseDescription.With(

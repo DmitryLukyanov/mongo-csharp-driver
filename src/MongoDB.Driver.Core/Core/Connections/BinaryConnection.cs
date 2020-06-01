@@ -333,6 +333,11 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
+                _backgroundTaskCancellationToken.Register(() =>
+                {
+                    Console.WriteLine("RecBuffAss");
+                });
+
                 var messageSizeBytes = new byte[4];
                 using (var effectiveStream = new StreamStateModifier(_stream, additionalAwaitTime))
                 {
@@ -359,6 +364,11 @@ namespace MongoDB.Driver.Core.Connections
 
         private IByteBuffer ReceiveBuffer(int responseTo, TimeSpan? additionalAwaitTime, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                Console.WriteLine("ReceiveBuffer");
+            });
+
             using (var receiveLockRequest = new SemaphoreSlimRequest(_receiveLock, cancellationToken))
             {
                 var messageTask = _dropbox.GetMessageAsync(responseTo);
@@ -398,6 +408,10 @@ namespace MongoDB.Driver.Core.Connections
         {
             try
             {
+                _backgroundTaskCancellationToken.Register(() =>
+                {
+                    Console.WriteLine("RecBuffAss");
+                });
                 var messageSizeBytes = new byte[4];
                 TimeSpan readTimeout;
                 if (_stream.CanTimeout)
@@ -433,6 +447,11 @@ namespace MongoDB.Driver.Core.Connections
 
         private async Task<IByteBuffer> ReceiveBufferAsync(int responseTo, TimeSpan? additionalAwaitTime, CancellationToken cancellationToken)
         {
+            cancellationToken.Register(() =>
+            {
+                Console.WriteLine("ReceiveBufferAsync");
+            });
+
             using (var receiveLockRequest = new SemaphoreSlimRequest(_receiveLock, cancellationToken))
             {
                 var messageTask = _dropbox.GetMessageAsync(responseTo);

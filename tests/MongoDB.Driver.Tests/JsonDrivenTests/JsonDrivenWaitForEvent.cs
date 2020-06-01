@@ -54,7 +54,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             switch (name)
             {
                 case "count":
-                    _count = value.ToInt32();
+                    _count = value.ToInt32();     // TODO:!!!!!
                     return;
 
                 case "event":
@@ -86,6 +86,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             }
 
             return events => events.Any(eventCondition);
+            //return events => events.Count(eventCondition) == _count;
         }
 
         private void Wait()

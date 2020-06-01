@@ -287,9 +287,9 @@ namespace MongoDB.Driver.Core.Servers
                 mongoConnectionException.IsNetworkException &&
                 !mongoConnectionException.ContainsSocketTimeoutException)
             {
-                _connectionPool.Clear();
+                //_connectionPool.Clear();
                 _monitor.Cancel();
-                return;
+                //return;
             }
 
             if (ShouldInvalidateServer(connection, ex, Description, out TopologyVersion responseTopologyVersion))

@@ -21,7 +21,7 @@
       "description": "Cancel server check",
       "clientOptions": {
         "retryWrites": true,
-        "heartbeatFrequencyMS": 100000,
+        "heartbeatFrequencyMS": 10000,
         "serverSelectionTimeoutMS": 5000,
         "appname": "cancelServerCheckTest"
       },

@@ -52,11 +52,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         public override void Assert()
         {
             var eventCondition = MapEventNameToCondition(_event);
-            var actualCount = _eventCapturer
+            var actualEventsCount = _eventCapturer
                 .Events
                 .Count(eventCondition);
 
-            actualCount.Should().Be(_count, $"Because the expected events number for {_event} is {_count}, but found {actualCount}.");
+            actualEventsCount.Should().Be(_count, $"{_event} must be triggered only {_count}");
         }
 
         protected override void SetArgument(string name, BsonValue value)

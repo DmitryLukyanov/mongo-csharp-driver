@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
         private readonly TimeSpan _timeout;
-        //private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
+        private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
 
         private readonly Action<ServerHeartbeatStartedEvent> _heartbeatStartedEventHandler;
         private readonly Action<ServerHeartbeatSucceededEvent> _heartbeatSucceededEventHandler;
@@ -65,7 +65,7 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-           // _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _monitorCancelationSource.Token);
+            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _cancellationTokenSource.Token);
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -101,7 +101,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     _connection.Dispose();
                 }
-               // _roundTripTimeMonitor.Dispose();
+                _roundTripTimeMonitor.Dispose();
             }
         }
 
@@ -110,7 +110,7 @@ namespace MongoDB.Driver.Core.Servers
             if (_state.TryChange(State.Initial, State.Open))
             {
                 MonitorServerAsync().ConfigureAwait(false);
-               // _roundTripTimeMonitor.Run().ConfigureAwait(false);
+                _roundTripTimeMonitor.Run().ConfigureAwait(false);
             }
         }
 
@@ -156,7 +156,7 @@ namespace MongoDB.Driver.Core.Servers
             stopwatch.Stop();
 
             _handshakeBuildInfoResult = _connection.Description.BuildInfoResult;
-            //_roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(stopwatch.Elapsed);
+            _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.AddSample(stopwatch.Elapsed);
             return _connection.Description.IsMasterResult;
         }
 
@@ -286,7 +286,7 @@ namespace MongoDB.Driver.Core.Servers
                 ServerDescription newDescription;
                 if (heartbeatIsMasterResult != null)
                 {
-                    var averageRoundTripTime = TimeSpan.FromSeconds(1);//_roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
+                    var averageRoundTripTime = _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
                     var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
 
                     newDescription = _baseDescription.With(

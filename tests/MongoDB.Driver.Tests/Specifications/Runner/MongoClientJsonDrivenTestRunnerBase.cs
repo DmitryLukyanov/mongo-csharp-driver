@@ -474,7 +474,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             InsertData(client, DatabaseName, CollectionName, shared);
 
             //client.Cluster.Dispose();
-            Thread.Sleep(20000);
+            //Thread.Sleep(20000);
 
             using (ConfigureFailPoint(test))
             {

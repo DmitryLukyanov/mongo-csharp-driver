@@ -245,10 +245,18 @@ namespace MongoDB.Driver.Core.Servers
         {
             var currentDescription = Interlocked.CompareExchange(ref _currentDescription, value: null, comparand: null);
 
+            var heartbeatException = e.NewServerDescription.HeartbeatException;
+            // The heartbeat commands are isMaster + buildInfo. These commands will throw a MongoCommandException on
+            // {ok: 0}, but a reply (with a potential topologyVersion) will still have been received.
+            // Not receiving a reply to the heartbeat commands implies a network error or a "HeartbeatFailed" type
+            // exception (i.e. ServerDescription.WithHeartbeatException was called), in which case we should immediately
+            // set the description to "Unknown"// (which is what e.NewServerDescription will be in such a case)
+            var heartbeatReplyNotReceived = heartbeatException != null && !(heartbeatException is MongoCommandException);
+
             // We cannot use FresherThan(e.NewServerDescription.TopologyVersion, currentDescription.TopologyVersion)
-            // because due to how// TopologyVersions comparisons are defined, IsStalerThanOrEqualTo(x, y) does not imply
+            // because due to how TopologyVersions comparisons are defined, IsStalerThanOrEqualTo(x, y) does not imply
             // FresherThan(y, x)
-            if (e.NewServerDescription.HeartbeatException != null ||
+            if (heartbeatReplyNotReceived ||
                 TopologyVersion.IsStalerThanOrEqualTo(currentDescription.TopologyVersion, e.NewServerDescription.TopologyVersion))
             {
                 SetDescription(e.NewServerDescription);

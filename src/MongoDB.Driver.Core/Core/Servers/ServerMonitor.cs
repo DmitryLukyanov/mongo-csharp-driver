@@ -32,7 +32,6 @@ namespace MongoDB.Driver.Core.Servers
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
         private readonly ServerDescription _baseDescription;
-        // private CancellationTokenSource _operationCancelationSource = new CancellationTokenSource();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
@@ -79,11 +78,6 @@ namespace MongoDB.Driver.Core.Servers
         // public methods
         public void Cancel()
         {
-            //if (_connection != null)
-            //{
-            //    _operationCancelationSource.Cancel();
-            //    //_currentCheckCancelled = true;   // atomic set
-            //}
             if (_connection != null)
             {
                 _currentCheckCancelled = true;
@@ -254,6 +248,12 @@ namespace MongoDB.Driver.Core.Servers
                 }
                 catch (Exception ex)
                 {
+                    if (ex.InnerException is OperationCanceledException)
+                    {
+                        // TODO
+                        return;
+                    }
+
                     heartbeatException = ex;
                     if (_connection != null)
                     {
@@ -312,7 +312,15 @@ namespace MongoDB.Driver.Core.Servers
 
                 if (heartbeatException != null)
                 {
-                    newDescription = newDescription.With(heartbeatException: heartbeatException);
+                    if (heartbeatException is MongoCommandException heartbeatCommandException)
+                    {
+                        var topologyVersion = TopologyVersion.FromMongoCommandException(heartbeatCommandException);
+                        newDescription = newDescription.With(heartbeatException: heartbeatException, topologyVersion: topologyVersion);
+                    }
+                    else
+                    {
+                        newDescription = newDescription.With(heartbeatException: heartbeatException);
+                    }
                 }
 
                 newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);

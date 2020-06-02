@@ -93,8 +93,8 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
 
             // stremable options
-            _additionalAwaitTime = GetAdditionalTimeoutIfRequired(_command, _isStremable);
             _isStremable = IsCommandStremable(_command);
+            _additionalAwaitTime = GetAdditionalTimeoutIfRequired(_command, _isStremable);
         }
 
         // public properties

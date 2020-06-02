@@ -35,6 +35,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private readonly EventCapturer _eventCapturer;
         private readonly ConcurrentDictionary<string, Task> _tasks;
 
+        private IJsonDrivenTestContext _testContext;
+
         // public constructors
         public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
             : this(client, databaseName, collectionName, bucketName, objectMap, eventCapturer: null)
@@ -69,6 +71,9 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         // public methods
         public JsonDrivenTest CreateTest(string receiver, string name)
         {
+            // TODO:
+            _testContext = new JsonDrivenRecordPrimaryContext();
+
             IMongoDatabase database;
             switch (receiver)
             {
@@ -94,8 +99,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "waitForEvent": return new JsonDrivenWaitForEvent(_testRunner, _objectMap, _eventCapturer); ;
                         case "assertEventCount": return new JsonDrivenAssertEventsCount(_testRunner, _objectMap, _eventCapturer);
                         case "startThread": return new JsonDrivenStartThread(_testRunner, _objectMap, _tasks);
+                        case "runAdminCommand": return new JsonDrivenRunAdminCommand(_client, _objectMap);
                         case "runOnThread": return new JsonDrivenRunOnThread(_testRunner, _objectMap, _tasks, this);
+                        case "recordPrimary": return new JsonDrivenRecordPrimary(_testContext, _testRunner, _client, _objectMap);
                         case "waitForThread": return new JsonDrivenWaitForThread(_testRunner, _objectMap, _tasks);
+                        case "waitForPrimaryChange": return new JsonDrivenWaitForPrimaryChange(_testContext, _testRunner, _client, _objectMap);
                         default: throw new FormatException($"Invalid method name: \"{name}\".");
                     }
 

@@ -34,7 +34,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         // public methods
         public override void Arrange(BsonDocument document)
         {
-            JsonDrivenHelper.EnsureFieldEquals(document, "object", "database");
+            // TODO
+           // JsonDrivenHelper.EnsureFieldEquals(document, "object", "database");
             base.Arrange(document);
         }
     }

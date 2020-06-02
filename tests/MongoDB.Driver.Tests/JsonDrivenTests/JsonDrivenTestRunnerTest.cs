@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Servers;
 
@@ -27,7 +28,12 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         // protected constructors
         protected JsonDrivenTestRunnerTest(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap)
-            : base(objectMap)
+            : this(null, testRunner, objectMap)
+        {
+        }
+
+        protected JsonDrivenTestRunnerTest(IJsonDrivenTestContext testContext, IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap)
+            : base(testContext, objectMap)
         {
             _testRunner = testRunner;
         }

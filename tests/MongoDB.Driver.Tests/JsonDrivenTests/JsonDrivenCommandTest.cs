@@ -29,6 +29,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         {
         }
 
+        protected JsonDrivenCommandTest(IJsonDrivenTestContext testContext, Dictionary<string, object> objectMap)
+            : base(testContext, objectMap)
+        {
+        }
+
         // protected methods
         protected override void AssertException()
         {

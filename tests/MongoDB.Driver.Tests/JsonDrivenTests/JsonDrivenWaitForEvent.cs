@@ -66,43 +66,39 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         }
 
         // private methods
-        private Func<IEnumerable<object>, bool> MapEventNameToCondition(string eventName)
+        private Func<object, bool> MapEventNameToCondition(string eventName)
         {
-            Func<object, bool> eventCondition = null;
             switch (eventName)
             {
                 case "ServerMarkedUnknownEvent":
-                    eventCondition = @event =>
+                    return @event =>
                         @event is ServerDescriptionChangedEvent serverDescriptionChangedEvent &&
                         serverDescriptionChangedEvent.NewDescription.Type == ServerType.Unknown;
-                    break;
 
                 case "PoolClearedEvent":
-                    eventCondition = @event => @event is ConnectionPoolClearedEvent;
-                    break;
+                    return @event => @event is ConnectionPoolClearedEvent;
 
                 default:
                     throw new Exception("TODO: Unexpected event type.");
             }
-
-            return events => events.Any(eventCondition);
-            //return events => events.Count(eventCondition) == _count;
         }
 
         private void Wait()
         {
             var eventCondition = MapEventNameToCondition(_event);
-            var notifyTask = _eventCapturer.NotifyWhen(eventCondition);
+            Func<IEnumerable<object>, bool> eventsConditionWithFilterByCount = (events) => events.Count(eventCondition) == _count;
+            var notifyTask = _eventCapturer.NotifyWhen(eventsConditionWithFilterByCount);
 
-            var events = _eventCapturer.Events.ToList().Where(c => c is ServerDescriptionChangedEvent).ToList().Cast<ServerDescriptionChangedEvent>();
-            var types = events.Select(c => c.NewDescription.Type.ToString()).ToList();
+            //var events = _eventCapturer.Events.ToList().Where(c => c is ServerDescriptionChangedEvent).ToList().Cast<ServerDescriptionChangedEvent>();
+            //var types = events.Select(c => c.NewDescription.Type.ToString()).ToList();
 
-            var timeout = TimeSpan.FromSeconds(200);
+            var timeout = TimeSpan.FromSeconds(60);
             var testFailedTimeout = Task.Delay(timeout, CancellationToken.None);
             var index = Task.WaitAny(notifyTask, testFailedTimeout);
             if (index != 0)
             {
-                throw new Exception($"Waiting for {_event} exceeded the timeout {timeout}.");
+                var triggeredEvents = _eventCapturer.Events.Count(eventCondition);
+                throw new Exception($"Waiting for {_count} {_event} exceeded the timeout {timeout}. The number of triggered events is {triggeredEvents}.");
             }
         }
     }

@@ -236,7 +236,7 @@ namespace MongoDB.Driver.Core.Servers
                     }
                     else
                     {
-                        isMasterProtocol =  CreateIsMasterProtocol(_connection);
+                        isMasterProtocol = isMasterProtocol ?? CreateIsMasterProtocol(_connection);
                         heartbeatIsMasterResult = await GetHeartbeatInfoAsync(isMasterProtocol, _connection, cancellationToken).ConfigureAwait(false);
                     }
                 }

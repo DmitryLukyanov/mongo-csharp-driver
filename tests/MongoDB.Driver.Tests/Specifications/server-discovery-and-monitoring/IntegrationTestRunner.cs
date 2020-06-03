@@ -43,6 +43,7 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
         {
             var doNotCaptureEvents = DefaultCommandsToNotCapture;
             doNotCaptureEvents.Add("configureFailPoint");
+            doNotCaptureEvents.Add("replSetStepDown");
             return eventCapturer.Capture<CommandStartedEvent>(e => !doNotCaptureEvents.Contains(e.CommandName))
                 .Capture<ServerDescriptionChangedEvent>()
                 .Capture<ConnectionPoolClearedEvent>();

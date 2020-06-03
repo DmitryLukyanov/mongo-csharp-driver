@@ -22,6 +22,7 @@ using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
 using System.Threading;
+using System;
 
 namespace MongoDB.Driver.Examples
 {
@@ -33,12 +34,11 @@ namespace MongoDB.Driver.Examples
 
         public DocumentationExamples()
         {
-            //var connectionString = "";//CoreTestConfiguration.ConnectionString.ToString();
-            client = new MongoClient();
-           // System.Threading.Thread.Sleep(40000);
+            var connectionString = CoreTestConfiguration.ConnectionString.ToString();
+            client = new MongoClient(connectionString);
             database = client.GetDatabase("test");
             collection = database.GetCollection<BsonDocument>("inventory");
-            //database.DropCollection("inventory");
+            database.DropCollection("inventory");
         }
 
         [Fact]
@@ -82,6 +82,19 @@ namespace MongoDB.Driver.Examples
         [Fact]
         public void Example_3()
         {
+            try
+            {
+                var res = client.GetDatabase("admin").RunCommand<BsonDocument>(BsonDocument.Parse(@"{
+              replSetStepDown: 1,
+              secondaryCatchUpPeriodSecs: 1,
+              force: false
+            }"));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
             // db.inventory.insertMany([ 
             //   { item: "journal", qty: 25, tags: ["blank", "red"], size: { h: 14, w: 21, uom: "cm" } },
             //   { item: "mat", qty: 85, tags: ["gray"], size: { h: 27.9, w: 35.5, uom: "cm" } },

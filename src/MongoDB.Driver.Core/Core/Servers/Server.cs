@@ -300,6 +300,11 @@ namespace MongoDB.Driver.Core.Servers
                 //return;
             }
 
+            if (ex is MongoNotPrimaryException)
+            {
+                _monitor.Cancel();
+            }
+
             if (ShouldInvalidateServer(connection, ex, Description, out TopologyVersion responseTopologyVersion))
             {
                 var shouldClearConnectionPool = ShouldClearConnectionPoolForChannelException(ex, connection.Description.ServerVersion);

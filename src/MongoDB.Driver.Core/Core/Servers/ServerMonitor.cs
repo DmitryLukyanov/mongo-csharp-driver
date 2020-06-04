@@ -246,6 +246,7 @@ namespace MongoDB.Driver.Core.Servers
                     }
 
                     heartbeatException = ex;
+                    heartbeatIsMasterResult = null;
                     if (_connection != null)
                     {
                         if (ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException ||

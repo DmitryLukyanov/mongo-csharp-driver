@@ -61,7 +61,7 @@
           "name": "waitForPrimaryChange",
           "object": "testRunner",
           "arguments": {
-            "timeoutMS": 10000
+            "timeoutMS": 5000
           }
         },
         {

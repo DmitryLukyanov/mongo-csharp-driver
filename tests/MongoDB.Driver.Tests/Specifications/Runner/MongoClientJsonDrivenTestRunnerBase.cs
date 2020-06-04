@@ -484,8 +484,8 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     eventCapturer = InitializeEventCapturer(new EventCapturer());
                 }
 
-                DriverTestConfiguration.Client.Cluster.Dispose();
-                Thread.Sleep(20000);
+                //DriverTestConfiguration.Client.Cluster.Dispose();
+                //Thread.Sleep(20000);
 
                 RunTest(shared, test, eventCapturer);
                 if (ShouldEventsBeChecked)
@@ -493,7 +493,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
                     AssertEvents(eventCapturer, test);
                 }
 
-               // AssertOutcome(test);
+                AssertOutcome(test);
             }
         }
     }

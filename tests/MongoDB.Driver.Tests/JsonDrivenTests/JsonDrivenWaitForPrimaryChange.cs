@@ -101,7 +101,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             var cancelationTokenSource = new CancellationTokenSource(_timeout);
 
             var currentPrimary = GetPrimary();
-            while (currentPrimary == previousPrimary && !cancelationTokenSource.IsCancellationRequested)
+            while ((currentPrimary == null || currentPrimary == previousPrimary) && !cancelationTokenSource.IsCancellationRequested)
             {
                 currentPrimary = GetPrimary();
             }

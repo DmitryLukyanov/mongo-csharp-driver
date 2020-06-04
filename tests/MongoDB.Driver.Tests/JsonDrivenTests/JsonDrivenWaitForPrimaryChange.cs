@@ -26,7 +26,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
     public class JsonDrivenWaitForPrimaryChange : JsonDrivenTestRunnerTest
     {
-        private CancellationTokenSource waitCancellationTokenSource;
         private readonly IMongoClient _client;
 
         private JsonDrivenRecordPrimaryContext _context;
@@ -34,14 +33,14 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         public JsonDrivenWaitForPrimaryChange(IJsonDrivenTestContext testContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap) : base(testContext, testRunner, objectMap)
         {
+            //Thread.Sleep(20000); // that time the isMaster should be streamable?
             _client = client;
             _context = (JsonDrivenRecordPrimaryContext)_testContext;
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            waitCancellationTokenSource = new CancellationTokenSource(_timeout);
-            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary, waitCancellationTokenSource.Token);
+            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary);
             if (changedPrimary != null)
             {
                 _context.RecordedPrimary = changedPrimary;
@@ -54,8 +53,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            waitCancellationTokenSource = new CancellationTokenSource(_timeout);
-            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary, waitCancellationTokenSource.Token);
+            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary);
             if (changedPrimary != null)
             {
                 _context.RecordedPrimary = changedPrimary;
@@ -88,8 +86,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         // private methods
         private EndPoint GetPrimary()
         {
-            var clusterDescription = _client.Cluster.Description;
-            foreach (var server in clusterDescription.Servers)
+            foreach (var server in _client.Cluster.Description.Servers)
             {
                 if (server.Type == ServerType.ReplicaSetPrimary)
                 {
@@ -99,10 +96,12 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             return null;
         }
 
-        private EndPoint WaitPrimaryChange(EndPoint previousPrimary, CancellationToken cancellationToken)
+        private EndPoint WaitPrimaryChange(EndPoint previousPrimary)
         {
+            var cancelationTokenSource = new CancellationTokenSource(_timeout);
+
             var currentPrimary = GetPrimary();
-            while (currentPrimary == previousPrimary && !cancellationToken.IsCancellationRequested)
+            while (currentPrimary == previousPrimary && !cancelationTokenSource.IsCancellationRequested)
             {
                 currentPrimary = GetPrimary();
             }

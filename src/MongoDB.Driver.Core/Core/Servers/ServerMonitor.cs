@@ -282,6 +282,7 @@ namespace MongoDB.Driver.Core.Servers
                     _currentCheckCancelled = false;
                     return;
                 }
+                var previousDescription = _currentDescription;
 
                 ServerDescription newDescription;
                 if (heartbeatIsMasterResult != null)
@@ -327,11 +328,16 @@ namespace MongoDB.Driver.Core.Servers
 
                 SetDescription(newDescription);
 
-                var skipImmediateAttempt =
-                    heartbeatException != null ||
-                    (isMasterProtocol == null || !isMasterProtocol.MoreResponsesExpected) ||
-                    (!(heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException && _currentDescription.Type != ServerType.Unknown));
-                immediateAttempt = !skipImmediateAttempt;
+                //var skipImmediateAttempt =
+                //    heartbeatException != null ||
+                //    (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion == null) ||
+                //    (isMasterProtocol == null || !isMasterProtocol.MoreResponsesExpected) ||
+                //    (!(heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException && _currentDescription.Type != ServerType.Unknown));
+                immediateAttempt = //!skipImmediateAttempt;
+                    (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion != null) ||
+                    (isMasterProtocol != null && isMasterProtocol.MoreResponsesExpected) ||
+                    (heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException) ||
+                    (previousDescription.Type != ServerType.Unknown);
             }
         }
 

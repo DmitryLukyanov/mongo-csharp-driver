@@ -227,7 +227,11 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (e.NewServerDescription.HeartbeatException != null)
             {
-                _connectionPool.Clear();
+                //var ex = e.NewServerDescription.HeartbeatException;
+                //if (ex is MongoConnectionException connEx && connEx.IsNetworkException || ex is MongoCommandException)
+                //{
+                    _connectionPool.Clear();
+                //}
             }
 
             var shouldServerDescriptionChangedEventBePublished = !e.OldServerDescription.SdamEquals(e.NewServerDescription);

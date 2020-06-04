@@ -221,6 +221,7 @@ namespace MongoDB.Driver.Core.Servers
             {
                 try
                 {
+                    heartbeatException = null;
                     if (_connection == null)
                     {
                         heartbeatIsMasterResult = await InitializeConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -249,7 +250,7 @@ namespace MongoDB.Driver.Core.Servers
                     heartbeatIsMasterResult = null;
                     if (_connection != null)
                     {
-                        if (ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException ||
+                        if ((ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException) ||
                             ex is MongoCommandException)
                         {
                             _connection.Dispose();
@@ -506,7 +507,8 @@ namespace MongoDB.Driver.Core.Servers
                 return
                     ex is MongoCommandException ||
                     (ex is MongoConnectionException mongoConnectionException &&
-                    mongoConnectionException.ContainsSocketTimeoutException); // TODO: check
+                    mongoConnectionException.ContainsSocketTimeoutException
+                    ); // TODO: check
             }
         }
 

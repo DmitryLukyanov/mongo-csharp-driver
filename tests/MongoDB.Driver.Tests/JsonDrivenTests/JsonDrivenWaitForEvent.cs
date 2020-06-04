@@ -54,7 +54,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             switch (name)
             {
                 case "count":
-                    _count = value.ToInt32();     // TODO:!!!!!
+                    _count = value.ToInt32();
                     return;
 
                 case "event":
@@ -79,26 +79,23 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                     return @event => @event is ConnectionPoolClearedEvent;
 
                 default:
-                    throw new Exception("TODO: Unexpected event type.");
+                    throw new Exception($"Unexpected event type {eventName}.");
             }
         }
 
         private void Wait()
         {
             var eventCondition = MapEventNameToCondition(_event);
-            Func<IEnumerable<object>, bool> eventsConditionWithFilterByCount = (events) => events.Count(eventCondition) == _count;
+            Func<IEnumerable<object>, bool> eventsConditionWithFilterByCount = (events) => events.Count(eventCondition) >= _count;
             var notifyTask = _eventCapturer.NotifyWhen(eventsConditionWithFilterByCount);
-
-            //var events = _eventCapturer.Events.ToList().Where(c => c is ServerDescriptionChangedEvent).ToList().Cast<ServerDescriptionChangedEvent>();
-            //var types = events.Select(c => c.NewDescription.Type.ToString()).ToList();
 
             var timeout = TimeSpan.FromSeconds(30);
             var testFailedTimeout = Task.Delay(timeout, CancellationToken.None);
             var index = Task.WaitAny(notifyTask, testFailedTimeout);
             if (index != 0)
             {
-                var triggeredEvents = _eventCapturer.Events.Count(eventCondition);
-                throw new Exception($"Waiting for {_count} {_event} exceeded the timeout {timeout}. The number of triggered events is {triggeredEvents}.");
+                var triggeredEventsCount = _eventCapturer.Events.Count(eventCondition);
+                throw new Exception($"Waiting for {_count} {_event} exceeded the timeout {timeout}. The number of triggered events is {triggeredEventsCount}.");
             }
         }
     }

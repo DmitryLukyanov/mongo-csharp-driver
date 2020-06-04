@@ -336,8 +336,7 @@ namespace MongoDB.Driver.Core.Servers
                 immediateAttempt = //!skipImmediateAttempt;
                     (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion != null) ||
                     (isMasterProtocol != null && isMasterProtocol.MoreResponsesExpected) ||
-                    (heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException) ||
-                    (previousDescription.Type != ServerType.Unknown);
+                    (heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException && previousDescription.Type != ServerType.Unknown);
             }
         }
 

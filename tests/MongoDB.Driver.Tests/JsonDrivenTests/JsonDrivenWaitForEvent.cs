@@ -92,7 +92,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             //var events = _eventCapturer.Events.ToList().Where(c => c is ServerDescriptionChangedEvent).ToList().Cast<ServerDescriptionChangedEvent>();
             //var types = events.Select(c => c.NewDescription.Type.ToString()).ToList();
 
-            var timeout = TimeSpan.FromSeconds(60);
+            var timeout = TimeSpan.FromSeconds(30);
             var testFailedTimeout = Task.Delay(timeout, CancellationToken.None);
             var index = Task.WaitAny(notifyTask, testFailedTimeout);
             if (index != 0)

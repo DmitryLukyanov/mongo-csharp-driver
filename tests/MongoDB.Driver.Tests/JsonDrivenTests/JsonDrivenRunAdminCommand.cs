@@ -14,14 +14,13 @@
 */
 
 using System.Collections.Generic;
-using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    // TODO: merge?
-    public class JsonDrivenRunAdminCommand : JsonDrivenRunCommandTest
+    public sealed class JsonDrivenRunAdminCommand : JsonDrivenRunCommandTest
     {
-        public JsonDrivenRunAdminCommand(IJsonDrivenTestContext testContext, IMongoClient mongoClient, Dictionary<string, object> objectMap) : base(testContext, mongoClient.GetDatabase("admin"), objectMap)
+        public JsonDrivenRunAdminCommand(IMongoClient mongoClient, Dictionary<string, object> objectMap)
+            : base(mongoClient.GetDatabase(DatabaseNamespace.Admin.DatabaseName), objectMap)
         {
         }
     }

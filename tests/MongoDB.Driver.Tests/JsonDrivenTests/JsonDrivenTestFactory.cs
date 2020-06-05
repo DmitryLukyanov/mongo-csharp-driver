@@ -23,6 +23,12 @@ using MongoDB.Driver.Core;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
+#pragma warning disable CA1040 // Avoid empty interfaces
+    public interface IJsonDrivenTestsContext
+#pragma warning restore CA1040 // Avoid empty interfaces
+    {
+    }
+
     public class JsonDrivenTestFactory
     {
         // private fields
@@ -35,7 +41,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private readonly EventCapturer _eventCapturer;
         private readonly ConcurrentDictionary<string, Task> _tasks;
 
-        private IJsonDrivenTestContext _testContext;
+        private IJsonDrivenTestsContext _testsContext;
 
         // public constructors
         public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
@@ -56,7 +62,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             string bucketName,
             Dictionary<string, object> objectMap,
             EventCapturer eventCapturer,
-            ConcurrentDictionary<string, Task> tasks)
+            )
         {
             _client = client;
             _databaseName = databaseName;
@@ -71,9 +77,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         // public methods
         public JsonDrivenTest CreateTest(string receiver, string name)
         {
-            // TODO:
-            _testContext = _testContext ?? new JsonDrivenRecordPrimaryContext();
-
             IMongoDatabase database;
             switch (receiver)
             {
@@ -99,11 +102,15 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "waitForEvent": return new JsonDrivenWaitForEvent(_testRunner, _objectMap, _eventCapturer); ;
                         case "assertEventCount": return new JsonDrivenAssertEventsCount(_testRunner, _objectMap, _eventCapturer);
                         case "startThread": return new JsonDrivenStartThread(_testRunner, _objectMap, _tasks);
-                        case "runAdminCommand": return new JsonDrivenRunAdminCommand(_testContext, _client, _objectMap);
+                        case "runAdminCommand": return new JsonDrivenRunAdminCommand(_client, _objectMap);
                         case "runOnThread": return new JsonDrivenRunOnThread(_testRunner, _objectMap, _tasks, this);
-                        case "recordPrimary": return new JsonDrivenRecordPrimary(_testContext, _testRunner, _client, _objectMap);
+                        case "recordPrimary": return new JsonDrivenRecordPrimary(
+                            _testsContext = new JsonDrivenRecordPrimaryContext(), // first step for RecordPrimary context processing
+                            _testRunner,
+                            _client,
+                            _objectMap);
                         case "waitForThread": return new JsonDrivenWaitForThread(_testRunner, _objectMap, _tasks);
-                        case "waitForPrimaryChange": return new JsonDrivenWaitForPrimaryChange(_testContext, _testRunner, _client, _objectMap);
+                        case "waitForPrimaryChange": return new JsonDrivenWaitForPrimaryChange(_testsContext, _testRunner, _client, _objectMap);
                         default: throw new FormatException($"Invalid method name: \"{name}\".");
                     }
 

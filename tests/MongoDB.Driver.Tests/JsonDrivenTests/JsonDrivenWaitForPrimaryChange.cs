@@ -19,7 +19,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using MongoDB.Bson.TestHelpers.JsonDrivenTests;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
@@ -27,15 +27,13 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public class JsonDrivenWaitForPrimaryChange : JsonDrivenTestRunnerTest
     {
         private readonly IMongoClient _client;
-
-        private JsonDrivenRecordPrimaryContext _context;
+        private readonly JsonDrivenRecordPrimaryContext _context;
         private TimeSpan _timeout;
 
-        public JsonDrivenWaitForPrimaryChange(IJsonDrivenTestContext testContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap) : base(testContext, testRunner, objectMap)
+        public JsonDrivenWaitForPrimaryChange(IJsonDrivenTestsContext testContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap) : base(testRunner, objectMap)
         {
-            //Thread.Sleep(20000); // that time the isMaster should be streamable?
-            _client = client;
-            _context = (JsonDrivenRecordPrimaryContext)_testContext;
+            _client = Ensure.IsNotNull(client, nameof(client));
+            _context = (JsonDrivenRecordPrimaryContext)Ensure.IsNotNull(testContext, nameof(testContext));
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
@@ -77,12 +75,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             base.SetArgument(name, value);
         }
 
-        //// public methods
-        //public override void Assert()
-        //{
-        //    // do nothing
-        //}
-
         // private methods
         private EndPoint GetPrimary()
         {
@@ -93,6 +85,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                     return server.EndPoint;
                 }
             }
+
             return null;
         }
 
@@ -101,7 +94,10 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             var cancelationTokenSource = new CancellationTokenSource(_timeout);
 
             var currentPrimary = GetPrimary();
-            while ((currentPrimary == null || currentPrimary == previousPrimary) && !cancelationTokenSource.IsCancellationRequested)
+            while ((
+                currentPrimary == null || // temporary case when all servers are secondary
+                currentPrimary == previousPrimary) &&
+                !cancelationTokenSource.IsCancellationRequested) // timeout is exceeded
             {
                 currentPrimary = GetPrimary();
             }

@@ -20,10 +20,6 @@ using System.Threading.Tasks;
 
 namespace MongoDB.Bson.TestHelpers.JsonDrivenTests
 {
-    public interface IJsonDrivenTestContext
-    {
-    }
-
     public abstract class JsonDrivenTest
     {
         // protected fields
@@ -31,17 +27,11 @@ namespace MongoDB.Bson.TestHelpers.JsonDrivenTests
         protected BsonDocument _expectedException;
         protected BsonValue _expectedResult;
         protected Dictionary<string, object> _objectMap;
-        protected IJsonDrivenTestContext _testContext;
 
         // constructors
-        protected JsonDrivenTest(Dictionary<string, object> objectMap = null) : this(null, objectMap)
-        {
-        }
-
-        protected JsonDrivenTest(IJsonDrivenTestContext testContext, Dictionary<string, object> objectMap = null)
+        protected JsonDrivenTest(Dictionary<string, object> objectMap = null)
         {
             _objectMap = objectMap;
-            _testContext = testContext;
         }
 
         // public methods

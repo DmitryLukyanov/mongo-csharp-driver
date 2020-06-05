@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                 var testCases = base.CreateTestCases(document);
                 foreach (var testCase in testCases)
                 {
-                    foreach (var async in new[] { false })
+                    foreach (var async in new[] { false, true })
                     {
                         var name = $"{testCase.Name}:async={async}";
                         var test = testCase.Test.DeepClone().AsBsonDocument.Add("async", async);

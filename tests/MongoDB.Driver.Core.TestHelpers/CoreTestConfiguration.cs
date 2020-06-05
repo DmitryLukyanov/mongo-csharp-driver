@@ -230,7 +230,7 @@ namespace MongoDB.Driver
             if (uri == null)
             {
                 uri = "mongodb://localhost";
-                //if (IsReplicaSet(uri))
+                if (IsReplicaSet(uri))
                 {
                     uri += "/?connect=replicaSet";
                 }

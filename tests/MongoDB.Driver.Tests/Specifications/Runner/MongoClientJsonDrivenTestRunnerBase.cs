@@ -364,11 +364,11 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             }
         }
 
-        protected FailPoint ConfigureFailPoint(BsonDocument test, IMongoClient client = null)
+        protected FailPoint ConfigureFailPoint(BsonDocument test, IMongoClient client)
         {
             if (test.TryGetValue(FailPointKey, out var failPoint))
             {
-                var cluster = (client ?? DriverTestConfiguration.Client).Cluster;
+                var cluster = client.Cluster;
                 var server = cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
                 var session = NoCoreSession.NewHandle();
                 var command = failPoint.AsBsonDocument;
@@ -476,25 +476,19 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             CreateCollection(client, DatabaseName, CollectionName, test, shared);
             InsertData(client, DatabaseName, CollectionName, shared);
 
-            
+            EventCapturer eventCapturer = null;
+            if (ShouldEventsBeChecked)
             {
-                EventCapturer eventCapturer = null;
-                if (ShouldEventsBeChecked)
-                {
-                    eventCapturer = InitializeEventCapturer(new EventCapturer());
-                }
-
-                //DriverTestConfiguration.Client.Cluster.Dispose();
-                //Thread.Sleep(20000);
-
-                RunTest(shared, test, eventCapturer);
-                if (ShouldEventsBeChecked)
-                {
-                    AssertEvents(eventCapturer, test);
-                }
-
-                AssertOutcome(test);
+                eventCapturer = InitializeEventCapturer(new EventCapturer());
             }
+
+            RunTest(shared, test, eventCapturer);
+            if (ShouldEventsBeChecked)
+            {
+                AssertEvents(eventCapturer, test);
+            }
+
+            AssertOutcome(test);
         }
     }
 }

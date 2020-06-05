@@ -43,8 +43,9 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 action,
                 CancellationToken.None,
                 TaskCreationOptions.None,
-                //new ThreadPerTaskScheduler()
-                TaskScheduler.Default);
+                new ThreadPerTaskScheduler()
+                //TaskScheduler.Default
+                );
         }
 
         protected void AssignTask(Action action)

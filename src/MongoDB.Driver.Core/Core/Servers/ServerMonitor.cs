@@ -211,17 +211,16 @@ namespace MongoDB.Driver.Core.Servers
 
         private async Task HeartbeatAsync(CancellationToken cancellationToken)
         {
-            IsMasterResult heartbeatIsMasterResult = null;
-            Exception heartbeatException = null;
-
             CommandWireProtocol<BsonDocument> isMasterProtocol = null;
 
             bool immediateAttempt = true;
             while (immediateAttempt)
             {
+                IsMasterResult heartbeatIsMasterResult;
+                Exception heartbeatException = null;
+
                 try
                 {
-                    heartbeatException = null;
                     if (_connection == null)
                     {
                         heartbeatIsMasterResult = await InitializeConnectionAsync(cancellationToken).ConfigureAwait(false);

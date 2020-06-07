@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,34 +23,20 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public class JsonDrivenWaitForThread : JsonDrivenWithThread
     {
         public JsonDrivenWaitForThread(
+            IDictionary<string, object> testsContext,
             IJsonDrivenTestRunner testRunner,
-            Dictionary<string, object> objectMap,
-            ConcurrentDictionary<string, Task> tasks) : base(testRunner, objectMap, tasks)
+            Dictionary<string, object> objectMap) : base(testsContext, testRunner, objectMap)
         {
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            if (_tasks.TryGetValue(_name, out var task) && task != null)
-            {
-                task.GetAwaiter().GetResult();
-            }
-            else
-            {
-                throw new Exception($"The task {_name} must be configured before waiting.");
-            }
+            WaitTask();
         }
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            if (_tasks.TryGetValue(_name, out var task) && task != null)
-            {
-                task.GetAwaiter().GetResult();
-            }
-            else
-            {
-                throw new Exception($"The task {_name} must be configured before waiting.");
-            }
+            WaitTask();
             return Task.FromResult(true);
         }
 
@@ -59,6 +44,19 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         public override void Assert()
         {
             // do nothing
+        }
+
+        // private methods
+        private void WaitTask()
+        {
+            if (_testContext.Tasks.TryGetValue(_name, out var task) && task != null)
+            {
+                task.GetAwaiter().GetResult();
+            }
+            else
+            {
+                throw new Exception($"The task {_name} must be configured before waiting.");
+            }
         }
     }
 }

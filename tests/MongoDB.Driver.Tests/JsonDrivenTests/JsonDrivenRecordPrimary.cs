@@ -22,32 +22,35 @@ using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public class JsonDrivenRecordPrimaryContext : IJsonDrivenTestsContext
+    public class JsonDrivenRecordPrimaryTestContext
     {
+        #region static
+        public static string Key => nameof(RecordedPrimary);
+        #endregion
+
         public EndPoint RecordedPrimary { get; set; }
     }
 
     public class JsonDrivenRecordPrimary : JsonDrivenTestRunnerTest
     {
         private readonly IMongoClient _client;
-        private readonly JsonDrivenRecordPrimaryContext _testsContext;
+        private readonly JsonDrivenRecordPrimaryContext _testContext;
 
-        public JsonDrivenRecordPrimary(IJsonDrivenTestsContext testsContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
+        public JsonDrivenRecordPrimary(IDictionary<string, object> testsContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
             : base(testRunner, objectMap)
         {
             _client = Ensure.IsNotNull(client, nameof(client));
-            _testsContext = new JsonDrivenRecordPrimaryContext();
-                //(JsonDrivenRecordPrimaryContext)Ensure.IsNotNull(testsContext, nameof(testsContext));
+            _testContext = (JsonDrivenRecordPrimaryContext)Ensure.IsNotNull(testsContext, nameof(testsContext))[JsonDrivenRecordPrimaryContext.Key];
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            _testsContext.RecordedPrimary = GetPrimary();
+            _testContext.RecordedPrimary = GetPrimary();
         }
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            _testsContext.RecordedPrimary = GetPrimary();
+            _testContext.RecordedPrimary = GetPrimary();
             return Task.FromResult(true);
         }
 

@@ -14,21 +14,13 @@
 */
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-#pragma warning disable CA1040 // Avoid empty interfaces
-    public interface IJsonDrivenTestsContext
-#pragma warning restore CA1040 // Avoid empty interfaces
-    {
-    }
-
     public class JsonDrivenTestFactory
     {
         // private fields
@@ -39,30 +31,25 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private readonly Dictionary<string, object> _objectMap;
         private readonly IJsonDrivenTestRunner _testRunner;
         private readonly EventCapturer _eventCapturer;
-        private readonly ConcurrentDictionary<string, Task> _tasks;
-
-        private IJsonDrivenTestsContext _testsContext;
+        private readonly IDictionary<string, object> _testsContext;
 
         // public constructors
-        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
-            : this(client, databaseName, collectionName, bucketName, objectMap, eventCapturer: null)
-        {
-        }
-
         public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
-            : this(testRunner: null, client, databaseName, collectionName, bucketName, objectMap, eventCapturer, tasks: null)
+            : this(client, databaseName, collectionName, bucketName, objectMap)
         {
         }
 
-        public JsonDrivenTestFactory(
-            IJsonDrivenTestRunner testRunner,
-            IMongoClient client,
-            string databaseName,
-            string collectionName,
-            string bucketName,
-            Dictionary<string, object> objectMap,
-            EventCapturer eventCapturer,
-            )
+        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
+            : this(null, client, databaseName, collectionName, bucketName, objectMap)
+        {
+        }
+
+        public JsonDrivenTestFactory(IJsonDrivenTestRunner testRunner, IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
+            : this(testRunner, client, databaseName, collectionName, bucketName, objectMap, null)
+        {
+        }
+
+        public JsonDrivenTestFactory(IJsonDrivenTestRunner testRunner, IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
         {
             _client = client;
             _databaseName = databaseName;
@@ -71,7 +58,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _objectMap = objectMap;
             _testRunner = testRunner;
             _eventCapturer = eventCapturer;
-            _tasks = tasks;
+            _testsContext = new Dictionary<string, object>();
         }
 
         // public methods
@@ -83,10 +70,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                 case "testRunner":
                     switch (name)
                     {
-                        case "targetedFailPoint": //TODO: merge?
-                            return new JsonDrivenTargetedFailPointTest(_testRunner, _objectMap);
-                        case "configureFailPoint": //TODO: merge?
-                            return new JsonDrivenConfigureFailPoint(_testRunner, _client, _objectMap);
+                        case "targetedFailPoint": return new JsonDrivenTargetedFailPointTest(_testRunner, _objectMap);
+                        case "configureFailPoint": return new JsonDrivenConfigureFailPoint(_testRunner, _client, _objectMap);
                         case "assertCollectionExists": return new JsonDrivenAssertCollectionExists(_testRunner, _objectMap);
                         case "assertCollectionNotExists": return new JsonDrivenAssertCollectionNotExists(_testRunner, _objectMap);
                         case "assertDifferentLsidOnLastTwoCommands": return new JsonDrivenAssertDifferentLsidOnLastTwoCommandsTest(_testRunner, _eventCapturer, _objectMap);
@@ -101,15 +86,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
                         case "wait": return new JsonDrivenWait(_testRunner, _objectMap);
                         case "waitForEvent": return new JsonDrivenWaitForEvent(_testRunner, _objectMap, _eventCapturer); ;
                         case "assertEventCount": return new JsonDrivenAssertEventsCount(_testRunner, _objectMap, _eventCapturer);
-                        case "startThread": return new JsonDrivenStartThread(_testRunner, _objectMap, _tasks);
+                        case "startThread": return new JsonDrivenStartThread(_testsContext, _testRunner, _objectMap);
                         case "runAdminCommand": return new JsonDrivenRunAdminCommand(_client, _objectMap);
-                        case "runOnThread": return new JsonDrivenRunOnThread(_testRunner, _objectMap, _tasks, this);
-                        case "recordPrimary": return new JsonDrivenRecordPrimary(
-                            _testsContext = new JsonDrivenRecordPrimaryContext(), // first step for RecordPrimary context processing
-                            _testRunner,
-                            _client,
-                            _objectMap);
-                        case "waitForThread": return new JsonDrivenWaitForThread(_testRunner, _objectMap, _tasks);
+                        case "runOnThread": return new JsonDrivenRunOnThread(_testsContext, _testRunner, _objectMap, this);
+                        case "recordPrimary": return new JsonDrivenRecordPrimary(_testsContext, _testRunner, _client, _objectMap);
+                        case "waitForThread": return new JsonDrivenWaitForThread(_testsContext, _testRunner, _objectMap);
                         case "waitForPrimaryChange": return new JsonDrivenWaitForPrimaryChange(_testsContext, _testRunner, _client, _objectMap);
                         default: throw new FormatException($"Invalid method name: \"{name}\".");
                     }

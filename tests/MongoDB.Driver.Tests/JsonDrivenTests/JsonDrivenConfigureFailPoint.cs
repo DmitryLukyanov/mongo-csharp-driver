@@ -19,14 +19,14 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
-using MongoDB.Driver.Core.TestHelpers;
+using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public sealed class JsonDrivenConfigureFailPoint : JsonDrivenTestRunnerTest
+    public class JsonDrivenConfigureFailPoint : JsonDrivenTestRunnerTest
     {
         private readonly IMongoClient _client;
-        private BsonDocument _failCommand;
+        protected BsonDocument _failCommand;
 
         public JsonDrivenConfigureFailPoint(IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
             : base(testRunner, objectMap)
@@ -34,23 +34,27 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _client = client;
         }
 
+        protected override void AssertResult()
+        {
+            // do nothing
+        }
+
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            var cluster = _client.Cluster;
-            _ = cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
-            FailPoint.Configure(cluster, NoCoreSession.NewHandle(), _failCommand);
+            var server = GetServer();
+            TestRunner.ConfigureFailPoint(server, NoCoreSession.NewHandle(), _failCommand);
         }
 
         protected override async Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            var cluster = _client.Cluster;
-            _ = cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
-            await Task.Run(() => FailPoint.Configure(cluster, NoCoreSession.NewHandle(), _failCommand)).ConfigureAwait(false); ;
+            var server = GetServer();
+            await TestRunner.ConfigureFailPointAsync(server, NoCoreSession.NewHandle(), _failCommand);
         }
 
-        protected override void AssertResult()
+        protected virtual IServer GetServer()
         {
-            // do nothing
+            var cluster = _client.Cluster;
+            return cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
         }
 
         protected override void SetArgument(string name, BsonValue value)

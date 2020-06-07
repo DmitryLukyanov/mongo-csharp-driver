@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,16 +20,32 @@ using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver;
 using MongoDB.Driver.Core;
+using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Events;
+using MongoDB.Driver.Core.Servers;
+using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Tests.JsonDrivenTests;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
-    public class IntegrationTestRunner : MongoClientJsonDrivenTestRunnerBase
+    public class ServerDiscoveryAndMonitoringIntegrationTestRunner : DisposableJsonDrivenTestRunner, IJsonDrivenTestRunner
     {
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
+
+        // public methods
+        public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
+        {
+            var failPoint = FailPoint.Configure(server, session, failCommand);
+            Disposables.Add(failPoint);
+        }
+
+        public async Task ConfigureFailPointAsync(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
+        {
+            var failPoint = await Task.Run(() => FailPoint.Configure(server, session, failCommand)).ConfigureAwait(false);
+            Disposables.Add(failPoint);
+        }
 
         [SkippableTheory]
         [ClassData(typeof(TestCaseFactory))]
@@ -39,14 +54,10 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
             SetupAndRunTest(testCase);
         }
 
-        protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
+        // protected methods
+        protected override JsonDrivenTestFactory CreateJsonFactory(IMongoClient mongoClient, string databaseName, string collectionName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
         {
-            var doNotCaptureEvents = DefaultCommandsToNotCapture;
-            doNotCaptureEvents.Add("configureFailPoint");
-            doNotCaptureEvents.Add("replSetStepDown");
-            return eventCapturer.Capture<CommandStartedEvent>(e => !doNotCaptureEvents.Contains(e.CommandName))
-                .Capture<ServerDescriptionChangedEvent>()
-                .Capture<ConnectionPoolClearedEvent>();
+            return new JsonDrivenTestFactory(this, mongoClient, databaseName, collectionName, bucketName: null, objectMap, eventCapturer);
         }
 
         protected override List<object> ExtractEventsForAsserting(EventCapturer eventCapturer)
@@ -57,17 +68,14 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                 .ToList();
         }
 
-        protected override JsonDrivenTestFactory CreateJsonFactory(IMongoClient client, string databaseName, string collectionName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
+        protected override EventCapturer InitializeEventCapturer(EventCapturer eventCapturer)
         {
-            return new JsonDrivenTestFactory(
-                testRunner: null,
-                client,
-                databaseName,
-                collectionName,
-                bucketName: null,
-                objectMap,
-                eventCapturer,
-                new ConcurrentDictionary<string, Task>());
+            var doNotCaptureEvents = DefaultCommandsToNotCapture;
+            doNotCaptureEvents.Add("configureFailPoint");
+            doNotCaptureEvents.Add("replSetStepDown");
+            return eventCapturer.Capture<CommandStartedEvent>(e => !doNotCaptureEvents.Contains(e.CommandName))
+                .Capture<ServerDescriptionChangedEvent>()
+                .Capture<ConnectionPoolClearedEvent>();
         }
 
         // nested types

@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,18 +21,18 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
     public class JsonDrivenStartThread : JsonDrivenWithThread
     {
-        public JsonDrivenStartThread(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap, ConcurrentDictionary<string, Task> tasks) : base(testRunner, objectMap, tasks)
+        public JsonDrivenStartThread(IDictionary<string, object> testsContext, IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap) : base(testsContext, testRunner, objectMap)
         {
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            _tasks.GetOrAdd(_name, (Task)null);
+            _testContext.Tasks.GetOrAdd(_name, (Task)null);
         }
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            _tasks.GetOrAdd(_name, (Task)null);
+            _testContext.Tasks.GetOrAdd(_name, (Task)null);
             return Task.FromResult(true);
         }
 

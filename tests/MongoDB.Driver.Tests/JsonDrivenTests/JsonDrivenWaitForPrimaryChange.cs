@@ -27,21 +27,21 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public class JsonDrivenWaitForPrimaryChange : JsonDrivenTestRunnerTest
     {
         private readonly IMongoClient _client;
-        private readonly JsonDrivenRecordPrimaryContext _context;
+        private readonly JsonDrivenRecordPrimaryTestContext _testContext;
         private TimeSpan _timeout;
 
-        public JsonDrivenWaitForPrimaryChange(IJsonDrivenTestsContext testContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap) : base(testRunner, objectMap)
+        public JsonDrivenWaitForPrimaryChange(JsonDrivenTestsContext testsContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap) : base(testRunner, objectMap)
         {
+            _testContext = Ensure.IsNotNull(testsContext, nameof(testsContext)).GetTestContext<JsonDrivenRecordPrimaryTestContext>(JsonDrivenRecordPrimaryTestContext.Key);
             _client = Ensure.IsNotNull(client, nameof(client));
-            _context = (JsonDrivenRecordPrimaryContext)Ensure.IsNotNull(testContext, nameof(testContext));
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary);
+            var changedPrimary = WaitPrimaryChange(_testContext.RecordedPrimary);
             if (changedPrimary != null)
             {
-                _context.RecordedPrimary = changedPrimary;
+                _testContext.RecordedPrimary = changedPrimary;
             }
             else
             {
@@ -51,10 +51,10 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            var changedPrimary = WaitPrimaryChange(_context.RecordedPrimary);
+            var changedPrimary = WaitPrimaryChange(_testContext.RecordedPrimary);
             if (changedPrimary != null)
             {
-                _context.RecordedPrimary = changedPrimary;
+                _testContext.RecordedPrimary = changedPrimary;
             }
             else
             {

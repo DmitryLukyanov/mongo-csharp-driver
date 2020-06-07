@@ -36,18 +36,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         protected readonly JsonDrivenWithThreadContext _testContext;
 
         public JsonDrivenWithThread(
-            IDictionary<string, object> testsContext,
+            JsonDrivenTestsContext testsContext,
             IJsonDrivenTestRunner testRunner,
             Dictionary<string, object> objectMap) : base(testRunner, objectMap)
         {
-            Ensure.IsNotNull(testsContext, nameof(testsContext));
-
-            if (!testsContext.ContainsKey(JsonDrivenWithThreadContext.Key))
-            {
-                testsContext.Add(JsonDrivenWithThreadContext.Key, new JsonDrivenWithThreadContext());
-            }
-
-            _testContext = (JsonDrivenWithThreadContext)testsContext[JsonDrivenWithThreadContext.Key];
+            _testContext = Ensure.IsNotNull(testsContext, nameof(testsContext)).GetTestContext<JsonDrivenWithThreadContext>(JsonDrivenWithThreadContext.Key);
             Ensure.IsNotNull(_testContext.Tasks, nameof(_testContext.Tasks));
         }
 

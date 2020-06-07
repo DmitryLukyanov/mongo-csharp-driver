@@ -34,13 +34,13 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public class JsonDrivenRecordPrimary : JsonDrivenTestRunnerTest
     {
         private readonly IMongoClient _client;
-        private readonly JsonDrivenRecordPrimaryContext _testContext;
+        private readonly JsonDrivenRecordPrimaryTestContext _testContext;
 
-        public JsonDrivenRecordPrimary(IDictionary<string, object> testsContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
+        public JsonDrivenRecordPrimary(JsonDrivenTestsContext testsContext, IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
             : base(testRunner, objectMap)
         {
             _client = Ensure.IsNotNull(client, nameof(client));
-            _testContext = (JsonDrivenRecordPrimaryContext)Ensure.IsNotNull(testsContext, nameof(testsContext))[JsonDrivenRecordPrimaryContext.Key];
+            _testContext = Ensure.IsNotNull(testsContext, nameof(testsContext)).GetTestContext<JsonDrivenRecordPrimaryTestContext>(JsonDrivenRecordPrimaryTestContext.Key);
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)

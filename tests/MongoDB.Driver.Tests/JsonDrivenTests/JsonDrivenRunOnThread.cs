@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private BsonDocument _operation;
 
         public JsonDrivenRunOnThread(
-            IDictionary<string, object> testsContext,
+            JsonDrivenTestsContext testsContext,
             IJsonDrivenTestRunner testRunner,
             Dictionary<string, object> objectMap,
             JsonDrivenTestFactory jsonDrivenTestFactory) : base(testsContext, testRunner, objectMap)

@@ -21,7 +21,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
     public class JsonDrivenStartThread : JsonDrivenWithThread
     {
-        public JsonDrivenStartThread(IDictionary<string, object> testsContext, IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap) : base(testsContext, testRunner, objectMap)
+        public JsonDrivenStartThread(JsonDrivenTestsContext testsContext, IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap) : base(testsContext, testRunner, objectMap)
         {
         }
 

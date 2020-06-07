@@ -21,6 +21,21 @@ using MongoDB.Driver.Core;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
+    public class JsonDrivenTestsContext
+    {
+        public IDictionary<string, object> Contexts { get; } = new Dictionary<string, object>();
+
+        public T GetTestContext<T>(string key) where T : class
+        {
+            if (!Contexts.ContainsKey(key))
+            {
+                Contexts.Add(key, Activator.CreateInstance<T>());
+            }
+
+            return (T)Contexts[key];
+        }
+    }
+
     public class JsonDrivenTestFactory
     {
         // private fields
@@ -31,7 +46,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private readonly Dictionary<string, object> _objectMap;
         private readonly IJsonDrivenTestRunner _testRunner;
         private readonly EventCapturer _eventCapturer;
-        private readonly IDictionary<string, object> _testsContext;
+        private readonly JsonDrivenTestsContext _testsContext;
 
         // public constructors
         public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
@@ -58,7 +73,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _objectMap = objectMap;
             _testRunner = testRunner;
             _eventCapturer = eventCapturer;
-            _testsContext = new Dictionary<string, object>();
+            _testsContext = new JsonDrivenTestsContext();
         }
 
         // public methods

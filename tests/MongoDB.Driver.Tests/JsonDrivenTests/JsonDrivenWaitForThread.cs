@@ -23,7 +23,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public class JsonDrivenWaitForThread : JsonDrivenWithThread
     {
         public JsonDrivenWaitForThread(
-            IDictionary<string, object> testsContext,
+            JsonDrivenTestsContext testsContext,
             IJsonDrivenTestRunner testRunner,
             Dictionary<string, object> objectMap) : base(testsContext, testRunner, objectMap)
         {

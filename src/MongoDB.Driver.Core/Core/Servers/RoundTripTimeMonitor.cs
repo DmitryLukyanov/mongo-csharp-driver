@@ -58,7 +58,7 @@ namespace MongoDB.Driver.Core.Servers
 
         public async Task Run()
         {
-            while (!_cancellationToken.IsCancellationRequested) // TODO: different token?
+            while (!_cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -68,37 +68,26 @@ namespace MongoDB.Driver.Core.Servers
                     }
                     else
                     {
-                        try
-                        {
-                            var isMasterCommand = IsMasterHelper.CreateCommand();
-                            var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
+                        var isMasterCommand = IsMasterHelper.CreateCommand();
+                        var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
 
-                            var stopwatch = Stopwatch.StartNew();
-                            var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
-                            stopwatch.Stop();
-                            _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
-                        }
-                        catch (Exception ex) when (ShouldCloseRoundTripConnection(ex))
-                        {
-                            _roundTripTimeConnection.Dispose();
-                            _roundTripTimeConnection = null;
-                        }
+                        var stopwatch = Stopwatch.StartNew();
+                        var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
+                        stopwatch.Stop();
+                        _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
                     }
                 }
                 catch (Exception)
                 {
-                    // ignore exceptions
+                    if (_roundTripTimeConnection != null)
+                    {
+                        _roundTripTimeConnection.Dispose();
+                        _roundTripTimeConnection = null;
+                    }
+                    _averageRoundTripTimeCalculator.Reset();
                 }
 
                 await Task.Delay(_heartbeatFrequency).ConfigureAwait(false);
-            }
-
-            bool ShouldCloseRoundTripConnection(Exception ex)
-            {
-                return
-                    ex is MongoCommandException ||
-                    (ex is MongoConnectionException mongoConnectionException &&
-                    mongoConnectionException.ContainsSocketTimeoutException);
             }
         }
 

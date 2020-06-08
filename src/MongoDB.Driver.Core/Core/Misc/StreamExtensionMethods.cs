@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,9 +40,6 @@ namespace MongoDB.Driver.Core.Misc
         {
             var state = 1; // 1 == reading, 2 == done reading, 3 == timedout, 4 == cancelled
 
-            Stopwatch start = Stopwatch.StartNew();
-            DateTime startTime = DateTime.Now;
-
             var bytesRead = 0;
             using (new Timer(_ => ChangeState(3), null, timeout, Timeout.InfiniteTimeSpan))
             using (cancellationToken.Register(() => ChangeState(4)))
@@ -58,27 +54,19 @@ namespace MongoDB.Driver.Core.Misc
                     try { stream.Dispose(); } catch { }
                     throw;
                 }
-                catch (Exception e) when (state >= 3)
+                catch when (state >= 3)
                 {
-                    // check cancelation token
-                    // ObjectDisposedException?
-                    Console.WriteLine(e);
                     // a timeout or operation cancelled exception will be thrown instead
                 }
 
                 if (state == 3) { throw new TimeoutException(); }
-                if (state == 4) {
-                    throw new OperationCanceledException();
-                }
+                if (state == 4) { throw new OperationCanceledException(); }
             }
 
             return bytesRead;
 
             void ChangeState(int to)
             {
-                var finish = DateTime.Now;
-                start.Stop();
-                var time = start.Elapsed.TotalMilliseconds;
                 var from = Interlocked.CompareExchange(ref state, to, 1);
                 if (from == 1 && to >= 3)
                 {
@@ -191,9 +179,7 @@ namespace MongoDB.Driver.Core.Misc
                 }
 
                 if (state == 3) { throw new TimeoutException(); }
-                if (state == 4) {
-                    throw new OperationCanceledException();
-                }
+                if (state == 4) { throw new OperationCanceledException(); }
             }
 
             void ChangeState(int to)

@@ -50,7 +50,6 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly IBsonSerializer<TCommandResult> _resultSerializer;
         private readonly ICoreSession _session;
         // streamable fields
-        private readonly TimeSpan? _additionalAwaitTime;
         private readonly bool _isStreamable;
         private bool _previousResponseMoreToCome = false; // MoreToCome from the previous response
         private int? _previousResponseId = null; // MessageId from the previous response
@@ -94,7 +93,6 @@ namespace MongoDB.Driver.Core.WireProtocol
 
             // streamable options
             _isStreamable = IsCommandStreamable(_command);
-            _additionalAwaitTime = GetAdditionalTimeoutIfRequired(_command, _isStreamable);
         }
 
         // public properties
@@ -128,7 +126,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 if (message.WrappedMessage.ResponseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, _additionalAwaitTime, cancellationToken);
+                    var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken);
                     SaveResponseInfoIfRequired(response);
                     response = AutoDecryptFieldsIfNecessary(response, cancellationToken);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
@@ -172,7 +170,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 if (message.WrappedMessage.ResponseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, _additionalAwaitTime, cancellationToken).ConfigureAwait(false);
+                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
                     SaveResponseInfoIfRequired(response);
                     response = await AutoDecryptFieldsIfNecessaryAsync(response, cancellationToken).ConfigureAwait(false);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
@@ -268,16 +266,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                 var helper = new CommandMessageFieldEncryptor(_documentFieldEncryptor, _messageEncoderSettings);
                 return await helper.EncryptFieldsAsync(_databaseNamespace.DatabaseName, unencryptedRequestMessage, cancellationToken).ConfigureAwait(false);
             }
-        }
-
-        private TimeSpan? GetAdditionalTimeoutIfRequired(BsonDocument command, bool isStreamable)
-        {
-            TimeSpan? maxAwaitedTimeout = null;
-            if (isStreamable && command.TryGetValue("maxAwaitTimeMS", out var maxAwaitedTime))
-            {
-                maxAwaitedTimeout = TimeSpan.FromMilliseconds(maxAwaitedTime.ToInt32());
-            }
-            return maxAwaitedTimeout;
         }
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)

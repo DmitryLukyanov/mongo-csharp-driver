@@ -192,5 +192,10 @@ namespace MongoDB.Driver.Core.Helpers
         {
             throw new NotImplementedException();
         }
+
+        public void SetReadTimeout(TimeSpan timeout)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

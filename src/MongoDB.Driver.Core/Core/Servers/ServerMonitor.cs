@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Core.Servers
             if (_state.TryChange(State.Initial, State.Open))
             {
                 MonitorServerAsync().ConfigureAwait(false);
-                _roundTripTimeMonitor.Run().ConfigureAwait(false);
+                //_roundTripTimeMonitor.Run().ConfigureAwait(false);
             }
         }
 
@@ -137,11 +137,15 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         // private methods
-        private CommandWireProtocol<BsonDocument> CreateIsMasterProtocol(IConnection connection)
+        private CommandWireProtocol<BsonDocument> InitializeIsMasterProtocol(IConnection connection)
         {
             var isMasterCommand = IsMasterHelper.CreateCommand(
                 connection.Description.IsMasterResult.TopologyVersion,  // can be null
                 _heartbeatInterval);
+            if (connection.Description.IsMasterResult.TopologyVersion != null)
+            {
+                connection.SetReadTimeout(_heartbeatInterval);
+            }
             return IsMasterHelper.CreateProtocol(isMasterCommand);
         }
 
@@ -246,7 +250,7 @@ namespace MongoDB.Driver.Core.Servers
                     }
                     else
                     {
-                        isMasterProtocol = isMasterProtocol ?? CreateIsMasterProtocol(_connection);
+                        isMasterProtocol = isMasterProtocol ?? InitializeIsMasterProtocol(_connection);
                         heartbeatIsMasterResult = await GetHeartbeatInfoAsync(isMasterProtocol, _connection, cancellationToken).ConfigureAwait(false);
                     }
                 }

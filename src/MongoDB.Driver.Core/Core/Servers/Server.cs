@@ -302,18 +302,8 @@ namespace MongoDB.Driver.Core.Servers
                 mongoConnectionException.IsNetworkException &&
                 !mongoConnectionException.ContainsSocketTimeoutException)
             {
-                //_connectionPool.Clear();
-                _monitor.Cancel();
-                //return;
+                _monitor.CurrentCheckCancel();
             }
-
-            //if (ex is MongoNotPrimaryException)
-            //{
-            //    // _monitor.Cancel();
-            //    //Invalidate("tata", true, null);
-            //    //return;
-            //    _monitor.Cancel();
-            //}
 
             var description = Description; // use Description property to access _description value safely
             if (ShouldInvalidateServer(connection, ex, description, out TopologyVersion responseTopologyVersion))

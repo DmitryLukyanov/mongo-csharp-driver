@@ -51,7 +51,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly ICoreSession _session;
         // streamable fields
         private readonly TimeSpan? _additionalAwaitTime;
-        private readonly bool _isStremable;
+        private readonly bool _isStreamable;
         private bool _previousResponseMoreToCome = false; // MoreToCome from the previous response
         private int? _previousResponseId = null; // MessageId from the previous response
 
@@ -92,9 +92,9 @@ namespace MongoDB.Driver.Core.WireProtocol
                 _documentFieldEncryptor = messageEncoderSettings.GetOrDefault<IBinaryCommandFieldEncryptor>(MessageEncoderSettingsName.BinaryDocumentFieldEncryptor, null);
             }
 
-            // stremable options
-            _isStremable = IsCommandStremable(_command);
-            _additionalAwaitTime = GetAdditionalTimeoutIfRequired(_command, _isStremable);
+            // streamable options
+            _isStreamable = IsCommandStreamable(_command);
+            _additionalAwaitTime = GetAdditionalTimeoutIfRequired(_command, _isStreamable);
         }
 
         // public properties
@@ -270,10 +270,10 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
         }
 
-        private TimeSpan? GetAdditionalTimeoutIfRequired(BsonDocument command, bool isStremable)
+        private TimeSpan? GetAdditionalTimeoutIfRequired(BsonDocument command, bool isStreamable)
         {
             TimeSpan? maxAwaitedTimeout = null;
-            if (isStremable && command.TryGetValue("maxAwaitTimeMS", out var maxAwaitedTime))
+            if (isStreamable && command.TryGetValue("maxAwaitTimeMS", out var maxAwaitedTime))
             {
                 maxAwaitedTimeout = TimeSpan.FromMilliseconds(maxAwaitedTime.ToInt32());
             }
@@ -291,7 +291,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToComeRequest)
             {
                 PostWriteAction = _postWriteAction,
-                ExhaustAllowed = _isStremable,
+                ExhaustAllowed = _isStreamable,
                 RequestExpected = !_previousResponseMoreToCome
             };
             var shouldBeSent = (Func<bool>)(() => true);
@@ -399,7 +399,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
         }
 
-        private bool IsCommandStremable(BsonDocument command)
+        private bool IsCommandStreamable(BsonDocument command)
         {
             return
                 command.Contains("isMaster") &&
@@ -541,7 +541,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private void SaveResponseInfoIfRequired(CommandResponseMessage response)
         {
-            if (_isStremable)
+            if (_isStreamable)
             {
                 _previousResponseId = response.RequestId;
                 _previousResponseMoreToCome = response.WrappedMessage.MoreToCome;

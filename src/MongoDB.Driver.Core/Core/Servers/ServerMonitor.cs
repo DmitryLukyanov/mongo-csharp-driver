@@ -31,7 +31,7 @@ namespace MongoDB.Driver.Core.Servers
         private static readonly TimeSpan __minHeartbeatInterval = TimeSpan.FromMilliseconds(500);
 
         private readonly ServerDescription _baseDescription;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource;
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
         private volatile bool _currentCheckCancelled;
@@ -45,7 +45,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
         private readonly TimeSpan _timeout;
-        private readonly RoundTripTimeMonitor _roundTripTimeMonitor;
+        private readonly IRoundTripTimeMonitor _roundTripTimeMonitor;
 
         private readonly Action<ServerHeartbeatStartedEvent> _heartbeatStartedEventHandler;
         private readonly Action<ServerHeartbeatSucceededEvent> _heartbeatSucceededEventHandler;
@@ -55,7 +55,26 @@ namespace MongoDB.Driver.Core.Servers
         public event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;
 
         public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, TimeSpan heartbeatInterval, TimeSpan timeout, IEventSubscriber eventSubscriber)
+            : this(serverId, endPoint, connectionFactory, heartbeatInterval, timeout, eventSubscriber, new CancellationTokenSource())
         {
+        }
+
+        public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, TimeSpan heartbeatInterval, TimeSpan timeout, IEventSubscriber eventSubscriber, CancellationTokenSource cancellationTokenSource)
+            : this(
+                  serverId,
+                  endPoint,
+                  connectionFactory,
+                  heartbeatInterval,
+                  timeout,
+                  eventSubscriber,
+                  roundTripTimeMonitor: new RoundTripTimeMonitor(connectionFactory, serverId, endPoint, heartbeatInterval, cancellationTokenSource.Token),
+                  cancellationTokenSource)
+        {
+        }
+
+        public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, TimeSpan heartbeatInterval, TimeSpan timeout, IEventSubscriber eventSubscriber, IRoundTripTimeMonitor roundTripTimeMonitor, CancellationTokenSource cancellationTokenSource)
+        {
+            _cancellationTokenSource = cancellationTokenSource;
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
             _endPoint = Ensure.IsNotNull(endPoint, nameof(endPoint));
             _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
@@ -64,7 +83,7 @@ namespace MongoDB.Driver.Core.Servers
             _baseDescription = _currentDescription = new ServerDescription(_serverId, endPoint, reasonChanged: "InitialDescription", heartbeatInterval: heartbeatInterval);
             _heartbeatInterval = heartbeatInterval;
             _timeout = timeout;
-            _roundTripTimeMonitor = new RoundTripTimeMonitor(_connectionFactory, _serverId, _endPoint, _heartbeatInterval, _cancellationTokenSource.Token);
+            _roundTripTimeMonitor = roundTripTimeMonitor;
 
             _state = new InterlockedInt32(State.Initial);
             eventSubscriber.TryGetEventHandler(out _heartbeatStartedEventHandler);
@@ -76,7 +95,7 @@ namespace MongoDB.Driver.Core.Servers
         public ServerDescription Description => Interlocked.CompareExchange(ref _currentDescription, null, null);
 
         // public methods
-        public void Cancel()
+        public void CurrentCheckCancel()
         {
             if (_connection != null)
             {
@@ -421,109 +440,6 @@ namespace MongoDB.Driver.Core.Servers
             public const int Initial = 0;
             public const int Open = 1;
             public const int Disposed = 2;
-        }
-    }
-
-    internal class RoundTripTimeMonitor : IDisposable
-    {
-        private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
-
-        private readonly CancellationToken _cancellationToken;
-        private readonly IConnectionFactory _connectionFactory;
-        private readonly EndPoint _endPoint;
-        private IConnection _roundTripTimeConnection;
-        private readonly ServerId _serverId;
-        private readonly TimeSpan _heartbeatFrequency;
-
-        public RoundTripTimeMonitor(
-            IConnectionFactory connectionFactory,
-            ServerId serverId,
-            EndPoint endpoint,
-            TimeSpan heartbeatFrequency,
-            CancellationToken cancellationToken)
-        {
-            _cancellationToken = cancellationToken;
-            _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
-            _endPoint = Ensure.IsNotNull(endpoint, nameof(endpoint));
-            _heartbeatFrequency = heartbeatFrequency;
-            _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
-        }
-
-        public ExponentiallyWeightedMovingAverage ExponentiallyWeightedMovingAverage => _averageRoundTripTimeCalculator;
-
-        public async Task InitializeConnectionAsync()
-        {
-            _cancellationToken.ThrowIfCancellationRequested();
-
-            _roundTripTimeConnection = _connectionFactory.CreateConnection(_serverId, _endPoint);
-            // if we are cancelling, it's because the server has
-            // been shut down and we really don't need to wait.
-            var stopwatch = Stopwatch.StartNew();
-            await _roundTripTimeConnection.OpenAsync(_cancellationToken).ConfigureAwait(false);
-            stopwatch.Stop();
-            _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
-        }
-
-        public async Task Run()
-        {
-            while (!_cancellationToken.IsCancellationRequested) // TODO: different token?
-            {
-                try
-                {
-                    if (_roundTripTimeConnection == null)
-                    {
-                        await InitializeConnectionAsync().ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var isMasterCommand = IsMasterHelper.CreateCommand();
-                            var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
-
-                            var stopwatch = Stopwatch.StartNew();
-                            var isMasterResult = await IsMasterHelper.GetResultAsync(_roundTripTimeConnection, isMasterProtocol, _cancellationToken).ConfigureAwait(false);
-                            stopwatch.Stop();
-                            _averageRoundTripTimeCalculator.AddSample(stopwatch.Elapsed);
-                        }
-                        catch (Exception ex) when (ShouldCloseRoundTripConnection(ex))
-                        {
-                            _roundTripTimeConnection.Dispose();
-                            _roundTripTimeConnection = null;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    // ignore exceptions
-                }
-
-                await Task.Delay(_heartbeatFrequency).ConfigureAwait(false);
-            }
-
-            bool ShouldCloseRoundTripConnection(Exception ex)
-            {
-                return
-                    ex is MongoCommandException ||
-                    (ex is MongoConnectionException mongoConnectionException &&
-                    mongoConnectionException.ContainsSocketTimeoutException
-                    ); // TODO: check
-            }
-        }
-
-        public void Dispose()
-        {
-            if (_roundTripTimeConnection != null)
-            {
-                try
-                {
-                    _roundTripTimeConnection.Dispose();
-                }
-                catch
-                {
-                    // ignore it
-                }
-            }
         }
     }
 }

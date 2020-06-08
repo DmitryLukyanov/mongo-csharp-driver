@@ -14,6 +14,8 @@
 */
 
 using System.Collections.Generic;
+using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
@@ -22,6 +24,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         public JsonDrivenRunAdminCommand(IMongoClient mongoClient, Dictionary<string, object> objectMap)
             : base(mongoClient.GetDatabase(DatabaseNamespace.Admin.DatabaseName), objectMap)
         {
+        }
+
+        protected override void EnsureObjectField(BsonDocument document)
+        {
+            JsonDrivenHelper.EnsureFieldEquals(document, "object", "testRunner");
         }
     }
 }

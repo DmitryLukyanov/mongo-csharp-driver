@@ -256,14 +256,14 @@ namespace MongoDB.Driver.Core.Servers
                     _connection = null;
                     return;
                 }
+                catch (MongoConnectionException ex) when (ex.InnerException is OperationCanceledException)
+                {
+                    // MongoConnectionException can wrap OperationCancellationException
+                    return;
+                }
                 catch (Exception ex)
                 {
                     heartbeatException = ex;
-                    if (ex.InnerException is OperationCanceledException)
-                    {
-                        // TODO
-                        return;
-                    }
 
                     if (_connection != null)
                     {

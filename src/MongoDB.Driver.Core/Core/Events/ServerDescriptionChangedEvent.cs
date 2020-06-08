@@ -13,7 +13,6 @@
 * limitations under the License.
 */
 
-using System;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Servers;
 
@@ -34,11 +33,6 @@ namespace MongoDB.Driver.Core.Events
         /// <param name="newDescription">The new description.</param>
         public ServerDescriptionChangedEvent(ServerDescription oldDescription, ServerDescription newDescription)
         {
-            if (newDescription.Type == ServerType.Unknown)
-            {
-                Console.WriteLine("tratat");
-            }
-
             _oldDescription = oldDescription;
             _newDescription = newDescription;
         }

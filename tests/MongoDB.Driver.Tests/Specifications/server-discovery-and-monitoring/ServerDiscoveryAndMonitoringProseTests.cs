@@ -19,10 +19,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.TestHelpers;
@@ -45,7 +48,11 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                 {
                     var timeout = TimeSpan.FromMilliseconds(550); // a bit bigger than heartbeatInterval
                     var notifyTask = eventCapturer.NotifyWhen(events => events.Any(e => events.Count() == attempt));
-                    WaitOrTimeout(notifyTask, timeout, $"The expected heartbeat interval is {heartbeatInterval} ms, but the attempt #{attempt} took more than {timeout.Milliseconds} ms.");
+                    var index = Task.WaitAny(notifyTask, Task.Delay(timeout));
+                    if (index != 0)
+                    {
+                        throw new Exception($"The expected heartbeat interval is {heartbeatInterval} ms, but the attempt #{attempt} took more than {timeout.Milliseconds} ms.");
+                    }
                 }
             }
         }
@@ -87,14 +94,35 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                         }
                     }");
 
-                using (var failPoint = FailPoint.Configure(client.Cluster, NoCoreSession.NewHandle(), failPointCommand))
+                using (FailPoint.Configure(client.Cluster, NoCoreSession.NewHandle(), failPointCommand))
                 {
-                    var expectedRoundTimeTrip = TimeSpan.FromMilliseconds(250);
-                    var timeout = TimeSpan.FromSeconds(5); // the event should not require longer timeout value than this
-                    Func<object, bool> eventCondition = @event => ((ServerDescriptionChangedEvent)@event).NewDescription.AverageRoundTripTime > expectedRoundTimeTrip;
-                    var notifyTask = eventCapturer.NotifyWhen(events => events.Any(eventCondition));
-                    WaitOrTimeout(notifyTask, timeout, $"The event with RTT equal to or bigger than {expectedRoundTimeTrip} exceeded timeout {timeout}.");
+                    // Note that the Server Description Equality rule means that ServerDescriptionChangedEvents will not be published.
+                    // So we use reflection to obtain the latest RTT instead.
+                    var server = client.Cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
+                    var roundTripTimeMonitor = server._monitor()._roundTripTimeMonitor();
+                    var expectedRoundTripTime = TimeSpan.FromMilliseconds(250);
+                    var timeout = TimeSpan.FromSeconds(30); // should not be reached without a driver bug
+                    WaitRoundTimeTripOrThrow(roundTripTimeMonitor, expectedRoundTripTime, timeout);
                 }
+            }
+
+            void WaitRoundTimeTripOrThrow(IRoundTripTimeMonitor roundTripTimeMonitor, TimeSpan expectedValue, TimeSpan timeout)
+            {
+                using (var timeoutCancellationTokenSource = new CancellationTokenSource(timeout))
+                {
+                    while (!timeoutCancellationTokenSource.IsCancellationRequested)
+                    {
+                        var currentValue = roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
+                        if (currentValue >= expectedValue)
+                        {
+                            return;
+                        }
+
+                        Thread.Sleep(50);
+                    }
+                }
+
+                throw new Exception($"The event with RTT equal to or bigger than {expectedValue} exceeded timeout {timeout}.");
             }
         }
 
@@ -109,14 +137,18 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
             };
             return DriverTestConfiguration.CreateDisposableClient(mongoclientSettings);
         }
+    }
 
-        private void WaitOrTimeout(Task notifyTask, TimeSpan timeout, string message)
+    internal static class ServerRelfector
+    {
+        public static IServerMonitor _monitor(this IServer server)
         {
-            var index = Task.WaitAny(notifyTask, Task.Delay(timeout));
-            if (index != 0)
-            {
-                throw new Exception(message);
-            }
+            return (IServerMonitor)Reflector.GetFieldValue(server, nameof(_monitor));
+        }
+
+        public static IRoundTripTimeMonitor _roundTripTimeMonitor(this IServerMonitor serverMonitor)
+        {
+            return (IRoundTripTimeMonitor)Reflector.GetFieldValue(serverMonitor, nameof(_roundTripTimeMonitor));
         }
     }
 }

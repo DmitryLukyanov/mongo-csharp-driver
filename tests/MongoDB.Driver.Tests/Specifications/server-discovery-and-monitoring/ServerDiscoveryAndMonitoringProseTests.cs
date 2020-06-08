@@ -91,7 +91,7 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
                 {
                     var expectedRoundTimeTrip = TimeSpan.FromMilliseconds(250);
                     var timeout = TimeSpan.FromSeconds(5); // the event should not require longer timeout value than this
-                    Func<object, bool> eventCondition = (@event) => ((ServerDescriptionChangedEvent)@event).NewDescription.AverageRoundTripTime > expectedRoundTimeTrip;
+                    Func<object, bool> eventCondition = @event => ((ServerDescriptionChangedEvent)@event).NewDescription.AverageRoundTripTime > expectedRoundTimeTrip;
                     var notifyTask = eventCapturer.NotifyWhen(events => events.Any(eventCondition));
                     WaitOrTimeout(notifyTask, timeout, $"The event with RTT equal to or bigger than {expectedRoundTimeTrip} exceeded timeout {timeout}.");
                 }

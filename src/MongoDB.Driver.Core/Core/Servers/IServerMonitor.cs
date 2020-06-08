@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Core.Servers
         ServerDescription Description { get; }
 
         /// <summary>
-        /// TODO
+        /// Cancel the current heartbeat.
         /// </summary>
         void CurrentCheckCancel();
 

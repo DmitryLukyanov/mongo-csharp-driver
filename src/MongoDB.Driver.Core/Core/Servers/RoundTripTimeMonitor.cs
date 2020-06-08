@@ -98,8 +98,7 @@ namespace MongoDB.Driver.Core.Servers
                 return
                     ex is MongoCommandException ||
                     (ex is MongoConnectionException mongoConnectionException &&
-                    mongoConnectionException.ContainsSocketTimeoutException
-                    ); // TODO: check
+                    mongoConnectionException.ContainsSocketTimeoutException);
             }
         }
 

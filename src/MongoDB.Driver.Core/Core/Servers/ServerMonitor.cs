@@ -37,8 +37,7 @@ namespace MongoDB.Driver.Core.Servers
         private volatile bool _currentCheckCancelled;
         private ServerDescription _currentDescription;
         private readonly EndPoint _endPoint;
-        // Do not worry about it now
-        private volatile BuildInfoResult _handshakeBuildInfoResult = new BuildInfoResult(new BsonDocument("version", "4.5.1"));
+        private volatile BuildInfoResult _handshakeBuildInfoResult;
         private HeartbeatDelay _heartbeatDelay;
         private readonly TimeSpan _heartbeatInterval;
         private readonly object _lock = new object();
@@ -235,8 +234,9 @@ namespace MongoDB.Driver.Core.Servers
             bool immediateAttempt = true;
             while (immediateAttempt)
             {
-                IsMasterResult heartbeatIsMasterResult;
+                IsMasterResult heartbeatIsMasterResult = null;
                 Exception heartbeatException = null;
+                var previousDescription = _currentDescription;
 
                 try
                 {
@@ -258,37 +258,21 @@ namespace MongoDB.Driver.Core.Servers
                 }
                 catch (Exception ex)
                 {
+                    heartbeatException = ex;
                     if (ex.InnerException is OperationCanceledException)
                     {
                         // TODO
                         return;
                     }
 
-                    heartbeatException = ex;
-                    heartbeatIsMasterResult = null;
                     if (_connection != null)
                     {
-                        if ((ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException) ||
-                            ex is MongoCommandException)
+                        if (IsNetworkError(ex) || ex is MongoCommandException)
                         {
                             _connection.Dispose();
                             _connection = null;
                         }
                     }
-                    //if (_connection != null)
-                    //{
-                    //    if ((ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException) ||
-                    //        ex is MongoCommandException)
-                    //    {
-                    //        _connection.Dispose();
-                    //        _connection = null;
-                    //        _handshakeBuildInfoResult = null;
-                    //        //_connectionPool.Clear(); // Think about inderect way
-                    //        //Invalidate("Heartbeat exception.");
-                    //        // TODO: clear connection pool
-                    //        // if this was a network error and the server was in a known state before the error, the client MUST NOT sleep and MUST begin the next check immediately. (See retry ismaster calls once and JAVA-1159.)
-                    //    }
-                    //}
                 }
 
                 if (_handshakeBuildInfoResult == null)
@@ -302,7 +286,6 @@ namespace MongoDB.Driver.Core.Servers
                     _currentCheckCancelled = false;
                     return;
                 }
-                var previousDescription = _currentDescription;
 
                 ServerDescription newDescription;
                 if (heartbeatIsMasterResult != null)
@@ -348,15 +331,15 @@ namespace MongoDB.Driver.Core.Servers
 
                 SetDescription(newDescription);
 
-                //var skipImmediateAttempt =
-                //    heartbeatException != null ||
-                //    (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion == null) ||
-                //    (isMasterProtocol == null || !isMasterProtocol.MoreResponsesExpected) ||
-                //    (!(heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException && _currentDescription.Type != ServerType.Unknown));
-                immediateAttempt = //!skipImmediateAttempt;
+                immediateAttempt =
                     (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion != null) ||
                     (isMasterProtocol != null && isMasterProtocol.MoreResponsesExpected) ||
-                    (heartbeatException is MongoConnectionException typedEx && typedEx.IsNetworkException && previousDescription.Type != ServerType.Unknown);
+                    (IsNetworkError(heartbeatException) && previousDescription.Type != ServerType.Unknown);
+            }
+
+            bool IsNetworkError(Exception ex)
+            {
+                return ex is MongoConnectionException mongoConnectionException && mongoConnectionException.IsNetworkException;
             }
         }
 

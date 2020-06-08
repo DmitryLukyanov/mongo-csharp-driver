@@ -26,7 +26,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         {
         }
 
-        protected override void EnsureObjectField(BsonDocument document)
+        protected override void EnsureObjectFieldIsValid(BsonDocument document)
         {
             JsonDrivenHelper.EnsureFieldEquals(document, "object", "testRunner");
         }

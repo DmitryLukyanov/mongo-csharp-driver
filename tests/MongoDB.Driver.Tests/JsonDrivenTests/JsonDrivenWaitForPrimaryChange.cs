@@ -91,17 +91,18 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         private EndPoint WaitPrimaryChange(EndPoint previousPrimary)
         {
-            var cancelationTokenSource = new CancellationTokenSource(_timeout);
-
-            var currentPrimary = GetPrimary();
-            while ((
-                currentPrimary == null || // temporary case when all servers are secondary
-                currentPrimary == previousPrimary) &&
-                !cancelationTokenSource.IsCancellationRequested) // timeout is exceeded
+            using (var cancelationTokenSource = new CancellationTokenSource(_timeout))
             {
-                currentPrimary = GetPrimary();
+                var currentPrimary = GetPrimary();
+                while ((
+                    currentPrimary == null || // temporary case when all servers are secondary
+                    currentPrimary == previousPrimary) &&
+                    !cancelationTokenSource.IsCancellationRequested) // timeout is exceeded
+                {
+                    currentPrimary = GetPrimary();
+                }
+                return currentPrimary != previousPrimary ? currentPrimary : null;
             }
-            return currentPrimary != previousPrimary ? currentPrimary : null;
         }
     }
 }

@@ -92,14 +92,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             var timeout = TimeSpan.FromSeconds(30);
             var testFailedTimeout = Task.Delay(timeout, CancellationToken.None);
             var index = Task.WaitAny(notifyTask, testFailedTimeout);
-            Passed = true;
             if (index != 0)
             {
                 var triggeredEventsCount = _eventCapturer.Events.Count(eventCondition);
                 throw new Exception($"Waiting for {_count} {_event} exceeded the timeout {timeout}. The number of triggered events is {triggeredEventsCount}.");
             }
         }
-
-        public bool Passed { get; set; }
     }
 }

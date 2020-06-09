@@ -50,9 +50,8 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly IBsonSerializer<TCommandResult> _resultSerializer;
         private readonly ICoreSession _session;
         // streamable fields
-        private readonly bool _isStreamable;
-        private bool _previousResponseMoreToCome = false; // MoreToCome from the previous response
-        private int? _previousResponseId = null; // MessageId from the previous response
+        private bool _moreToCome = false; // MoreToCome from the previous response
+        private int _previousRequestId; // MessageId from the previous response
 
         // constructors
         public CommandUsingCommandMessageWireProtocol(
@@ -90,24 +89,26 @@ namespace MongoDB.Driver.Core.WireProtocol
                 _documentFieldDecryptor = messageEncoderSettings.GetOrDefault<IBinaryDocumentFieldDecryptor>(MessageEncoderSettingsName.BinaryDocumentFieldDecryptor, null);
                 _documentFieldEncryptor = messageEncoderSettings.GetOrDefault<IBinaryCommandFieldEncryptor>(MessageEncoderSettingsName.BinaryDocumentFieldEncryptor, null);
             }
-
-            // streamable options
-            _isStreamable = IsCommandStreamable(_command);
         }
 
         // public properties
-        public bool MoreResponsesExpected => _previousResponseMoreToCome;
+        public bool MoreResponsesExpected => _moreToCome;
 
         // public methods
         public TCommandResult Execute(IConnection connection, CancellationToken cancellationToken)
         {
-            var message = CreateCommandMessage(connection.Description);
-
             try
             {
-
-                if (message.WrappedMessage.RequestExpected) // no need to create a message
+                bool responseExpected;
+                int responseTo;
+                if (_moreToCome)
                 {
+                    responseExpected = true;
+                    responseTo = _previousRequestId;
+                }
+                else
+                {
+                    var message = CreateCommandMessage(connection.Description);
                     message = AutoEncryptFieldsIfNecessary(message, connection, cancellationToken);
 
                     try
@@ -121,12 +122,15 @@ namespace MongoDB.Driver.Core.WireProtocol
                             MessageWasProbablySent(message);
                         }
                     }
+
+                    responseExpected = _responseHandling != CommandResponseHandling.NoResponseExpected;
+                    responseTo = message.RequestId;
                 }
 
-                if (message.WrappedMessage.ResponseExpected)
+                if (responseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)connection.ReceiveMessage(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken);
+                    var response = (CommandResponseMessage)connection.ReceiveMessage(responseTo, encoderSelector, _messageEncoderSettings, cancellationToken);
                     SaveResponseInfoIfRequired(response);
                     response = AutoDecryptFieldsIfNecessary(response, cancellationToken);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
@@ -149,9 +153,16 @@ namespace MongoDB.Driver.Core.WireProtocol
         {
             try
             {
-                var message = CreateCommandMessage(connection.Description);
-                if (message.WrappedMessage.RequestExpected) // no need to create a message
+                bool responseExpected;
+                int responseTo;
+                if (_moreToCome)
                 {
+                    responseExpected = true;
+                    responseTo = _previousRequestId;
+                }
+                else
+                {
+                    var message = CreateCommandMessage(connection.Description);
                     message = await AutoEncryptFieldsIfNecessaryAsync(message, connection, cancellationToken).ConfigureAwait(false);
 
                     try
@@ -165,12 +176,15 @@ namespace MongoDB.Driver.Core.WireProtocol
                             MessageWasProbablySent(message);
                         }
                     }
+
+                    responseExpected = _responseHandling != CommandResponseHandling.NoResponseExpected;
+                    responseTo = message.RequestId;
                 }
 
-                if (message.WrappedMessage.ResponseExpected)
+                if (responseExpected)
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
-                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(message.RequestId, encoderSelector, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                    var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(responseTo, encoderSelector, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
                     SaveResponseInfoIfRequired(response);
                     response = await AutoDecryptFieldsIfNecessaryAsync(response, cancellationToken).ConfigureAwait(false);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
@@ -270,7 +284,7 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private CommandRequestMessage CreateCommandMessage(ConnectionDescription connectionDescription)
         {
-            var requestId = _previousResponseId ?? RequestMessage.GetNextRequestId();
+            var requestId = RequestMessage.GetNextRequestId();
             var responseTo = 0;
             var sections = CreateSections(connectionDescription);
 
@@ -279,8 +293,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             var wrappedMessage = new CommandMessage(requestId, responseTo, sections, moreToComeRequest)
             {
                 PostWriteAction = _postWriteAction,
-                ExhaustAllowed = _isStreamable,
-                RequestExpected = !_previousResponseMoreToCome
+                ExhaustAllowed = _responseHandling == CommandResponseHandling.ExhaustAllowed,
             };
             var shouldBeSent = (Func<bool>)(() => true);
 
@@ -385,13 +398,6 @@ namespace MongoDB.Driver.Core.WireProtocol
                     return true;
                 }
             }
-        }
-
-        private bool IsCommandStreamable(BsonDocument command)
-        {
-            return
-                command.Contains("isMaster") &&
-                command.Contains("topologyVersion");
         }
 
         private bool IsRetryableWriteExceptionAndDeploymentDoesNotSupportRetryableWrites(MongoCommandException exception)
@@ -529,11 +535,8 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private void SaveResponseInfoIfRequired(CommandResponseMessage response)
         {
-            if (_isStreamable)
-            {
-                _previousResponseId = response.RequestId;
-                _previousResponseMoreToCome = response.WrappedMessage.MoreToCome;
-            }
+            _previousRequestId = response.RequestId;
+            _moreToCome = response.WrappedMessage.MoreToCome;
         }
 
         private bool ShouldAddTransientTransactionError(MongoException exception)

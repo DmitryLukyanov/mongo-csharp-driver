@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Core.Servers
             if (_state.TryChange(State.Initial, State.Open))
             {
                 MonitorServerAsync().ConfigureAwait(false);
-                //_roundTripTimeMonitor.Run().ConfigureAwait(false);
+                _roundTripTimeMonitor.Run().ConfigureAwait(false);
             }
         }
 
@@ -142,11 +142,13 @@ namespace MongoDB.Driver.Core.Servers
             var isMasterCommand = IsMasterHelper.CreateCommand(
                 connection.Description.IsMasterResult.TopologyVersion,  // can be null
                 _heartbeatInterval);
+            var commandResponseHandling = CommandResponseHandling.Return;
             if (connection.Description.IsMasterResult.TopologyVersion != null)
             {
                 connection.SetReadTimeout(_heartbeatInterval);
+                commandResponseHandling = CommandResponseHandling.ExhaustAllowed;
             }
-            return IsMasterHelper.CreateProtocol(isMasterCommand);
+            return IsMasterHelper.CreateProtocol(isMasterCommand, commandResponseHandling);
         }
 
         private async Task<IsMasterResult> InitializeConnectionAsync(CancellationToken cancellationToken)

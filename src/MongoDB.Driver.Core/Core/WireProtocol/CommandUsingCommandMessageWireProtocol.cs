@@ -125,7 +125,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                         }
                     }
 
-                    responseExpected = _responseHandling != CommandResponseHandling.NoResponseExpected;
+                    responseExpected = message.WrappedMessage.ResponseExpected;
                     responseTo = message.RequestId;
                 }
 
@@ -133,7 +133,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
                     var response = (CommandResponseMessage)connection.ReceiveMessage(responseTo, encoderSelector, _messageEncoderSettings, cancellationToken);
-                    SaveResponseInfoIfRequired(response);
+                    SaveResponseInfo(response);
                     response = AutoDecryptFieldsIfNecessary(response, cancellationToken);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
                 }
@@ -179,7 +179,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                         }
                     }
 
-                    responseExpected = _responseHandling != CommandResponseHandling.NoResponseExpected;
+                    responseExpected = message.WrappedMessage.ResponseExpected;
                     responseTo = message.RequestId;
                 }
 
@@ -187,7 +187,7 @@ namespace MongoDB.Driver.Core.WireProtocol
                 {
                     var encoderSelector = new CommandResponseMessageEncoderSelector();
                     var response = (CommandResponseMessage)await connection.ReceiveMessageAsync(responseTo, encoderSelector, _messageEncoderSettings, cancellationToken).ConfigureAwait(false);
-                    SaveResponseInfoIfRequired(response);
+                    SaveResponseInfo(response);
                     response = await AutoDecryptFieldsIfNecessaryAsync(response, cancellationToken).ConfigureAwait(false);
                     return ProcessResponse(connection.ConnectionId, response.WrappedMessage);
                 }
@@ -535,7 +535,7 @@ namespace MongoDB.Driver.Core.WireProtocol
             }
         }
 
-        private void SaveResponseInfoIfRequired(CommandResponseMessage response)
+        private void SaveResponseInfo(CommandResponseMessage response)
         {
             _previousRequestId = response.RequestId;
             _moreToCome = response.WrappedMessage.MoreToCome;

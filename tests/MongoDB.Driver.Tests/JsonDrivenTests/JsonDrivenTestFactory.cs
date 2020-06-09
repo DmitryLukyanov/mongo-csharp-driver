@@ -49,13 +49,13 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         private readonly JsonDrivenTestsContext _testsContext;
 
         // public constructors
-        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
-            : this(client, databaseName, collectionName, bucketName, objectMap)
+        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
+            : this(client, databaseName, collectionName, bucketName, objectMap, null)
         {
         }
 
-        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap)
-            : this(null, client, databaseName, collectionName, bucketName, objectMap)
+        public JsonDrivenTestFactory(IMongoClient client, string databaseName, string collectionName, string bucketName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
+            : this(null, client, databaseName, collectionName, bucketName, objectMap, eventCapturer)
         {
         }
 

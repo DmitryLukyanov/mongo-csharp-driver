@@ -54,7 +54,7 @@ namespace MongoDB.Driver.Tests.Builders
             index["key"]["a.$**"].AsInt32.Should().Be(1);
         }
 
-        [SkippableFact]
+        [SkippableFact(Skip = "skip")]
         public void CreateIndex_with_wildcardProjection_should_create_expected_index()
         {
             RequireServer.Check().Supports(Feature.WildcardIndexes);

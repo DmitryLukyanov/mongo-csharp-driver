@@ -35,9 +35,11 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
     public class ServerDiscoveryAndMonitoringProseTests
     {
-        [Fact]
+        [SkippableFact]
         public void Streaming_protocol_test()
         {
+            RequireServer.Check().Supports(Feature.StreamingIsMaster);
+
             var eventCapturer = new EventCapturer().Capture<ServerHeartbeatStartedEvent>();
 
             var heartbeatInterval = 500;

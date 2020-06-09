@@ -101,6 +101,23 @@ namespace MongoDB.Driver.Core.Helpers
                     mockConnectionPoolFactory
                         .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), endPoint))
                         .Returns(mockConnectionPool.Object);
+                    mockConnection.Setup(c => c.Generation).Returns(valueFunction: () => connectionGeneration);
+                    // need to use a func to close over poolGeneration
+                    mockConnectionPool.Setup(p => p.Generation).Returns(valueFunction: () => poolGeneration);
+                    Action acquireConnectionCallback = () => { connectionGeneration = poolGeneration; };
+                    mockConnectionPool
+                        .Setup(p => p.AcquireConnection(It.IsAny<CancellationToken>()))
+                        .Callback(acquireConnectionCallback)
+                        .Returns(mockConnection.Object);
+                    mockConnectionPool
+                        .Setup(p => p.AcquireConnectionAsync(It.IsAny<CancellationToken>()))
+                        .Callback(acquireConnectionCallback)
+                        .ReturnsAsync(mockConnection.Object);
+                    mockConnectionPool.Setup(p => p.Clear()).Callback(() => { ++poolGeneration; });
+                    var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory> { DefaultValue = DefaultValue.Mock };
+                    mockConnectionPoolFactory
+                        .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), endPoint))
+                        .Returns(mockConnectionPool.Object);
 
                     result = new ServerTuple
                     {

@@ -67,9 +67,11 @@ namespace MongoDB.Driver.Core.WireProtocol
             MessageEncoderSettings messageEncoderSettings,
             Action<IMessageEncoderPostProcessor> postWriteAction)
         {
-            if (responseHandling != CommandResponseHandling.Return && responseHandling != CommandResponseHandling.NoResponseExpected)
+            if (responseHandling != CommandResponseHandling.Return &&
+                responseHandling != CommandResponseHandling.NoResponseExpected &&
+                responseHandling != CommandResponseHandling.ExhaustAllowed)
             {
-                throw new ArgumentException("CommandResponseHandling must be Return or NoneExpected.", nameof(responseHandling));
+                throw new ArgumentException("CommandResponseHandling must be Return, NoneExpected or ExhaustAllowed.", nameof(responseHandling));
             }
 
             _session = Ensure.IsNotNull(session, nameof(session));

@@ -150,9 +150,6 @@ namespace MongoDB.Driver.Core.Servers
             // go back to disconnected
             SpinWait.SpinUntil(() => _subject.Description.State == ServerState.Disconnected, TimeSpan.FromSeconds(5)).Should().BeTrue();
 
-            // when heart fails, we immediately attempt a second, hence the multiple events...
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
-            _capturedEvents.Next().Should().BeOfType<ServerHeartbeatFailedEvent>();
             _capturedEvents.Next().Should().BeOfType<ServerHeartbeatStartedEvent>();
             _capturedEvents.Next().Should().BeOfType<ServerHeartbeatFailedEvent>();
             _capturedEvents.Any().Should().BeFalse();
@@ -160,17 +157,10 @@ namespace MongoDB.Driver.Core.Servers
 
         private void SetupHeartbeatConnection()
         {
-            var isMasterReply = MessageHelper.BuildReply<RawBsonDocument>(
-                RawBsonDocumentHelper.FromJson("{ ok: 1 }"));
-            var buildInfoReply = MessageHelper.BuildReply<RawBsonDocument>(
-                RawBsonDocumentHelper.FromJson("{ ok: 1, version: \"2.6.3\" }"));
-
             _connection.Description = new ConnectionDescription(
                 _connection.ConnectionId,
                 new IsMasterResult(BsonDocument.Parse("{ ok : 1 }")),
-                new BuildInfoResult(BsonDocument.Parse("{ ok: 1, version: \"2.6.3\" }")));
-            _connection.EnqueueReplyMessage(isMasterReply);
-            _connection.EnqueueReplyMessage(buildInfoReply);
+                new BuildInfoResult(BsonDocument.Parse("{ ok : 1, version : '2.6.3' }")));
         }
     }
 }

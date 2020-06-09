@@ -280,11 +280,6 @@ namespace MongoDB.Driver.Core.Servers
                     }
                 }
 
-                if (_handshakeBuildInfoResult == null)
-                {
-                    // we can be here only if there is a bug in the driver
-                    throw new ArgumentNullException("BuildInfo has been lost.");
-                }
 
                 if (_currentCheckCancelled)
                 {
@@ -295,6 +290,12 @@ namespace MongoDB.Driver.Core.Servers
                 ServerDescription newDescription;
                 if (heartbeatIsMasterResult != null)
                 {
+                    if (_handshakeBuildInfoResult == null)
+                    {
+                        // we can be here only if there is a bug in the driver
+                        throw new ArgumentNullException("BuildInfo has been lost.");
+                    }
+
                     var averageRoundTripTime = _roundTripTimeMonitor.ExponentiallyWeightedMovingAverage.Average;
                     var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
 

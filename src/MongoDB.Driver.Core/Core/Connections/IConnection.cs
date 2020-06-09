@@ -134,8 +134,9 @@ namespace MongoDB.Driver.Core.Connections
         Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken);
 
         /// <summary>
-        /// TODO
+        /// Set read timeout value.
         /// </summary>
+        /// <param name="timeout">The timeout.</param>
         void SetReadTimeout(TimeSpan timeout);
     }
 

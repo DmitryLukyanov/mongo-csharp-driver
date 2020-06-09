@@ -160,7 +160,7 @@ namespace MongoDB.Driver.Core.Servers
             // if we are cancelling, it's because the server has
             // been shut down and we really don't need to wait.
             var stopwatch = Stopwatch.StartNew();
-            await _connection.OpenAsync(cancellationToken).ConfigureAwait(false); //TODO: cancellation token?
+            await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             stopwatch.Stop();
 
             _handshakeBuildInfoResult = _connection.Description.BuildInfoResult;

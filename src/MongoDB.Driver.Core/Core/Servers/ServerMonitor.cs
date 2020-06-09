@@ -224,7 +224,6 @@ namespace MongoDB.Driver.Core.Servers
                         oldHeartbeatDelay.Dispose();
                     }
                     await newHeartbeatDelay.Task.ConfigureAwait(false);
-                    //await Task.Delay(10000).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -339,7 +338,7 @@ namespace MongoDB.Driver.Core.Servers
 
                 immediateAttempt =
                     (heartbeatIsMasterResult != null && heartbeatIsMasterResult.TopologyVersion != null) ||
-                    (isMasterProtocol != null && isMasterProtocol.MoreResponsesExpected) ||
+                    (isMasterProtocol != null && isMasterProtocol.MoreToCome) ||
                     (IsNetworkError(heartbeatException) && previousDescription.Type != ServerType.Unknown);
             }
 

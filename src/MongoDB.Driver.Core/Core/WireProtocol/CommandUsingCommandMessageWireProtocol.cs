@@ -51,7 +51,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         private readonly ICoreSession _session;
         // streamable fields
         private bool _moreToCome = false; // MoreToCome from the previous response
-        private int _previousRequestId; // MessageId from the previous response
+        private int _previousRequestId; // RequestId from the previous response
 
         // constructors
         public CommandUsingCommandMessageWireProtocol(
@@ -94,7 +94,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         }
 
         // public properties
-        public bool MoreResponsesExpected => _moreToCome;
+        public bool MoreToCome => _moreToCome;
 
         // public methods
         public TCommandResult Execute(IConnection connection, CancellationToken cancellationToken)

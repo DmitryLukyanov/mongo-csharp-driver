@@ -21,14 +21,14 @@ namespace MongoDB.Driver.Core.WireProtocol
 {
     internal interface IWireProtocol
     {
-        bool MoreResponsesExpected { get; }
+        bool MoreToCome { get; }
         void Execute(IConnection connection, CancellationToken cancellationToken = default(CancellationToken));
         Task ExecuteAsync(IConnection connection, CancellationToken cancellationToken = default(CancellationToken));
     }
 
     internal interface IWireProtocol<TResult>
     {
-        bool MoreResponsesExpected { get; }
+        bool MoreToCome { get; }
         TResult Execute(IConnection connection, CancellationToken cancellationToken = default(CancellationToken));
         Task<TResult> ExecuteAsync(IConnection connection, CancellationToken cancellationToken = default(CancellationToken));
     }

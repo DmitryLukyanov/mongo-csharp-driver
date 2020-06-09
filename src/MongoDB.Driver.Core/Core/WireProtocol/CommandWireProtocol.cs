@@ -34,6 +34,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         // private fields
         private readonly BsonDocument _additionalOptions;
         private IWireProtocol<TCommandResult> _cachedWireProtocol;
+        private ConnectionId _cachedConnectId;
         private readonly BsonDocument _command;
         private readonly List<Type1CommandMessageSection> _commandPayloads;
         private readonly IElementNameValidator _commandValidator;
@@ -118,7 +119,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         }
 
         // public properties
-        public bool MoreResponsesExpected => _cachedWireProtocol?.MoreResponsesExpected ?? false;
+        public bool MoreToCome => _cachedWireProtocol?.MoreToCome ?? false;
 
         // public methods
         public TCommandResult Execute(IConnection connection, CancellationToken cancellationToken)
@@ -170,12 +171,13 @@ namespace MongoDB.Driver.Core.WireProtocol
 
         private IWireProtocol<TCommandResult> CreateSupportedWireProtocol(IConnection connection)
         {
-            if (_cachedWireProtocol != null)
+            if (_cachedWireProtocol != null && _cachedConnectId == connection.ConnectionId)
             {
                 return _cachedWireProtocol;
             }
             else
             {
+                _cachedConnectId = connection.ConnectionId;
                 var serverVersion = connection.Description?.ServerVersion;
                 if (serverVersion != null && Feature.CommandMessage.IsSupported(serverVersion))
                 {

@@ -148,7 +148,7 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
         /// <value>
         ///   <c>true</c> if a response is expected; otherwise, <c>false</c>.
         /// </value>
-        public bool ResponseExpected => !_moreToCome; 
+        public bool ResponseExpected => !_moreToCome;
 
         /// <summary>
         /// Gets the response to.

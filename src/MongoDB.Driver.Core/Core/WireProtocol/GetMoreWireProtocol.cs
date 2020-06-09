@@ -53,7 +53,7 @@ namespace MongoDB.Driver.Core.WireProtocol
         }
 
         // public properties
-        public bool MoreResponsesExpected => false;
+        public bool MoreToCome => false;
 
         // methods
         private GetMoreMessage CreateMessage()

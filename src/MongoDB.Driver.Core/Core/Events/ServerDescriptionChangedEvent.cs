@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Servers;
 

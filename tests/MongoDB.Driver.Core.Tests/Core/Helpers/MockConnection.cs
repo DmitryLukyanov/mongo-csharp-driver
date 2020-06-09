@@ -182,6 +182,7 @@ namespace MongoDB.Driver.Core.Helpers
             _sentMessages.AddRange(messages);
             return Task.FromResult<object>(null);
         }
+
         public void SetReadTimeout(TimeSpan timeout)
         {
             throw new NotImplementedException();

@@ -31,7 +31,6 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             _database = database;
         }
 
-
         // public methods
         public override void Arrange(BsonDocument document)
         {

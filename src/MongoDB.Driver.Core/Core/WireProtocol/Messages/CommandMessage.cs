@@ -78,10 +78,10 @@ namespace MongoDB.Driver.Core.WireProtocol.Messages
 
         // public properties
         /// <summary>
-        /// TODO.
+        /// Gets or sets a value indicating whether multiple responses might be returned from the server or not.
         /// </summary>
         /// <value>
-        /// TODO.
+        ///   <c>true</c> if the server might return multiple responses; otherwise, <c>false</c>.
         /// </value>
         public bool ExhaustAllowed
         {

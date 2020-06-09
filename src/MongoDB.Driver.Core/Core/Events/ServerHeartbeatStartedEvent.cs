@@ -24,8 +24,8 @@ namespace MongoDB.Driver.Core.Events
     /// </summary>
     public struct ServerHeartbeatStartedEvent
     {
-        private readonly ConnectionId _connectionId;
         private readonly bool _awaited;
+        private readonly ConnectionId _connectionId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServerHeartbeatStartedEvent"/> struct.

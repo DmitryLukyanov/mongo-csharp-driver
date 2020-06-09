@@ -16,6 +16,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.WireProtocol.Messages;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 

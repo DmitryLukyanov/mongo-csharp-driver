@@ -45,7 +45,7 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            // do nothing;
+            // do nothing
             return Task.FromResult(true);
         }
 

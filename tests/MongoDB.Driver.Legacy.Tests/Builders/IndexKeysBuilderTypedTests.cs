@@ -74,23 +74,23 @@ namespace MongoDB.Driver.Tests.Builders
             index["key"]["a.$**"].AsInt32.Should().Be(1);
         }
 
-        //[SkippableFact(Skip ="skip")]
-        //public void CreateIndex_with_wildcardProjection_should_create_expected_index()
-        //{
-        //    RequireServer.Check().Supports(Feature.WildcardIndexes);
-        //    var collection = _database.GetCollection<Test>("test_wildcard_index");
-        //    collection.Drop();
-        //    collection.CreateIndex(
-        //        IndexKeys<Test>.Wildcard(),
-        //        IndexOptions<Test>
-        //            .SetName("custom")
-        //            .SetWildcardProjection(c => c.B, true)
-        //            .SetWildcardProjection(c => c.Id, false));
-        //    var indexes = collection.GetIndexes();
-        //    var index = indexes.RawDocuments.Single(i => i["name"].AsString == "custom");
-        //    index["key"]["$**"].AsInt32.Should().Be(1);
-        //    index["wildcardProjection"].ToBsonDocument().Should().Be(BsonDocument.Parse("{ b : 1, _id : 0 }"));
-        //}
+        [SkippableFact]
+        public void CreateIndex_with_wildcardProjection_should_create_expected_index()
+        {
+            RequireServer.Check().Supports(Feature.WildcardIndexes);
+            var collection = _database.GetCollection<Test>("test_wildcard_index");
+            collection.Drop();
+            collection.CreateIndex(
+                IndexKeys<Test>.Wildcard(),
+                IndexOptions<Test>
+                    .SetName("custom")
+                    .SetWildcardProjection(c => c.B, true)
+                    .SetWildcardProjection(c => c.Id, false));
+            var indexes = collection.GetIndexes();
+            var index = indexes.RawDocuments.Single(i => i["name"].AsString == "custom");
+            index["key"]["$**"].AsInt32.Should().Be(1);
+            index["wildcardProjection"].ToBsonDocument().Should().Be(BsonDocument.Parse("{ b : 1, _id : 0 }"));
+        }
 
         [Fact]
         public void TestAscending1()

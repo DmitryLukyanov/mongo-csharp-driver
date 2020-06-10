@@ -14,53 +14,23 @@
 */
 
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
-using MongoDB.Bson;
-using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
-    public sealed class JsonDrivenTargetedFailPointTest : JsonDrivenTestRunnerTest
+    public sealed class JsonDrivenTargetedFailPointTest : JsonDrivenConfigureFailPoint
     {
-        private BsonDocument _failCommand;
-
-
         public JsonDrivenTargetedFailPointTest(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap)
-            : base(testRunner, objectMap)
+            : base(testRunner, client: null, objectMap)
         {
         }
 
-        protected override void CallMethod(CancellationToken cancellationToken)
+        protected override IServer GetServer()
         {
             var pinnedServer = GetPinnedServer();
             pinnedServer.Should().NotBeNull();
-            TestRunner.ConfigureFailPoint(pinnedServer, NoCoreSession.NewHandle(), _failCommand);
-        }
-
-        protected override Task CallMethodAsync(CancellationToken cancellationToken)
-        {
-            var pinnedServer = GetPinnedServer();
-            pinnedServer.Should().NotBeNull();
-            return TestRunner.ConfigureFailPointAsync(pinnedServer, NoCoreSession.NewHandle(), _failCommand);
-        }
-
-        protected override void AssertResult()
-        {
-            // do nothing
-        }
-
-        protected override void SetArgument(string name, BsonValue value)
-        {
-            switch (name)
-            {
-                case "failPoint":
-                    _failCommand = (BsonDocument)value;
-                    return;
-            }
-
-            base.SetArgument(name, value);
+            return pinnedServer;
         }
     }
 }

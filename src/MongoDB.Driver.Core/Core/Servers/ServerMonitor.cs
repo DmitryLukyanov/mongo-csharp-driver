@@ -279,6 +279,8 @@ namespace MongoDB.Driver.Core.Servers
                 catch (MongoConnectionException ex) when (ex.InnerException is OperationCanceledException)
                 {
                     // MongoConnectionException can wrap OperationCancellationException
+                    //_connection.Dispose();
+                    //_connection = null;
                     return;
                 }
                 catch (Exception ex)

@@ -198,9 +198,14 @@ namespace MongoDB.Driver.Core.Servers
             _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(monitorCancellationToken);
             while (!monitorCancellationToken.IsCancellationRequested)
             {
-                var currentCheckCancellationToken = _currentCheckCancellationTokenSource.Token;
                 try
                 {
+                    CancellationToken currentCheckCancellationToken;
+                    lock (_lock)
+                    {
+                        currentCheckCancellationToken = _currentCheckCancellationTokenSource.Token;
+                    }
+
                     try
                     {
                         await HeartbeatAsync(currentCheckCancellationToken).ConfigureAwait(false);

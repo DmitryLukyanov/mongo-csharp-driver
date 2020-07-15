@@ -519,6 +519,7 @@ namespace MongoDB.Driver.Core.Servers
                 .AppendFormat(", EndPoint: \"{0}\"", _endPoint)
                 .AppendFormat(", ReasonChanged: \"{0}\"", _reasonChanged)
                 .AppendFormat(", State: \"{0}\"", _state)
+                .Append($", ServerVersion: {_version}")
                 .Append($", TopologyVersion: {_topologyVersion}")
                 .AppendFormat(", Type: \"{0}\"", _type)
                 .AppendFormatIf(_tags != null && !_tags.IsEmpty, ", Tags: \"{0}\"", _tags)

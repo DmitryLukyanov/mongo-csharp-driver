@@ -153,7 +153,9 @@ namespace MongoDB.Driver.Core.Servers
                 connection.SetReadTimeout(_serverMonitorSettings.ConnectTimeout + _serverMonitorSettings.HeartbeatInterval);
                 commandResponseHandling = CommandResponseHandling.ExhaustAllowed;
 
-                isMasterCommand = IsMasterHelper.CreateCommand(connection.Description.IsMasterResult.TopologyVersion, _serverMonitorSettings.HeartbeatInterval);
+                var infiniteHeartbeatFrequencyMS = TimeSpan.FromDays(1); // the server doesn't support Infinite value, so we set just a big enough value
+                var maxAwaitTime = _serverMonitorSettings.HeartbeatInterval == Timeout.InfiniteTimeSpan ? infiniteHeartbeatFrequencyMS : _serverMonitorSettings.HeartbeatInterval;
+                isMasterCommand = IsMasterHelper.CreateCommand(connection.Description.IsMasterResult.TopologyVersion, maxAwaitTime);
             }
             else
             {

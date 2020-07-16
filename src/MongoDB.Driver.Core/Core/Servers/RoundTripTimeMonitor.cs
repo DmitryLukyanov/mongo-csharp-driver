@@ -85,7 +85,7 @@ namespace MongoDB.Driver.Core.Servers
                 {
                     if (_roundTripTimeConnection == null)
                     {
-                        await InitializeConnectionAsync().ConfigureAwait(false);
+                        await InitializeConnectionAsync().ConfigureAwait(false); // sets _roundTripTimeConnection
                     }
                     else
                     {
@@ -126,6 +126,7 @@ namespace MongoDB.Driver.Core.Servers
                 // if we are cancelling, it's because the server has
                 // been shut down and we really don't need to wait.
                 await roundTripTimeConnection.OpenAsync(_cancellationToken).ConfigureAwait(false);
+                _cancellationToken.ThrowIfCancellationRequested();
             }
             catch
             {

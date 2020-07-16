@@ -39,8 +39,8 @@ namespace MongoDB.Driver.Core.Servers
         private readonly object _lock = new object();
         private readonly CancellationTokenSource _monitorCancellationTokenSource;
         private readonly IRoundTripTimeMonitor _roundTripTimeMonitor;
-        private readonly InterlockedInt32 _state;
         private readonly ServerId _serverId;
+        private readonly InterlockedInt32 _state;
         private readonly ServerMonitorSettings _serverMonitorSettings;
 
         private readonly Action<ServerHeartbeatStartedEvent> _heartbeatStartedEventHandler;
@@ -57,18 +57,18 @@ namespace MongoDB.Driver.Core.Servers
 
         public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, ServerMonitorSettings serverMonitorSettings, IEventSubscriber eventSubscriber, CancellationTokenSource cancellationTokenSource)
             : this(
-                  serverId,
-                  endPoint,
-                  connectionFactory,
-                  serverMonitorSettings,
-                  eventSubscriber,
-                  roundTripTimeMonitor: new RoundTripTimeMonitor(
-                      connectionFactory,
-                      serverId,
-                      endPoint,
-                      Ensure.IsNotNull(serverMonitorSettings, nameof(serverMonitorSettings)).HeartbeatInterval,
-                      cancellationTokenSource.Token),
-                  cancellationTokenSource)
+                serverId,
+                endPoint,
+                connectionFactory,
+                serverMonitorSettings,
+                eventSubscriber,
+                roundTripTimeMonitor: new RoundTripTimeMonitor(
+                    connectionFactory,
+                    serverId,
+                    endPoint,
+                    Ensure.IsNotNull(serverMonitorSettings, nameof(serverMonitorSettings)).HeartbeatInterval,
+                    cancellationTokenSource.Token),
+                cancellationTokenSource)
         {
         }
 
@@ -153,8 +153,8 @@ namespace MongoDB.Driver.Core.Servers
                 connection.SetReadTimeout(_serverMonitorSettings.ConnectTimeout + _serverMonitorSettings.HeartbeatInterval);
                 commandResponseHandling = CommandResponseHandling.ExhaustAllowed;
 
-                var infiniteHeartbeatFrequencyMS = TimeSpan.FromDays(1); // the server doesn't support Infinite value, so we set just a big enough value
-                var maxAwaitTime = _serverMonitorSettings.HeartbeatInterval == Timeout.InfiniteTimeSpan ? infiniteHeartbeatFrequencyMS : _serverMonitorSettings.HeartbeatInterval;
+                var veryLargeHeartbeatInterval = TimeSpan.FromDays(1); // the server doesn't support Infinite value, so we set just a big enough value
+                var maxAwaitTime = _serverMonitorSettings.HeartbeatInterval == Timeout.InfiniteTimeSpan ? veryLargeHeartbeatInterval : _serverMonitorSettings.HeartbeatInterval;
                 isMasterCommand = IsMasterHelper.CreateCommand(connection.Description.IsMasterResult.TopologyVersion, maxAwaitTime);
             }
             else
@@ -289,7 +289,11 @@ namespace MongoDB.Driver.Core.Servers
                         var initializedConnection = await InitializeConnectionAsync(cancellationToken).ConfigureAwait(false);
                         lock (_lock)
                         {
-                            ThrowCancellationExceptionAndDisposeConnectionIfMonitorDisposed(initializedConnection);
+                            if (_state.Value == State.Disposed)
+                            {
+                                try { initializedConnection.Dispose(); } catch { }
+                                throw new OperationCanceledException("The ServerMonitor has been disposed.");
+                            }
                             _connection = initializedConnection;
                             _handshakeBuildInfoResult = _connection.Description.BuildInfoResult;
                             heartbeatIsMasterResult = _connection.Description.IsMasterResult;
@@ -448,15 +452,6 @@ namespace MongoDB.Driver.Core.Servers
         {
             Interlocked.Exchange(ref _currentDescription, newDescription);
             OnDescriptionChanged(oldDescription, newDescription);
-        }
-
-        private void ThrowCancellationExceptionAndDisposeConnectionIfMonitorDisposed(IConnection connection)
-        {
-            if (_state.Value == State.Disposed)
-            {
-                try { connection.Dispose(); } catch { }
-                throw new OperationCanceledException("The serverMonitor has been disposed.");
-            }
         }
 
         private void ThrowIfDisposed()

@@ -32,16 +32,16 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            GetWaitTask().GetAwaiter().GetResult();
+            GetTask().GetAwaiter().GetResult();
         }
 
         protected override Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            return GetWaitTask();
+            return GetTask();
         }
 
         // private methods
-        private Task GetWaitTask()
+        private Task GetTask()
         {
             if (_testState.Tasks.TryGetValue(_name, out var task) && task != null)
             {

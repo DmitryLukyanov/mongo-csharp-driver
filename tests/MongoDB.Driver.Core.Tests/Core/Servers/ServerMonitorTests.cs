@@ -190,46 +190,6 @@ namespace MongoDB.Driver.Core.Servers
         }
 
         [Theory]
-        [ParameterAttributeData]
-        public void InitializeIsMasterProtocol_should_use_streaming_protocol_when_available([Values(false, true)] bool isStreamable)
-        {
-            var subject = CreateSubject(out var mockConnection, out _, out _);
-            SetupHeartbeatConnection(mockConnection, isStreamable, autoFillStreamingResponses: true);
-
-            mockConnection.WasReadTimeoutChanged.Should().Be(null);
-            var resultProtocol = subject.InitializeIsMasterProtocol(mockConnection);
-            if (isStreamable)
-            {
-                mockConnection.WasReadTimeoutChanged.Should().BeTrue();
-                resultProtocol._command().Should().Contain("isMaster");
-                resultProtocol._command().Should().Contain("topologyVersion");
-                resultProtocol._command().Should().Contain("maxAwaitTimeMS");
-                resultProtocol._responseHandling().Should().Be(CommandResponseHandling.ExhaustAllowed);
-            }
-            else
-            {
-                mockConnection.WasReadTimeoutChanged.Should().Be(null);
-                resultProtocol._command().Should().Contain("isMaster");
-                resultProtocol._command().Should().NotContain("topologyVersion");
-                resultProtocol._command().Should().NotContain("maxAwaitTimeMS");
-                resultProtocol._responseHandling().Should().Be(CommandResponseHandling.Return);
-            }
-        }
-
-        [Fact]
-        public void Initialize_should_run_round_time_trip_monitor_only_once()
-        {
-            var subject = CreateSubject(out var mockConnection, out _, out var mockRoundTripTimeMonitor);
-
-            SetupHeartbeatConnection(mockConnection);
-
-            subject.Initialize();
-            subject.Initialize();
-
-            mockRoundTripTimeMonitor.Verify(m => m.RunAsync(), Times.Once);
-        }
-
-        [Theory]
         [InlineData(null)]
         [InlineData("MongoConnectionException")]
         public void Heartbeat_should_make_immediate_next_attempt_for_streaming_protocol(string exceptionType)
@@ -303,6 +263,46 @@ namespace MongoDB.Driver.Core.Servers
                     serverDescriptionChangedEvent.NewDescription.HeartbeatException.Should().BeNull();
                 }
             }
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void InitializeIsMasterProtocol_should_use_streaming_protocol_when_available([Values(false, true)] bool isStreamable)
+        {
+            var subject = CreateSubject(out var mockConnection, out _, out _);
+            SetupHeartbeatConnection(mockConnection, isStreamable, autoFillStreamingResponses: true);
+
+            mockConnection.WasReadTimeoutChanged.Should().Be(null);
+            var resultProtocol = subject.InitializeIsMasterProtocol(mockConnection);
+            if (isStreamable)
+            {
+                mockConnection.WasReadTimeoutChanged.Should().BeTrue();
+                resultProtocol._command().Should().Contain("isMaster");
+                resultProtocol._command().Should().Contain("topologyVersion");
+                resultProtocol._command().Should().Contain("maxAwaitTimeMS");
+                resultProtocol._responseHandling().Should().Be(CommandResponseHandling.ExhaustAllowed);
+            }
+            else
+            {
+                mockConnection.WasReadTimeoutChanged.Should().Be(null);
+                resultProtocol._command().Should().Contain("isMaster");
+                resultProtocol._command().Should().NotContain("topologyVersion");
+                resultProtocol._command().Should().NotContain("maxAwaitTimeMS");
+                resultProtocol._responseHandling().Should().Be(CommandResponseHandling.Return);
+            }
+        }
+
+        [Fact]
+        public void Initialize_should_run_round_time_trip_monitor_only_once()
+        {
+            var subject = CreateSubject(out var mockConnection, out _, out var mockRoundTripTimeMonitor);
+
+            SetupHeartbeatConnection(mockConnection);
+
+            subject.Initialize();
+            subject.Initialize();
+
+            mockRoundTripTimeMonitor.Verify(m => m.RunAsync(), Times.Once);
         }
 
         [Fact]

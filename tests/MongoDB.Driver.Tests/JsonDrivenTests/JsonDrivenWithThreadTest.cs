@@ -38,7 +38,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         public JsonDrivenWithThreadTest(
             JsonDrivenTestsStateHolder stateHolder,
             IJsonDrivenTestRunner testRunner,
-            Dictionary<string, object> objectMap) : base(testRunner, objectMap)
+            Dictionary<string, object> objectMap)
+            : base(testRunner, objectMap)
         {
             _testState = Ensure.IsNotNull(stateHolder, nameof(stateHolder)).GetTestState<JsonDrivenWithThreadState>(JsonDrivenWithThreadState.Key);
             Ensure.IsNotNull(_testState.Tasks, nameof(_testState.Tasks));

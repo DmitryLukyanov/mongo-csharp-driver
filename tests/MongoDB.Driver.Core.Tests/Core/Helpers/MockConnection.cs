@@ -183,19 +183,19 @@ namespace MongoDB.Driver.Core.Helpers
 
         public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
-            var reply = _replyActions.Dequeue();
-            reply.ThrowIfException();
-            var message = (ResponseMessage)reply.Message;
-            reply.DelayIfRequired();
+            var action = _replyActions.Dequeue();
+            action.ThrowIfException();
+            var message = (ResponseMessage)action.Message;
+            action.DelayIfRequired();
             return message;
         }
 
         public async Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
-            var reply = _replyActions.Dequeue();
-            reply.ThrowIfException();
-            var message = (ResponseMessage)reply.Message;
-            await reply.DelayIfRequiredAsync().ConfigureAwait(false);
+            var action = _replyActions.Dequeue();
+            action.ThrowIfException();
+            var message = (ResponseMessage)action.Message;
+            await action.DelayIfRequiredAsync().ConfigureAwait(false);
             return message;
         }
 

@@ -230,7 +230,7 @@ namespace MongoDB.Driver.Core.Connections
 
         public void Open(CancellationToken cancellationToken)
         {
-            ThrowIfDisposed(cancellationToken);
+            ThrowIfDisposedOrCancelled(cancellationToken);
 
             TaskCompletionSource<bool> taskCompletionSource = null;
             var connecting = false;
@@ -267,7 +267,7 @@ namespace MongoDB.Driver.Core.Connections
 
         public Task OpenAsync(CancellationToken cancellationToken)
         {
-            ThrowIfDisposed(cancellationToken);
+            ThrowIfDisposedOrCancelled(cancellationToken);
 
             lock (_openLock)
             {
@@ -454,7 +454,7 @@ namespace MongoDB.Driver.Core.Connections
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
-            ThrowIfDisposedOrNotOpen(cancellationToken);
+            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
 
             var helper = new ReceiveMessageHelper(this, responseTo, messageEncoderSettings, _compressorSource);
             try
@@ -483,7 +483,7 @@ namespace MongoDB.Driver.Core.Connections
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
-            ThrowIfDisposedOrNotOpen(cancellationToken);
+            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
 
             var helper = new ReceiveMessageHelper(this, responseTo, messageEncoderSettings, _compressorSource);
             try
@@ -565,7 +565,7 @@ namespace MongoDB.Driver.Core.Connections
         public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(messages, nameof(messages));
-            ThrowIfDisposedOrNotOpen(cancellationToken);
+            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
 
             var helper = new SendMessagesHelper(this, messages, messageEncoderSettings);
             try
@@ -603,7 +603,7 @@ namespace MongoDB.Driver.Core.Connections
         public async Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(messages, nameof(messages));
-            ThrowIfDisposedOrNotOpen(cancellationToken);
+            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
 
             var helper = new SendMessagesHelper(this, messages, messageEncoderSettings);
             try
@@ -711,26 +711,12 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-
-        private Exception WrapInOperationCanceledExceptionIfRequired(Exception exception, CancellationToken cancellationToken)
+        private void ThrowIfDisposed()
         {
-            if (exception is ObjectDisposedException objectDisposedException
-                &&
-                (
-                    objectDisposedException.ObjectName == GetType().Name ||
-                    objectDisposedException.Message == "The semaphore has been disposed."
-                ))
-            {
-                return new OperationCanceledException($"The {nameof(BinaryConnection)} has been cancelled.", exception);
-            }
-            else
-            {
-                return exception;
-            }
+            ThrowIfDisposedOrCancelled(CancellationToken.None);
         }
 
-
-        private void ThrowIfDisposed(CancellationToken cancellationToken = default)
+        private void ThrowIfDisposedOrCancelled(CancellationToken cancellationToken = default)
         {
             if (_state.Value == State.Disposed)
             {
@@ -740,9 +726,9 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private void ThrowIfDisposedOrNotOpen(CancellationToken cancellationToken)
+        private void ThrowIfDisposedOrNotOpenOrCancelled(CancellationToken cancellationToken)
         {
-            ThrowIfDisposed(cancellationToken);
+            ThrowIfDisposedOrCancelled(cancellationToken);
             if (_state.Value == State.Failed)
             {
                 throw new MongoConnectionClosedException(_connectionId);
@@ -770,6 +756,23 @@ namespace MongoDB.Driver.Core.Connections
             {
                 var message = string.Format("An exception occurred while {0}.", action);
                 return new MongoConnectionException(_connectionId, message, ex);
+            }
+        }
+
+        private Exception WrapInOperationCanceledExceptionIfRequired(Exception exception, CancellationToken cancellationToken)
+        {
+            if (exception is ObjectDisposedException objectDisposedException
+                &&
+                (
+                    objectDisposedException.ObjectName == GetType().Name ||
+                    objectDisposedException.Message == "The semaphore has been disposed."
+                ))
+            {
+                return new OperationCanceledException($"The {nameof(BinaryConnection)} has been cancelled.", exception);
+            }
+            else
+            {
+                return exception;
             }
         }
 

@@ -81,7 +81,7 @@ namespace MongoDB.Driver
             get
             {
                 var server = __cluster.Value.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
-                return server.Description.Version;
+                return Ensure.IsNotNull(server.Description.Version, nameof(server.Description.Version));
             }
         }
 

@@ -114,7 +114,8 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         // nested types
         /// <summary>
         /// Originally this code was published here https://code.msdn.microsoft.com/Samples-for-Parallel-b4b76364/sourcecode?fileId=44488&pathId=2098696067
-        /// Needs to call tasks as threads
+        /// We don't think this custom scheduler is necessary but we think it may have solved some test failures for reasons we don't understand
+        /// so we are leaving it in for now with a TODO to either remove this custom scheduler or actually understand what is going on
         /// </summary>
         private class ThreadPerTaskScheduler : TaskScheduler
         {

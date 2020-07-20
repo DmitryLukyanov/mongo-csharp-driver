@@ -230,7 +230,7 @@ namespace MongoDB.Driver.Core.Connections
 
         public void Open(CancellationToken cancellationToken)
         {
-            ThrowIfDisposedOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposed(cancellationToken);
 
             TaskCompletionSource<bool> taskCompletionSource = null;
             var connecting = false;
@@ -267,7 +267,7 @@ namespace MongoDB.Driver.Core.Connections
 
         public Task OpenAsync(CancellationToken cancellationToken)
         {
-            ThrowIfDisposedOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposed(cancellationToken);
 
             lock (_openLock)
             {
@@ -454,7 +454,7 @@ namespace MongoDB.Driver.Core.Connections
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
-            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposedOrNotOpen(cancellationToken);
 
             var helper = new ReceiveMessageHelper(this, responseTo, messageEncoderSettings, _compressorSource);
             try
@@ -470,9 +470,7 @@ namespace MongoDB.Driver.Core.Connections
             catch (Exception ex)
             {
                 helper.FailedReceivingMessage(ex);
-                var wrappedException = WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
-                DisposeConnectionIfCancelled(wrappedException, cancellationToken);
-                throw wrappedException;
+                throw WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
             }
         }
 
@@ -483,7 +481,7 @@ namespace MongoDB.Driver.Core.Connections
             CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(encoderSelector, nameof(encoderSelector));
-            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposedOrNotOpen(cancellationToken);
 
             var helper = new ReceiveMessageHelper(this, responseTo, messageEncoderSettings, _compressorSource);
             try
@@ -499,9 +497,7 @@ namespace MongoDB.Driver.Core.Connections
             catch (Exception ex)
             {
                 helper.FailedReceivingMessage(ex);
-                var wrappedException = WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
-                DisposeConnectionIfCancelled(wrappedException, cancellationToken);
-                throw wrappedException;
+                throw WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
             }
         }
 
@@ -565,7 +561,7 @@ namespace MongoDB.Driver.Core.Connections
         public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(messages, nameof(messages));
-            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposedOrNotOpen(cancellationToken);
 
             var helper = new SendMessagesHelper(this, messages, messageEncoderSettings);
             try
@@ -594,16 +590,14 @@ namespace MongoDB.Driver.Core.Connections
             catch (Exception ex)
             {
                 helper.FailedSendingMessages(ex);
-                var wrappedException = WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
-                DisposeConnectionIfCancelled(wrappedException, cancellationToken);
-                throw wrappedException;
+                throw WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
             }
         }
 
         public async Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(messages, nameof(messages));
-            ThrowIfDisposedOrNotOpenOrCancelled(cancellationToken);
+            ThrowIfCancelledOrDisposedOrNotOpen(cancellationToken);
 
             var helper = new SendMessagesHelper(this, messages, messageEncoderSettings);
             try
@@ -632,9 +626,7 @@ namespace MongoDB.Driver.Core.Connections
             catch (Exception ex)
             {
                 helper.FailedSendingMessages(ex);
-                var wrappedException = WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
-                DisposeConnectionIfCancelled(wrappedException, cancellationToken);
-                throw wrappedException;
+                throw WrapInOperationCanceledExceptionIfRequired(ex, cancellationToken);
             }
         }
 
@@ -703,32 +695,23 @@ namespace MongoDB.Driver.Core.Connections
             compressedMessageEncoder.WriteMessage(compressedMessage);
         }
 
-        private void DisposeConnectionIfCancelled(Exception ex, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested && ex is OperationCanceledException)
-            {
-                Dispose();
-            }
-        }
-
         private void ThrowIfDisposed()
-        {
-            ThrowIfDisposedOrCancelled(CancellationToken.None);
-        }
-
-        private void ThrowIfDisposedOrCancelled(CancellationToken cancellationToken = default)
         {
             if (_state.Value == State.Disposed)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 throw new ObjectDisposedException(GetType().Name);
             }
         }
 
-        private void ThrowIfDisposedOrNotOpenOrCancelled(CancellationToken cancellationToken)
+        private void ThrowIfCancelledOrDisposed(CancellationToken cancellationToken = default)
         {
-            ThrowIfDisposedOrCancelled(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+        }
+
+        private void ThrowIfCancelledOrDisposedOrNotOpen(CancellationToken cancellationToken)
+        {
+            ThrowIfCancelledOrDisposed(cancellationToken);
             if (_state.Value == State.Failed)
             {
                 throw new MongoConnectionClosedException(_connectionId);
@@ -748,7 +731,8 @@ namespace MongoDB.Driver.Core.Connections
 #endif
                 ex is MongoAuthenticationException ||
                 ex is OutOfMemoryException ||
-                ex is OperationCanceledException)
+                ex is OperationCanceledException ||
+                ex is ObjectDisposedException)
             {
                 return ex;
             }

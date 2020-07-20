@@ -299,7 +299,7 @@ namespace MongoDB.Driver.Core.Servers
                 case "AverageRoundTripTime": averageRoundTripTime = averageRoundTripTime.Add(TimeSpan.FromSeconds(1)); break;
                 case "CanonicalEndPoint": canonicalEndPoint = new DnsEndPoint("localhost", 27018); break;
                 case "ElectionId": electionId = new ElectionId(ObjectId.Empty); break;
-                case "HeartbeatException": heartbeatException = new Exception(); break;
+                case "HeartbeatException": heartbeatException = new Exception("NewMessage"); break;
                 case "HeartbeatInterval": heartbeatInterval = TimeSpan.FromSeconds(11); break;
                 case "LastUpdateTimestamp": lastUpdateTimestamp = lastUpdateTimestamp.Add(TimeSpan.FromSeconds(1)); break;
                 case "LastWriteTimestamp": lastWriteTimestamp = lastWriteTimestamp.Add(TimeSpan.FromSeconds(1)); break;

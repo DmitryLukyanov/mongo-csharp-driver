@@ -98,17 +98,21 @@ namespace MongoDB.Driver.Core.Servers
         // public methods
         public void CancelCurrentCheck()
         {
+            IConnection toDispose = null;
             lock (_lock)
             {
-                if (!_currentCheckCancellationTokenSource.IsCancellationRequested)
+                if (!Ensure.IsNotNull(_currentCheckCancellationTokenSource, nameof(_currentCheckCancellationTokenSource)).IsCancellationRequested)
                 {
                     _currentCheckCancellationTokenSource.Cancel();
                     _currentCheckCancellationTokenSource.Dispose();
                     _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
                     // the previous isMaster cancelation token is still cancelled
+
+                    toDispose = _connection;
                     _connection = null;
                 }
             }
+            toDispose.Dispose();
         }
 
         public void Dispose()

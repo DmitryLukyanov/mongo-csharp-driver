@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using MongoDB.Driver.Core.Clusters;
@@ -437,7 +438,7 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_canonicalEndPoint, other._canonicalEndPoint) &&
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_endPoint, other._endPoint) &&
-                object.Equals(_heartbeatException, other._heartbeatException) &&
+                ExceptionHelper.Equals(_heartbeatException, other._heartbeatException) &&
                 _heartbeatInterval == other._heartbeatInterval &&
                 _lastHeartbeatTimestamp == other.LastHeartbeatTimestamp &&
                 _lastUpdateTimestamp == other._lastUpdateTimestamp &&
@@ -507,7 +508,7 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_replicaSetConfig?.Primary, other._replicaSetConfig?.Primary) && // primary
                 _logicalSessionTimeout == other._logicalSessionTimeout &&
-                object.Equals(_heartbeatException, other._heartbeatException);
+                ExceptionHelper.Equals(_heartbeatException, other._heartbeatException);
         }
 
         /// <inheritdoc/>

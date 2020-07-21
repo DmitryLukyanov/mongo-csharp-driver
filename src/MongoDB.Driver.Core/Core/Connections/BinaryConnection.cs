@@ -695,14 +695,6 @@ namespace MongoDB.Driver.Core.Connections
             compressedMessageEncoder.WriteMessage(compressedMessage);
         }
 
-        private void ThrowIfDisposed()
-        {
-            if (_state.Value == State.Disposed)
-            {
-                throw new ObjectDisposedException(GetType().Name);
-            }
-        }
-
         private void ThrowIfCancelledOrDisposed(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -719,6 +711,14 @@ namespace MongoDB.Driver.Core.Connections
             if (_state.Value != State.Open && _state.Value != State.Initializing)
             {
                 throw new InvalidOperationException("The connection must be opened before it can be used.");
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_state.Value == State.Disposed)
+            {
+                throw new ObjectDisposedException(GetType().Name);
             }
         }
 

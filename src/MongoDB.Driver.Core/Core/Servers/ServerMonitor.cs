@@ -89,6 +89,8 @@ namespace MongoDB.Driver.Core.Servers
             eventSubscriber.TryGetEventHandler(out _heartbeatSucceededEventHandler);
             eventSubscriber.TryGetEventHandler(out _heartbeatFailedEventHandler);
             eventSubscriber.TryGetEventHandler(out _sdamInformationEventHandler);
+
+            _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
         }
 
         public ServerDescription Description => Interlocked.CompareExchange(ref _currentDescription, null, null);
@@ -199,22 +201,21 @@ namespace MongoDB.Driver.Core.Servers
             var metronome = new Metronome(_serverMonitorSettings.HeartbeatInterval);
             var monitorCancellationToken = _monitorCancellationTokenSource.Token;
 
-            _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(monitorCancellationToken);
             while (!monitorCancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    CancellationToken currentCheckCancellationToken;
+                    CancellationToken cachedCurrentCheckCancellationToken;
                     lock (_lock)
                     {
-                        currentCheckCancellationToken = _currentCheckCancellationTokenSource.Token;
+                        cachedCurrentCheckCancellationToken = _currentCheckCancellationTokenSource.Token; // we want to cache the current cancellation token in case the source changes
                     }
 
                     try
                     {
-                        await HeartbeatAsync(currentCheckCancellationToken).ConfigureAwait(false);
+                        await HeartbeatAsync(cachedCurrentCheckCancellationToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (currentCheckCancellationToken.IsCancellationRequested)
+                    catch (OperationCanceledException) when (cachedCurrentCheckCancellationToken.IsCancellationRequested)
                     {
                         // ignore OperationCanceledException when heartbeat cancellation is requested
                     }

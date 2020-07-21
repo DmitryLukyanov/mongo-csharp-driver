@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using MongoDB.Driver.Core.Clusters;
@@ -28,6 +27,26 @@ namespace MongoDB.Driver.Core.Servers
     /// </summary>
     public sealed class ServerDescription : IEquatable<ServerDescription>
     {
+        #region static
+        private static bool Equals(Exception x, Exception y)
+        {
+            if (x == null && y == null)
+            {
+                return true;
+            }
+            if (x == null || y == null)
+            {
+                return false;
+            }
+
+            return
+                x.GetType() == y.GetType() &&
+                string.Equals(x.Message, y.Message, StringComparison.Ordinal) &&
+                string.Equals(x.StackTrace, y.StackTrace, StringComparison.Ordinal) &&
+                Equals(x.InnerException, y.InnerException);
+        }
+        #endregion
+
         // fields
         private readonly TimeSpan _averageRoundTripTime;
         private readonly EndPoint _canonicalEndPoint;
@@ -438,7 +457,7 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_canonicalEndPoint, other._canonicalEndPoint) &&
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_endPoint, other._endPoint) &&
-                ExceptionHelper.Equals(_heartbeatException, other._heartbeatException) &&
+                Equals(_heartbeatException, other._heartbeatException) &&
                 _heartbeatInterval == other._heartbeatInterval &&
                 _lastHeartbeatTimestamp == other.LastHeartbeatTimestamp &&
                 _lastUpdateTimestamp == other._lastUpdateTimestamp &&
@@ -508,7 +527,7 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_replicaSetConfig?.Primary, other._replicaSetConfig?.Primary) && // primary
                 _logicalSessionTimeout == other._logicalSessionTimeout &&
-                ExceptionHelper.Equals(_heartbeatException, other._heartbeatException);
+                Equals(_heartbeatException, other._heartbeatException);
         }
 
         /// <inheritdoc/>

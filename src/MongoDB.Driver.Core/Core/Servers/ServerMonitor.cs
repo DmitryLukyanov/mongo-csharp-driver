@@ -31,13 +31,13 @@ namespace MongoDB.Driver.Core.Servers
         private readonly ServerDescription _baseDescription;
         private volatile IConnection _connection;
         private readonly IConnectionFactory _connectionFactory;
-        private CancellationTokenSource _currentCheckCancellationTokenSource;
+        private CancellationTokenSource _heartbeatCancellationTokenSource; // used to cancel an ongoing heartbeat
         private ServerDescription _currentDescription;
         private readonly EndPoint _endPoint;
         private BuildInfoResult _handshakeBuildInfoResult;
         private HeartbeatDelay _heartbeatDelay;
         private readonly object _lock = new object();
-        private readonly CancellationTokenSource _monitorCancellationTokenSource;
+        private readonly CancellationTokenSource _monitorCancellationTokenSource; // used to cancel the entire monitor
         private readonly IRoundTripTimeMonitor _roundTripTimeMonitor;
         private readonly ServerId _serverId;
         private readonly InterlockedInt32 _state;
@@ -90,7 +90,7 @@ namespace MongoDB.Driver.Core.Servers
             eventSubscriber.TryGetEventHandler(out _heartbeatFailedEventHandler);
             eventSubscriber.TryGetEventHandler(out _sdamInformationEventHandler);
 
-            _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
+            _heartbeatCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
         }
 
         public ServerDescription Description => Interlocked.CompareExchange(ref _currentDescription, null, null);
@@ -103,11 +103,11 @@ namespace MongoDB.Driver.Core.Servers
             IConnection toDispose = null;
             lock (_lock)
             {
-                if (!_currentCheckCancellationTokenSource.IsCancellationRequested)
+                if (!_heartbeatCancellationTokenSource.IsCancellationRequested)
                 {
-                    _currentCheckCancellationTokenSource.Cancel();
-                    _currentCheckCancellationTokenSource.Dispose();
-                    _currentCheckCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
+                    _heartbeatCancellationTokenSource.Cancel();
+                    _heartbeatCancellationTokenSource.Dispose();
+                    _heartbeatCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_monitorCancellationTokenSource.Token);
                     // the previous isMaster cancelation token is still cancelled
 
                     toDispose = _connection;
@@ -205,17 +205,17 @@ namespace MongoDB.Driver.Core.Servers
             {
                 try
                 {
-                    CancellationToken cachedCurrentCheckCancellationToken;
+                    CancellationToken cachedHeartbeatCancellationToken;
                     lock (_lock)
                     {
-                        cachedCurrentCheckCancellationToken = _currentCheckCancellationTokenSource.Token; // we want to cache the current cancellation token in case the source changes
+                        cachedHeartbeatCancellationToken = _heartbeatCancellationTokenSource.Token; // we want to cache the current cancellation token in case the source changes
                     }
 
                     try
                     {
-                        await HeartbeatAsync(cachedCurrentCheckCancellationToken).ConfigureAwait(false);
+                        await HeartbeatAsync(cachedHeartbeatCancellationToken).ConfigureAwait(false);
                     }
-                    catch (OperationCanceledException) when (cachedCurrentCheckCancellationToken.IsCancellationRequested)
+                    catch (OperationCanceledException) when (cachedHeartbeatCancellationToken.IsCancellationRequested)
                     {
                         // ignore OperationCanceledException when heartbeat cancellation is requested
                     }

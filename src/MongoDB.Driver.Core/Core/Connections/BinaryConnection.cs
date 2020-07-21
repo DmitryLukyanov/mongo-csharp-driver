@@ -745,14 +745,14 @@ namespace MongoDB.Driver.Core.Connections
 
         private Exception WrapInOperationCanceledExceptionIfRequired(Exception exception, CancellationToken cancellationToken)
         {
-            if (exception is ObjectDisposedException objectDisposedException
-                &&
-                (
-                    objectDisposedException.ObjectName == GetType().Name ||
-                    objectDisposedException.Message == "The semaphore has been disposed."
-                ))
+            if (exception is ObjectDisposedException objectDisposedException)
             {
-                return new OperationCanceledException($"The {nameof(BinaryConnection)} has been cancelled.", exception);
+                // We expect two cases here:
+                //      objectDisposedException.ObjectName == GetType().Name
+                //      objectDisposedException.Message == "The semaphore has been disposed."
+                // but since the last one is language-specific, the only option we have is avoiding any additional conditions for ObjectDisposedException
+                // TODO: this logic should be reviewed in the scope of https://jira.mongodb.org/browse/CSHARP-3165
+                return new OperationCanceledException($"The {nameof(BinaryConnection)} operation has been cancelled.", exception);
             }
             else
             {

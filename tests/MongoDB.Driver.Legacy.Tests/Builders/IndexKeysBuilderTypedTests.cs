@@ -74,7 +74,7 @@ namespace MongoDB.Driver.Tests.Builders
             index["key"]["a.$**"].AsInt32.Should().Be(1);
         }
 
-        [SkippableFact(Skip = "skip")]
+        [SkippableFact]
         public void CreateIndex_with_wildcardProjection_should_create_expected_index()
         {
             RequireServer.Check().Supports(Feature.WildcardIndexes);
@@ -89,7 +89,14 @@ namespace MongoDB.Driver.Tests.Builders
             var indexes = collection.GetIndexes();
             var index = indexes.RawDocuments.Single(i => i["name"].AsString == "custom");
             index["key"]["$**"].AsInt32.Should().Be(1);
-            index["wildcardProjection"].ToBsonDocument().Should().Be(BsonDocument.Parse("{ b : 1, _id : 0 }"));
+            if (CoreTestConfiguration.ServerVersion >= new SemanticVersion(4, 5, 0, ""))
+            {
+                index["wildcardProjection"].Should().Be(BsonDocument.Parse("{ b : true, _id : false }"));
+            }
+            else
+            {
+                index["wildcardProjection"].Should().Be(BsonDocument.Parse("{ b : 1, _id : 0 }"));
+            }
         }
 
         [Fact]

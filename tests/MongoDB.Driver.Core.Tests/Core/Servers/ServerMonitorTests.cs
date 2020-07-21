@@ -80,7 +80,7 @@ namespace MongoDB.Driver.Core.Servers
         [Fact]
         public void Constructor_should_throw_when_roundTripTimeMonitor_is_null()
         {
-            var exception = Record.Exception(() => new ServerMonitor(__serverId, __endPoint, Mock.Of<IConnectionFactory>(), __serverMonitorSettings, new EventCapturer(), roundTripTimeMonitor: null, Mock.Of<CancellationTokenSource>()));
+            var exception = Record.Exception(() => new ServerMonitor(__serverId, __endPoint, Mock.Of<IConnectionFactory>(), __serverMonitorSettings, new EventCapturer(), roundTripTimeMonitor: null));
 
             exception.Should().BeOfType<ArgumentNullException>();
         }
@@ -166,21 +166,17 @@ namespace MongoDB.Driver.Core.Servers
         {
             var capturedEvents = new EventCapturer();
 
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                var subject = CreateSubject(cancellationTokenSource, out var mockConnection, out _, out var mockRoundTripTimeMonitor, capturedEvents, captureConnectionEvents: true);
+            var subject = CreateSubject(out var mockConnection, out _, out var mockRoundTripTimeMonitor, capturedEvents, captureConnectionEvents: true);
 
-                SetupHeartbeatConnection(mockConnection);
-                subject.Initialize();
-                SpinWait.SpinUntil(() => subject._connection() != null, TimeSpan.FromSeconds(5)).Should().BeTrue();
+            SetupHeartbeatConnection(mockConnection);
+            subject.Initialize();
+            SpinWait.SpinUntil(() => subject._connection() != null, TimeSpan.FromSeconds(5)).Should().BeTrue();
 
-                subject.Dispose();
-                subject.Dispose();
+            subject.Dispose();
+            subject.Dispose();
 
-                capturedEvents.Events.Count(e => e is ConnectionClosingEvent).Should().Be(1);
-                cancellationTokenSource.IsCancellationRequested.Should().BeTrue();
-                mockRoundTripTimeMonitor.Verify(m => m.Dispose(), Times.Once);
-            }
+            capturedEvents.Events.Count(e => e is ConnectionClosingEvent).Should().Be(1);
+            mockRoundTripTimeMonitor.Verify(m => m.Dispose(), Times.Once);
         }
 
         [Theory]
@@ -325,11 +321,6 @@ namespace MongoDB.Driver.Core.Servers
         // private methods
         private ServerMonitor CreateSubject(out MockConnection connection, out Mock<IConnectionFactory> mockConnectionFactory, out Mock<IRoundTripTimeMonitor> mockRoundTripTimeMonitor, EventCapturer eventCapturer = null, bool captureConnectionEvents = false)
         {
-            return CreateSubject(new CancellationTokenSource(), out connection, out mockConnectionFactory, out mockRoundTripTimeMonitor, eventCapturer, captureConnectionEvents);
-        }
-
-        private ServerMonitor CreateSubject(CancellationTokenSource cancellationTokenSource, out MockConnection connection, out Mock<IConnectionFactory> mockConnectionFactory, out Mock<IRoundTripTimeMonitor> mockRoundTripTimeMonitor, EventCapturer eventCapturer = null, bool captureConnectionEvents = false)
-        {
             mockRoundTripTimeMonitor = new Mock<IRoundTripTimeMonitor>();
             mockRoundTripTimeMonitor.Setup(m => m.RunAsync()).Returns(Task.FromResult(true));
 
@@ -352,8 +343,7 @@ namespace MongoDB.Driver.Core.Servers
                 mockConnectionFactory.Object,
                 __serverMonitorSettings,
                 eventCapturer ?? new EventCapturer(),
-                mockRoundTripTimeMonitor.Object,
-                cancellationTokenSource);
+                mockRoundTripTimeMonitor.Object);
         }
 
         private void SetupHeartbeatConnection(MockConnection connection, bool isStreamable = false, bool autoFillStreamingResponses = true)

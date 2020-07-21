@@ -51,11 +51,6 @@ namespace MongoDB.Driver.Core.Servers
         public event EventHandler<ServerDescriptionChangedEventArgs> DescriptionChanged;
 
         public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, ServerMonitorSettings serverMonitorSettings, IEventSubscriber eventSubscriber)
-            : this(serverId, endPoint, connectionFactory, serverMonitorSettings, eventSubscriber, new CancellationTokenSource())
-        {
-        }
-
-        public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, ServerMonitorSettings serverMonitorSettings, IEventSubscriber eventSubscriber, CancellationTokenSource cancellationTokenSource)
             : this(
                 serverId,
                 endPoint,
@@ -66,15 +61,13 @@ namespace MongoDB.Driver.Core.Servers
                     connectionFactory,
                     serverId,
                     endPoint,
-                    Ensure.IsNotNull(serverMonitorSettings, nameof(serverMonitorSettings)).HeartbeatInterval,
-                    cancellationTokenSource.Token),
-                cancellationTokenSource)
+                    Ensure.IsNotNull(serverMonitorSettings, nameof(serverMonitorSettings)).HeartbeatInterval))
         {
         }
 
-        public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, ServerMonitorSettings serverMonitorSettings, IEventSubscriber eventSubscriber, IRoundTripTimeMonitor roundTripTimeMonitor, CancellationTokenSource cancellationTokenSource)
+        public ServerMonitor(ServerId serverId, EndPoint endPoint, IConnectionFactory connectionFactory, ServerMonitorSettings serverMonitorSettings, IEventSubscriber eventSubscriber, IRoundTripTimeMonitor roundTripTimeMonitor)
         {
-            _monitorCancellationTokenSource = cancellationTokenSource;
+            _monitorCancellationTokenSource = new CancellationTokenSource();
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
             _endPoint = Ensure.IsNotNull(endPoint, nameof(endPoint));
             _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));

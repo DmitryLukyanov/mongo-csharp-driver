@@ -35,8 +35,8 @@ namespace MongoDB.Driver.Core.Servers
     {
         private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
         private readonly CancellationToken _cancellationToken;
+        private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly IConnectionFactory _connectionFactory;
-        private bool _disposed;
         private readonly EndPoint _endPoint;
         private readonly TimeSpan _heartbeatInterval;
         private readonly object _lock = new object();
@@ -47,14 +47,14 @@ namespace MongoDB.Driver.Core.Servers
             IConnectionFactory connectionFactory,
             ServerId serverId,
             EndPoint endpoint,
-            TimeSpan heartbeatInterval,
-            CancellationToken cancellationToken)
+            TimeSpan heartbeatInterval)
         {
             _connectionFactory = Ensure.IsNotNull(connectionFactory, nameof(connectionFactory));
             _serverId = Ensure.IsNotNull(serverId, nameof(serverId));
             _endPoint = Ensure.IsNotNull(endpoint, nameof(endpoint));
             _heartbeatInterval = heartbeatInterval;
-            _cancellationToken = cancellationToken;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _cancellationToken = _cancellationTokenSource.Token;
         }
 
         public TimeSpan Average
@@ -71,7 +71,9 @@ namespace MongoDB.Driver.Core.Servers
         // public methods
         public void Dispose()
         {
-            _disposed = true;
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+
             try { _roundTripTimeConnection?.Dispose(); } catch { }
         }
 
@@ -79,7 +81,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             await Task.Yield(); // return control immediately
 
-            while (!_cancellationToken.IsCancellationRequested && !_disposed)
+            while (!_cancellationToken.IsCancellationRequested)
             {
                 try
                 {

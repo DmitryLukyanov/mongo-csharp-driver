@@ -103,7 +103,7 @@ namespace MongoDB.Driver.Core.Servers
             IConnection toDispose = null;
             lock (_lock)
             {
-                if (!Ensure.IsNotNull(_currentCheckCancellationTokenSource, nameof(_currentCheckCancellationTokenSource)).IsCancellationRequested)
+                if (!_currentCheckCancellationTokenSource.IsCancellationRequested)
                 {
                     _currentCheckCancellationTokenSource.Cancel();
                     _currentCheckCancellationTokenSource.Dispose();

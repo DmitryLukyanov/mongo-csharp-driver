@@ -175,20 +175,19 @@ namespace MongoDB.Driver.Core.Servers
                 SpinWait.SpinUntil(() => subject._connection() != null, TimeSpan.FromSeconds(5)).Should().BeTrue();
 
                 subject.Dispose();
+                subject.Dispose();
 
-                for (int attempt = 1; attempt <= 2; attempt++)
-                {
-                    capturedEvents.Events.Count(e => e is ConnectionClosingEvent).Should().Be(1);
-                    cancellationTokenSource.IsCancellationRequested.Should().BeTrue();
-                    mockRoundTripTimeMonitor.Verify(m => m.Dispose(), Times.Once);
-                }
+                capturedEvents.Events.Count(e => e is ConnectionClosingEvent).Should().Be(1);
+                cancellationTokenSource.IsCancellationRequested.Should().BeTrue();
+                mockRoundTripTimeMonitor.Verify(m => m.Dispose(), Times.Once);
             }
         }
 
         [Theory]
-        [InlineData(null)]
-        [InlineData("MongoConnectionException")]
-        public void Heartbeat_should_make_immediate_next_attempt_for_streaming_protocol(string exceptionType)
+        [InlineData(null, false)]
+        [InlineData(null, true)]
+        [InlineData("MongoConnectionException", null)]
+        public void Heartbeat_should_make_immediate_next_attempt_for_streaming_protocol(string exceptionType, bool? moreToCome)
         {
             var capturedEvents = new EventCapturer()
                     .Capture<ServerHeartbeatSucceededEvent>()
@@ -209,7 +208,7 @@ namespace MongoDB.Driver.Core.Servers
             switch (exceptionType)
             {
                 case null:
-                    mockConnection.EnqueueCommandResponseMessage(CreateStreamableCommandResponseMessage(), null);
+                    mockConnection.EnqueueCommandResponseMessage(CreateStreamableCommandResponseMessage(moreToCome.Value), null);
                     break;
                 case "MongoConnectionException":
                     // previousDescription type is "Known" for this case
@@ -383,11 +382,23 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
-        private CommandResponseMessage CreateStreamableCommandResponseMessage()
+        private CommandResponseMessage CreateStreamableCommandResponseMessage(bool moreToCome = false)
         {
-            var section0 = "{ ismaster : true, topologyVersion : { processId : ObjectId('5ee3f0963109d4fe5e71dd28'), counter : NumberLong(0) }, ok : 1.0 }";
-            var bsonDocument = BsonDocument.Parse(section0);
-            return MessageHelper.BuildCommandResponse(new RawBsonDocument(bsonDocument.ToBson()));
+            var section0BsonDocument = new BsonDocument
+            {
+                { "ismaster", true },
+                {
+                    "topologyVersion",
+                    new BsonDocument
+                    {
+                        { "processId", ObjectId.Parse("5ee3f0963109d4fe5e71dd28") },
+                        { "counter", 0 }
+                    },
+                    !moreToCome // needs only for tests reasons
+                },
+                { "ok", 1 }
+            };
+            return MessageHelper.BuildCommandResponse(new RawBsonDocument(section0BsonDocument.ToBson()), moreToCome: moreToCome);
         }
     }
 

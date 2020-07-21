@@ -107,14 +107,15 @@ namespace MongoDB.Driver.Core.Helpers
         public static CommandResponseMessage BuildCommandResponse(
             RawBsonDocument command,
             int requestId = 0,
-            int responseTo = 0)
+            int responseTo = 0,
+            bool moreToCome = false)
         {
             return new CommandResponseMessage(
                 new CommandMessage(
                 requestId: requestId,
                 responseTo: responseTo,
                 sections: new[] { new Type0CommandMessageSection<RawBsonDocument>(command, RawBsonDocumentSerializer.Instance) },
-                moreToCome: false));
+                moreToCome: moreToCome));
         }
 
         public static DeleteMessage BuildDelete(

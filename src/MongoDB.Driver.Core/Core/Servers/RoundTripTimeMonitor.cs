@@ -31,12 +31,13 @@ namespace MongoDB.Driver.Core.Servers
         Task RunAsync();
     }
 
-    internal class RoundTripTimeMonitor : IRoundTripTimeMonitor
+    internal sealed class RoundTripTimeMonitor : IRoundTripTimeMonitor
     {
         private readonly ExponentiallyWeightedMovingAverage _averageRoundTripTimeCalculator = new ExponentiallyWeightedMovingAverage(0.2);
         private readonly CancellationToken _cancellationToken;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly IConnectionFactory _connectionFactory;
+        private bool _disposed;
         private readonly EndPoint _endPoint;
         private readonly TimeSpan _heartbeatInterval;
         private readonly object _lock = new object();
@@ -71,10 +72,14 @@ namespace MongoDB.Driver.Core.Servers
         // public methods
         public void Dispose()
         {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
+            if (!_disposed)
+            {
+                _disposed = true;
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
 
-            try { _roundTripTimeConnection?.Dispose(); } catch { }
+                try { _roundTripTimeConnection?.Dispose(); } catch { }
+            }
         }
 
         public async Task RunAsync()

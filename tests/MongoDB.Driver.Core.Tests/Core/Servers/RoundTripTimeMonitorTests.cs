@@ -86,67 +86,65 @@ namespace MongoDB.Driver.Core.Tests.Core.Servers
 
             ConcurrentQueue<(TimeSpan, IConnection)> steps = new ConcurrentQueue<(TimeSpan, IConnection)>();
 
-            using (var cancellationTokenSource = new CancellationTokenSource(delay: TimeSpan.FromSeconds(10))) // just in case
-            {
-                var subject = CreateSubject(
-                    frequency,
-                    mockConnection,
-                    mockConnectionFactory);
+            var subject = CreateSubject(
+                frequency,
+                mockConnection,
+                mockConnectionFactory);
 
-                mockConnectionFactory
-                    .Setup(f => f.CreateConnection(__serverId, __endPoint))
-                    .Returns(
-                        () =>
-                        {
-                            steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
-                            return mockConnection.Object;
-                        });
+            mockConnectionFactory
+                .Setup(f => f.CreateConnection(__serverId, __endPoint))
+                .Returns(
+                    () =>
+                    {
+                        steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
+                        return mockConnection.Object;
+                    });
 
-                mockConnection
-                    .SetupSequence(c => c.ReceiveMessageAsync(It.IsAny<int>(), It.IsAny<IMessageEncoderSelector>(), It.IsAny<MessageEncoderSettings>(), It.IsAny<CancellationToken>()))
-                    .Returns(
-                        () =>
-                        {
-                            steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
-                            return Task.FromResult(CreateResponseMessage());
-                        })
-                    .Throws(new Exception("TestMessage"))
-                    .Returns(
-                        () =>
-                        {
-                            subject.Dispose();
-                            steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
-                            return Task.FromResult(CreateResponseMessage());
-                        });
+            mockConnection
+                .SetupSequence(c => c.ReceiveMessageAsync(It.IsAny<int>(), It.IsAny<IMessageEncoderSelector>(), It.IsAny<MessageEncoderSettings>(), It.IsAny<CancellationToken>()))
+                .Returns(
+                    () =>
+                    {
+                        steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
+                        return Task.FromResult(CreateResponseMessage());
+                    })
+                .Throws(new Exception("TestMessage"))
+                .Returns(
+                    () =>
+                    {
+                        subject.Dispose();
+                        steps.Enqueue((subject.Average, subject._roundTripTimeConnection()));
+                        return Task.FromResult(CreateResponseMessage());
+                    });
 
-                var exception = Record.Exception(() => subject.RunAsync().GetAwaiter().GetResult());
-                exception.Should().BeOfType<TaskCanceledException>(); // Task.Delay has been cancelled
+            var exception = Record.Exception(() => subject.RunAsync().GetAwaiter().GetResult());
+            exception.Should().BeOfType<TaskCanceledException>(); // Task.Delay has been cancelled
 
-                // initialize connection
-                steps.TryDequeue(out (TimeSpan Average, IConnection RttConnection) step).Should().BeTrue();
-                step.Average.Should().Be(default);
-                step.RttConnection.Should().BeNull();
+            // initialize connection
+            steps.TryDequeue(out (TimeSpan Average, IConnection RttConnection) step).Should().BeTrue();
+            step.Average.Should().Be(default);
+            step.RttConnection.Should().BeNull();
 
-                // isMaster call
-                steps.TryDequeue(out step).Should().BeTrue();
-                step.Average.Should().NotBe(default);
-                step.RttConnection.Should().NotBeNull();
+            // isMaster call
+            steps.TryDequeue(out step).Should().BeTrue();
+            step.Average.Should().NotBe(default);
+            step.RttConnection.Should().NotBeNull();
 
-                // initialize connection after exception
-                steps.TryDequeue(out step).Should().BeTrue();
-                step.Average.Should().NotBe(default);
-                step.RttConnection.Should().BeNull();
+            // initialize connection after exception
+            steps.TryDequeue(out step).Should().BeTrue();
+            step.Average.Should().NotBe(default);
+            step.RttConnection.Should().BeNull();
 
-                // isMaster call
-                steps.TryDequeue(out step).Should().BeTrue();
-                step.Average.Should().NotBe(default);
-                step.RttConnection.Should().NotBeNull();
+            // isMaster call
+            steps.TryDequeue(out step).Should().BeTrue();
+            step.Average.Should().NotBe(default);
+            step.RttConnection.Should().NotBeNull();
 
-                steps.TryDequeue(out _).Should().BeFalse();
+            steps.TryDequeue(out _).Should().BeFalse();
 
-                mockConnection.Verify(c => c.Dispose(), Times.Once());
-                mockConnectionFactory.Verify(c => c.CreateConnection(__serverId, __endPoint), Times.Exactly(2));
-            }
+            mockConnection.Verify(c => c.Dispose(), Times.Exactly(2)); // 1 - exception handling, 2 - monitor disposing
+            mockConnectionFactory.Verify(c => c.CreateConnection(__serverId, __endPoint), Times.Exactly(2));
+            subject._disposed().Should().BeTrue();
         }
 
         // private methods

@@ -238,6 +238,7 @@ namespace MongoDB.Driver.Core.Configuration
 
         private ServerFactory CreateServerFactory()
         {
+            _tcpStreamSettings = GetEffectiveTcpStreamSettings(_tcpStreamSettings);
             var connectionPoolFactory = CreateConnectionPoolFactory();
             var serverMonitorFactory = CreateServerMonitorFactory();
 
@@ -254,24 +255,22 @@ namespace MongoDB.Driver.Core.Configuration
             var serverMonitorConnectionSettings = _connectionSettings
                 .With(authenticators: new IAuthenticator[] { });
 
-            var heartbeatConnectTimeout = _tcpStreamSettings.ConnectTimeout;
-            if (heartbeatConnectTimeout == TimeSpan.Zero || heartbeatConnectTimeout == Timeout.InfiniteTimeSpan)
-            {
-                heartbeatConnectTimeout = TimeSpan.FromSeconds(30);
-            }
             var heartbeatSocketTimeout = _serverSettings.HeartbeatTimeout;
             if (heartbeatSocketTimeout == TimeSpan.Zero || heartbeatSocketTimeout == Timeout.InfiniteTimeSpan)
             {
-                heartbeatSocketTimeout = heartbeatConnectTimeout;
+                heartbeatSocketTimeout = _tcpStreamSettings.ConnectTimeout;
             }
             var serverMonitorTcpStreamSettings = new TcpStreamSettings(_tcpStreamSettings)
                 .With(
-                    connectTimeout: heartbeatConnectTimeout,
+                    connectTimeout: _tcpStreamSettings.ConnectTimeout,
                     readTimeout: heartbeatSocketTimeout,
                     writeTimeout: heartbeatSocketTimeout
                 );
 
             var serverMonitorStreamFactory = CreateTcpStreamFactory(serverMonitorTcpStreamSettings);
+            var serverMonitorSettings = new ServerMonitorSettings(
+                connectTimeout: serverMonitorTcpStreamSettings.ConnectTimeout,
+                heartbeatInterval: _serverSettings.HeartbeatInterval);
 
             var serverMonitorConnectionFactory = new BinaryConnectionFactory(
                 serverMonitorConnectionSettings,
@@ -279,7 +278,7 @@ namespace MongoDB.Driver.Core.Configuration
                 new EventAggregator());
 
             return new ServerMonitorFactory(
-                _serverSettings,
+                serverMonitorSettings,
                 serverMonitorConnectionFactory,
                 _eventAggregator);
         }
@@ -293,6 +292,26 @@ namespace MongoDB.Driver.Core.Configuration
             }
 
             return _streamFactoryWrapper(streamFactory);
+        }
+
+        private TcpStreamSettings GetEffectiveTcpStreamSettings(TcpStreamSettings tcpStreamSettings)
+        {
+            return tcpStreamSettings
+                .With(
+                    connectTimeout: GetEffectiveTimespan(tcpStreamSettings.ConnectTimeout).Value,
+                    readTimeout: GetEffectiveTimespan(tcpStreamSettings.ReadTimeout),
+                    writeTimeout: GetEffectiveTimespan(tcpStreamSettings.WriteTimeout));
+
+            TimeSpan? GetEffectiveTimespan(TimeSpan? timeSpan)
+            {
+                if (timeSpan == TimeSpan.Zero || timeSpan == Timeout.InfiniteTimeSpan)
+                {
+                    // 1. We mimic the mongo convention where time=0 is infinite value
+                    // 2. Stream doesn't support infinite timeouts, so we set just very big value instead
+                    timeSpan = TimeSpan.FromDays(1);
+                }
+                return timeSpan;
+            }
         }
     }
 }

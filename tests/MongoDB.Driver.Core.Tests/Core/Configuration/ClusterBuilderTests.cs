@@ -28,8 +28,8 @@ namespace MongoDB.Driver.Core.Configuration
     public class ClusterBuilderTests
     {
         [Theory]
-        [InlineData(0, 0, 30000, 30000)]
-        [InlineData(-1, -1, 30000, 30000)]
+        [InlineData(0, 0, 86400000, 86400000)]   // 86400000 - 1 day
+        [InlineData(-1, -1, 86400000, 86400000)]
         [InlineData(20000, 0, 20000, 20000)]
         [InlineData(20000, -1, 20000, 20000)]
         [InlineData(20000, 10000, 20000, 10000)]
@@ -44,6 +44,9 @@ namespace MongoDB.Driver.Core.Configuration
                 .ConfigureTcp(s => s.With(connectTimeout: connectTimeout))
                 .ConfigureConnection(s => s.With(authenticators: authenticators))
                 .ConfigureServer(s => s.With(heartbeatTimeout: heartbeatTimeout));
+            var tcpStreamSettings = subject._tcpStreamSettings();
+            var effectiveTcpStreamSettings = subject.GetEffectiveTcpStreamSettings(tcpStreamSettings);
+            subject._tcpStreamSettings(effectiveTcpStreamSettings);
 
             var result = (ServerMonitorFactory)subject.CreateServerMonitorFactory();
 
@@ -60,6 +63,26 @@ namespace MongoDB.Driver.Core.Configuration
             var eventSuscriber = result._eventSubscriber();
 
             var serverSettings = result._serverMonitorSettings();
+        }
+
+        [Theory]
+        [InlineData(0, 0, 0, 86400000, 86400000, 86400000)]   // 86400000 - 1 day
+        [InlineData(-1, -1, -1, 86400000, 86400000, 86400000)]
+        [InlineData(20000, 0, 10000, 20000, 86400000, 10000)]
+        [InlineData(20000, -1, 10000, 20000, 86400000, 10000)]
+        [InlineData(20000, 10000, 10000, 20000, 10000, 10000)]
+        public void GetEffectiveTcpStreamSettings_should_return_expected_result(int connectTimeoutMilliseconds, int readTimeoutMilliseconds, int writeTimeoutMilliseconds, int expectedConnectTimeoutMilliseconds, int expectedReadTimeoutMilliseconds, int expectedWriteTimeoutMilliseconds)
+        {
+            var connectTimeout = TimeSpan.FromMilliseconds(connectTimeoutMilliseconds);
+            var readTimeout = TimeSpan.FromMilliseconds(readTimeoutMilliseconds);
+            var writeTimeout = TimeSpan.FromMilliseconds(writeTimeoutMilliseconds);
+            var tcpStreamSettings = new TcpStreamSettings(connectTimeout: connectTimeout, readTimeout: readTimeout, writeTimeout: writeTimeout);
+
+            var result = new ClusterBuilder().GetEffectiveTcpStreamSettings(tcpStreamSettings);
+
+            result.ConnectTimeout.Should().Be(TimeSpan.FromMilliseconds(expectedConnectTimeoutMilliseconds));
+            result.ReadTimeout.Should().Be(TimeSpan.FromMilliseconds(expectedReadTimeoutMilliseconds));
+            result.WriteTimeout.Should().Be(TimeSpan.FromMilliseconds(expectedWriteTimeoutMilliseconds));
         }
 
         [Fact]
@@ -80,7 +103,9 @@ namespace MongoDB.Driver.Core.Configuration
     public static class ClusterBuilderReflector
     {
         internal static IServerMonitorFactory CreateServerMonitorFactory(this ClusterBuilder obj) => (IServerMonitorFactory)Reflector.Invoke(obj, nameof(CreateServerMonitorFactory));
-
+        internal static TcpStreamSettings GetEffectiveTcpStreamSettings(this ClusterBuilder obj, TcpStreamSettings tcpStreamSettings) => (TcpStreamSettings)Reflector.Invoke(obj, nameof(GetEffectiveTcpStreamSettings), tcpStreamSettings);
         internal static Func<IStreamFactory, IStreamFactory> _streamFactoryWrapper(this ClusterBuilder obj) => (Func<IStreamFactory, IStreamFactory>)Reflector.GetFieldValue(obj, nameof(_streamFactoryWrapper));
+        internal static void _tcpStreamSettings(this ClusterBuilder obj, TcpStreamSettings value) => Reflector.SetFieldValue(obj, nameof(_tcpStreamSettings), value);
+        internal static TcpStreamSettings _tcpStreamSettings(this ClusterBuilder obj) => (TcpStreamSettings)Reflector.GetFieldValue(obj, nameof(_tcpStreamSettings));
     }
 }

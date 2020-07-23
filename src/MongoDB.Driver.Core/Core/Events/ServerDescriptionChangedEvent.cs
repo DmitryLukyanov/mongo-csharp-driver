@@ -14,6 +14,7 @@
 */
 
 using System;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Servers;
 
@@ -24,6 +25,7 @@ namespace MongoDB.Driver.Core.Events
     /// </summary>
     public struct ServerDescriptionChangedEvent
     {
+        private readonly DateTime _createdDate;
         private readonly ServerDescription _oldDescription;
         private readonly ServerDescription _newDescription;
 
@@ -34,6 +36,7 @@ namespace MongoDB.Driver.Core.Events
         /// <param name="newDescription">The new description.</param>
         public ServerDescriptionChangedEvent(ServerDescription oldDescription, ServerDescription newDescription)
         {
+            _createdDate = DateTime.UtcNow;
             _oldDescription = oldDescription;
             _newDescription = newDescription;
         }
@@ -68,6 +71,18 @@ namespace MongoDB.Driver.Core.Events
         public ServerId ServerId
         {
             get { return _newDescription.ServerId; }
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return new BsonDocument
+            {
+                { nameof(_createdDate), _createdDate.ToString("MM/dd/yy H:mm:ss_fff") },
+                { nameof(OldDescription), _oldDescription.ToString() },
+                { nameof(NewDescription), _newDescription.ToString() }
+            }
+            .ToString();
         }
     }
 }

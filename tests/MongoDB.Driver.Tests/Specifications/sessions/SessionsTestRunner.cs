@@ -19,11 +19,16 @@ using MongoDB.Driver.Core;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using System.Collections.Generic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.sessions
 {
     public class SessionsTestRunner : MongoClientJsonDrivenSessionsTestRunner
     {
+        public SessionsTestRunner(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        { }
+
         protected override string[] ExpectedTestColumns => new string[] { "async", "clientOptions", "failPoint", "description", "operations", "expectations", "outcome" };
 
         [SkippableTheory]

@@ -15,12 +15,17 @@
 
 using System;
 using System.Collections.Generic;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.Runner
 {
     public abstract class DisposableJsonDrivenTestRunner : MongoClientJsonDrivenTestRunnerBase, IDisposable
     {
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
+
+        public DisposableJsonDrivenTestRunner(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        { }
 
         protected void AddDisposable(IDisposable disposable)
         {

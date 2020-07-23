@@ -23,6 +23,7 @@ using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Encryption;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
 {
@@ -31,6 +32,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
         #region static
         private static readonly CollectionNamespace __keyVaultCollectionNamespace = CollectionNamespace.FromFullName("keyvault.datakeys");
         #endregion
+
+        public ClientSideEncryptionTestRunner(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        { }
 
         [SkippableTheory]
         [ClassData(typeof(TestCaseFactory))]

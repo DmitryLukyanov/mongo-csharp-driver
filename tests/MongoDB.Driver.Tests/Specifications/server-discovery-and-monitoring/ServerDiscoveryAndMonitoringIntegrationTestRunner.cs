@@ -27,12 +27,17 @@ using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Tests.JsonDrivenTests;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
     public class ServerDiscoveryAndMonitoringIntegrationTestRunner : DisposableJsonDrivenTestRunner, IJsonDrivenTestRunner
     {
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
+
+        public ServerDiscoveryAndMonitoringIntegrationTestRunner(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        { }
 
         // public methods
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)

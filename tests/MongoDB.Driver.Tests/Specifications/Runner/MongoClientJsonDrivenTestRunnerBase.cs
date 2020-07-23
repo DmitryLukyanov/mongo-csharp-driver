@@ -31,6 +31,7 @@ using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.TestHelpers;
 using MongoDB.Driver.Tests.JsonDrivenTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.Runner
 {
@@ -63,6 +64,12 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         private string CollectionName { get; set; }
 
         private IDictionary<string, object> _objectMap = null;
+        private readonly ITestOutputHelper _testOutputHelper;
+
+        public MongoClientJsonDrivenTestRunnerBase(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
 
         // Protected
         // Virtual properties
@@ -264,7 +271,17 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         {
             using (var client = CreateDisposableClient(test, eventCapturer))
             {
-                ExecuteOperations(client, objectMap: null, test, eventCapturer);
+                try
+                {
+                    ExecuteOperations(client, objectMap: null, test, eventCapturer);
+                }
+                catch (Exception)
+                {
+                    var clusterDescription = client.Cluster.Description;
+                    var errorDetails = $"ClusterDescription:{clusterDescription}, Events:{string.Join(",", eventCapturer.Events.ToList().Select(c => c.ToString()))}";
+                    _testOutputHelper.WriteLine(errorDetails);
+                    throw;
+                }
             }
         }
 

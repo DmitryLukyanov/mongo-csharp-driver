@@ -18,12 +18,17 @@ using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.TestHelpers.JsonDrivenTests;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Tests.Specifications.Runner
 {
     public abstract class MongoClientJsonDrivenSessionsTestRunner : MongoClientJsonDrivenTestRunnerBase
     {
         private const string SessionIdKeySuffix = "__ClientSessionId";
+
+        public MongoClientJsonDrivenSessionsTestRunner(ITestOutputHelper testOutputHelper)
+            : base(testOutputHelper)
+        { }
 
         protected override string[] ExpectedTestColumns => new[] { "description", "clientOptions", "useMultipleMongoses", "failPoint", "sessionOptions", "operations", "expectations", "outcome", "async" };
 

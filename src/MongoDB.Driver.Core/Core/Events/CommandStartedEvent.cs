@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Misc;
@@ -27,6 +28,7 @@ namespace MongoDB.Driver.Core.Events
         private readonly BsonDocument _command;
         private readonly string _commandName;
         private readonly ConnectionId _connectionId;
+        private readonly DateTime _createdDate;
         private readonly DatabaseNamespace _databaseNamespace;
         private readonly long? _operationId;
         private readonly int _requestId;
@@ -48,6 +50,7 @@ namespace MongoDB.Driver.Core.Events
             _connectionId = Ensure.IsNotNull(connectionId, "connectionId");
             _operationId = operationId;
             _requestId = requestId;
+            _createdDate = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -96,6 +99,17 @@ namespace MongoDB.Driver.Core.Events
         public int RequestId
         {
             get { return _requestId; }
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return new BsonDocument
+            {
+                { nameof(_createdDate), _createdDate.ToString("MM/dd/yy H:mm:ss_fff") },
+                { nameof(Command), _command.ToString() }
+            }
+            .ToString();
         }
     }
 }

@@ -437,7 +437,6 @@ namespace MongoDB.Driver.Core.Servers
                 _emulatedStackTrace = stackTrace;
             }
 
-
             public override string StackTrace
             {
                 get

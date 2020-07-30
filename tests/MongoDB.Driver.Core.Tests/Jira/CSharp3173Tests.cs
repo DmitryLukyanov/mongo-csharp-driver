@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Configuration;
@@ -32,6 +33,7 @@ using MongoDB.Driver.Core.WireProtocol.Messages;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Core.Tests.Jira
 {
@@ -41,31 +43,13 @@ namespace MongoDB.Driver.Core.Tests.Jira
         private readonly static ClusterId __clusterId = new ClusterId();
         private readonly static EndPoint __endPoint1 = new DnsEndPoint("localhost", 27017);
         private readonly static EndPoint __endPoint2 = new DnsEndPoint("localhost", 27018);
-        private readonly static IServerSelector __endPoint1ServerSelector = new EndPointServerSelector(__endPoint1);
-        private readonly static IServerSelector __endpoint1AndWritableServerSelector = new CompositeServerSelector(
-            new[]
-            {
-                WritableServerSelector.Instance,
-                __endPoint1ServerSelector
-            });
+        private readonly static TimeSpan __heartbeatInterval = TimeSpan.FromMilliseconds(200);
         private readonly static ServerId __serverId1 = new ServerId(__clusterId, __endPoint1);
         private readonly static ServerId __serverId2 = new ServerId(__clusterId, __endPoint2);
-        private readonly static ServerMonitorSettings __serverMonitorSettings = new ServerMonitorSettings(
-            connectTimeout: TimeSpan.FromMilliseconds(1),
-            heartbeatInterval: TimeSpan.FromMilliseconds(200));
-        private readonly static ServerSettings __serverSettings = new ServerSettings(__serverMonitorSettings.HeartbeatInterval);
-        private readonly static (ServerId ServerId, EndPoint Endpoint, bool IsHealthy)[] __serverInfoCollection = new[]
-        {
-            (__serverId1, __endPoint1, false),
-            (__serverId2, __endPoint2, true),
-        };
-        private readonly static ClusterSettings __clusterSettings = new ClusterSettings(
-            connectionMode: ClusterConnectionMode.Sharded,
-            serverSelectionTimeout: TimeSpan.FromSeconds(30),
-            endPoints: __serverInfoCollection.Select(c => c.Endpoint).ToArray());
 
-        [Fact]
-        public void Ensure_command_network_error_before_hadnshake_is_correctly_handled()
+        [Theory]
+        [ParameterAttributeData]
+        public void Ensure_command_network_error_before_hadnshake_is_correctly_handled([Values(false, true)] bool async, [Values(false, true)] bool streamable)
         {
             var eventCapturer = new EventCapturer().Capture<ServerDescriptionChangedEvent>();
 
@@ -74,14 +58,8 @@ namespace MongoDB.Driver.Core.Tests.Jira
             // ensure that there are no unexpected events between test ending and cluster disposing
             var hasClusterBeenDisposed = new TaskCompletionSource<bool>();
 
-            var connectionPoolFactory = CreateAndSetupConnectionPoolFactory(__serverInfoCollection);
-            var serverMonitorConnectionFactory = CreateAndSetupServerMonitorConnectionFactory(hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, __serverInfoCollection);
-            var serverMonitorFactory = new ServerMonitorFactory(__serverMonitorSettings, serverMonitorConnectionFactory, eventCapturer);
-
-            var serverFactory = new ServerFactory(__clusterConnectionMode, __serverSettings, connectionPoolFactory, serverMonitorFactory, eventCapturer);
-
             EndPoint initialSelectedEndpoint = null;
-            using (var cluster = new MultiServerCluster(__clusterSettings, serverFactory, eventCapturer))
+            using (var cluster = CreateAndSetupCluster(hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, eventCapturer, streamable))
             {
                 cluster._clusterId(__clusterId);
 
@@ -89,15 +67,23 @@ namespace MongoDB.Driver.Core.Tests.Jira
                 // The next isMaster response will be delayed because the Task.WaitAny in the mock.Returns
                 cluster.Initialize();
 
-                var selectedServer = cluster.SelectServer(__endpoint1AndWritableServerSelector, CancellationToken.None);
+                var selectedServer = cluster.SelectServer(CreateWritableServerAndEndPointSelector(__endPoint1), CancellationToken.None);
                 initialSelectedEndpoint = selectedServer.EndPoint;
                 initialSelectedEndpoint.Should().Be(__endPoint1);
 
                 // make sure the next isMaster check has been called
-                Thread.Sleep(__serverMonitorSettings.HeartbeatInterval + TimeSpan.FromMilliseconds(50));
+                Thread.Sleep(__heartbeatInterval + TimeSpan.FromMilliseconds(50));
 
                 // 1. Trigger the command network error BEFORE handshake. At this time isMaster response is alreaady delayed until `hasNetworkErrorBeenTriggered.SetResult`
-                Exception exception = Record.Exception(() => selectedServer.GetChannelAsync(CancellationToken.None).GetAwaiter().GetResult());
+                Exception exception;
+                if (async)
+                {
+                    exception = Record.Exception(() => selectedServer.GetChannelAsync(CancellationToken.None).GetAwaiter().GetResult());
+                }
+                else
+                {
+                    exception = Record.Exception(() => selectedServer.GetChannel(CancellationToken.None));
+                }
 
                 var e = exception.Should().BeOfType<MongoConnectionException>().Subject;
                 e.Message.Should().Be("DnsException");
@@ -212,6 +198,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
         private IConnectionFactory CreateAndSetupServerMonitorConnectionFactory(
             TaskCompletionSource<bool> hasNetworkErrorBeenTriggered,
             TaskCompletionSource<bool> hasClusterBeenDisposed,
+            bool streamable,
             params (ServerId ServerId, EndPoint Endpoint, bool IsHealthy)[] serverInfoCollection)
         {
             var mockConnectionFactory = new Mock<IConnectionFactory>();
@@ -219,7 +206,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
             foreach (var serverInfo in serverInfoCollection)
             {
                 var mockServerMonitorConnection = new Mock<IConnection>();
-                SetupServerMonitorConnection(mockServerMonitorConnection, serverInfo.ServerId, serverInfo.IsHealthy, hasNetworkErrorBeenTriggered, hasClusterBeenDisposed);
+                SetupServerMonitorConnection(mockServerMonitorConnection, serverInfo.ServerId, serverInfo.IsHealthy, hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, streamable);
                 mockConnectionFactory
                     .Setup(c => c.CreateConnection(serverInfo.ServerId, serverInfo.Endpoint))
                     .Returns(mockServerMonitorConnection.Object);
@@ -228,9 +215,47 @@ namespace MongoDB.Driver.Core.Tests.Jira
             return mockConnectionFactory.Object;
         }
 
+        private MultiServerCluster CreateAndSetupCluster(TaskCompletionSource<bool> hasNetworkErrorBeenTriggered, TaskCompletionSource<bool> hasClusterBeenDisposed, EventCapturer eventCapturer, bool streamable)
+        {
+            (ServerId ServerId, EndPoint Endpoint, bool IsHealthy)[] serverInfoCollection = new[]
+            {
+                (__serverId1, __endPoint1, false),
+                (__serverId2, __endPoint2, true),
+            };
+
+            var clusterSettings = new ClusterSettings(
+                connectionMode: __clusterConnectionMode,
+                serverSelectionTimeout: TimeSpan.FromSeconds(30),
+                endPoints: serverInfoCollection.Select(c => c.Endpoint).ToArray());
+
+            var serverMonitorSettings = new ServerMonitorSettings(
+                connectTimeout: TimeSpan.FromMilliseconds(1),
+                heartbeatInterval: __heartbeatInterval);
+            var serverSettings = new ServerSettings(serverMonitorSettings.HeartbeatInterval);
+
+            var connectionPoolFactory = CreateAndSetupConnectionPoolFactory(serverInfoCollection);
+            var serverMonitorConnectionFactory = CreateAndSetupServerMonitorConnectionFactory(hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, streamable, serverInfoCollection);
+            var serverMonitorFactory = new ServerMonitorFactory(serverMonitorSettings, serverMonitorConnectionFactory, eventCapturer);
+
+            var serverFactory = new ServerFactory(__clusterConnectionMode, serverSettings, connectionPoolFactory, serverMonitorFactory, eventCapturer);
+
+            return new MultiServerCluster(clusterSettings, serverFactory, eventCapturer);
+        }
+
         private Exception CreateDnsException(ConnectionId connectionId)
         {
             return new MongoConnectionException(connectionId, "DnsException");
+        }
+
+        private IServerSelector CreateWritableServerAndEndPointSelector(EndPoint endPoint)
+        {
+            IServerSelector endPointServerSelector = new EndPointServerSelector(endPoint);
+            return new CompositeServerSelector(
+                new[]
+                {
+                    WritableServerSelector.Instance,
+                    endPointServerSelector
+                });
         }
 
         private void SetupServerMonitorConnection(
@@ -238,10 +263,11 @@ namespace MongoDB.Driver.Core.Tests.Jira
             ServerId serverId,
             bool isHealthy,
             TaskCompletionSource<bool> hasNetworkErrorBeenTriggered,
-            TaskCompletionSource<bool> hasClusterBeenDisposed)
+            TaskCompletionSource<bool> hasClusterBeenDisposed,
+            bool streamable)
         {
             var connectionId = new ConnectionId(serverId);
-            var serverVersion = "2.6";
+            var serverVersion = streamable ? "4.4" : "2.6";
             var isMasterDocument = new BsonDocument
             {
                 { "ok", 1 },
@@ -249,9 +275,11 @@ namespace MongoDB.Driver.Core.Tests.Jira
                 { "maxWireVersion", 7 },
                 { "msg", "isdbgrid" },
                 { "version", serverVersion },
+                { "topologyVersion", new TopologyVersion(ObjectId.Empty, 1).ToBsonDocument(), streamable }
             };
 
             mockConnection.SetupGet(c => c.ConnectionId).Returns(new ConnectionId(serverId));
+            mockConnection.SetupGet(c => c.EndPoint).Returns(serverId.EndPoint);
 
             mockConnection
                 .SetupGet(c => c.Description)
@@ -261,7 +289,15 @@ namespace MongoDB.Driver.Core.Tests.Jira
                         new IsMasterResult(isMasterDocument),
                         new BuildInfoResult(new BsonDocument("version", serverVersion))));
 
-            Func<ReplyMessage<RawBsonDocument>> commandResponseAction = () => { return MessageHelper.BuildReply(new RawBsonDocument(isMasterDocument.ToBson())); };
+            Func<ResponseMessage> commandResponseAction;
+            if (streamable)
+            {
+                commandResponseAction = () => { return MessageHelper.BuildCommandResponse(new RawBsonDocument(isMasterDocument.ToBson()), moreToCome: true); };
+            }
+            else
+            {
+                commandResponseAction = () => { return MessageHelper.BuildReply(new RawBsonDocument(isMasterDocument.ToBson())); };
+            }
 
             if (isHealthy)
             {
@@ -281,18 +317,17 @@ namespace MongoDB.Driver.Core.Tests.Jira
                     .Returns(Task.FromResult(true)) // the first isMaster configuration passes
                     .Returns(Task.FromResult(true)) // RTT
                     .Throws(CreateDnsException(mockConnection.Object.ConnectionId)) // the dns exception. Should be triggered after Invalidate
-                    .Returns(() =>
+                    .Returns(async () =>
                     {
-                        WaitForTaskOrTimeout(hasClusterBeenDisposed.Task, TimeSpan.FromMinutes(1), "cluster dispose");
-                        return Task.FromResult(true);
+                        await WaitForTaskOrTimeout(hasClusterBeenDisposed.Task, TimeSpan.FromMinutes(1), "cluster dispose").ConfigureAwait(false);
                     }); // ensure that there is no unrelated events
 
                 mockFaultyConnection
                     .Setup(c => c.ReceiveMessageAsync(It.IsAny<int>(), It.IsAny<IMessageEncoderSelector>(), It.IsAny<MessageEncoderSettings>(), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(() =>
+                    .Returns(async () =>
                     {
                         // wait until the command network error has been triggered
-                        WaitForTaskOrTimeout(hasNetworkErrorBeenTriggered.Task, TimeSpan.FromMinutes(1), "network error");
+                        await WaitForTaskOrTimeout(hasNetworkErrorBeenTriggered.Task, TimeSpan.FromMinutes(1), "network error").ConfigureAwait(false);
                         return commandResponseAction();
                     });
             }
@@ -311,10 +346,10 @@ namespace MongoDB.Driver.Core.Tests.Jira
             }
         }
 
-        private void WaitForTaskOrTimeout(Task task, TimeSpan timeout, string testTarget)
+        private async Task WaitForTaskOrTimeout(Task task, TimeSpan timeout, string testTarget)
         {
-            var index = Task.WaitAny(task, Task.Delay(timeout));
-            if (index != 0)
+            var resultedTask = await Task.WhenAny(task, Task.Delay(timeout)).ConfigureAwait(false);
+            if (resultedTask != task)
             {
                 throw new Exception($"The waiting for {testTarget} is exceeded timeout {timeout}.");
             }

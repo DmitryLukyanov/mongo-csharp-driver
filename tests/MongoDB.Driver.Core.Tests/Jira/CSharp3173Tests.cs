@@ -279,7 +279,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
                 { "topologyVersion", new TopologyVersion(ObjectId.Empty, 1).ToBsonDocument(), streamable }
             };
 
-            mockConnection.SetupGet(c => c.ConnectionId).Returns(new ConnectionId(serverId));
+            mockConnection.SetupGet(c => c.ConnectionId).Returns(connectionId);
             mockConnection.SetupGet(c => c.EndPoint).Returns(serverId.EndPoint);
 
             mockConnection

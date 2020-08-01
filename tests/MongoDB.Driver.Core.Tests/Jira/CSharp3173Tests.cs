@@ -33,7 +33,6 @@ using MongoDB.Driver.Core.WireProtocol.Messages;
 using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 using Moq;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MongoDB.Driver.Core.Tests.Jira
 {
@@ -62,6 +61,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
             using (var cluster = CreateAndSetupCluster(hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, eventCapturer, streamable))
             {
                 cluster._clusterId(__clusterId);
+                cluster._description(ClusterDescription.CreateInitial(__clusterId, __clusterConnectionMode));
 
                 // 0. Initial heartbeat via `connection.Open`
                 // The next isMaster response will be delayed because the Task.WaitAny in the mock.Returns
@@ -119,7 +119,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
             .OrderBy(c => GetPort(c.NewDescription.EndPoint))
             .ToList();
             AssertEvent(initialHeartbeatEvents[0], __endPoint1, ServerType.ShardRouter, "Heartbeat");
-            AssertEvent(initialHeartbeatEvents[1], __endPoint2, ServerType.ShardRouter, "Heartbeat");
+            AssertEvent(initialHeartbeatEvents[1], __endPoint2, ServerType.ShardRouter, "Heartbeat"); // the next 27018 events will be suppressed
 
             AssertNextEvent(eventCapturer, initialSelectedEndpoint, ServerType.Unknown, "InvalidatedBecause:ChannelException during handshake: MongoDB.Driver.MongoConnectionException: DnsException");
             AssertNextEvent(eventCapturer, initialSelectedEndpoint, ServerType.Unknown, "Heartbeat", typeof(MongoConnectionException));
@@ -131,6 +131,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
         // private method
         private void AssertEvent(ServerDescriptionChangedEvent @event, EndPoint expectedEndPoint, ServerType expectedServerType, string expectedReasonStart, Type exceptionType = null)
         {
+            @event.ServerId.ClusterId.Should().Be(__clusterId);
             @event.NewDescription.EndPoint.Should().Be(expectedEndPoint);
             @event.NewDescription.Type.Should().Be(expectedServerType);
             @event.NewDescription.State.Should().Be(expectedServerType == ServerType.Unknown ? ServerState.Disconnected : ServerState.Connected);
@@ -310,7 +311,6 @@ namespace MongoDB.Driver.Core.Tests.Jira
 
             void SetupFailedConnection(Mock<IConnection> mockFaultyConnection)
             {
-                // Open methods
                 // sync path is not used in serverMonitor
                 mockFaultyConnection
                     .SetupSequence(c => c.OpenAsync(It.IsAny<CancellationToken>()))
@@ -334,7 +334,6 @@ namespace MongoDB.Driver.Core.Tests.Jira
 
             void SetupHealthyConnection(Mock<IConnection> mockHealthyConnection)
             {
-                // Open methods
                 mockHealthyConnection.Setup(c => c.Open(It.IsAny<CancellationToken>())); // no action is required
                 mockHealthyConnection.Setup(c => c.OpenAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(true)); // no action is required
                 mockHealthyConnection

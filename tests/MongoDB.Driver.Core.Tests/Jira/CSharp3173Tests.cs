@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
@@ -60,8 +61,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
             EndPoint initialSelectedEndpoint = null;
             using (var cluster = CreateAndSetupCluster(hasNetworkErrorBeenTriggered, hasClusterBeenDisposed, eventCapturer, streamable))
             {
-                cluster._clusterId(__clusterId);
-                cluster._description(ClusterDescription.CreateInitial(__clusterId, __clusterConnectionMode));
+                ForceClusterId(cluster, __clusterId);
 
                 // 0. Initial heartbeat via `connection.Open`
                 // The next isMaster response will be delayed because the Task.WaitAny in the mock.Returns
@@ -257,6 +257,12 @@ namespace MongoDB.Driver.Core.Tests.Jira
                     WritableServerSelector.Instance,
                     endPointServerSelector
                 });
+        }
+
+        private void ForceClusterId(MultiServerCluster cluster, ClusterId clusterId)
+        {
+            Reflector.SetFieldValue(cluster, "_clusterId", clusterId);
+            Reflector.SetFieldValue(cluster, "_description", ClusterDescription.CreateInitial(clusterId, __clusterConnectionMode));
         }
 
         private void SetupServerMonitorConnection(

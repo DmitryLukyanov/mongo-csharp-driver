@@ -614,8 +614,6 @@ namespace MongoDB.Driver.Core.Clusters
 
     internal static class ClusterReflector
     {
-        public static void _clusterId(this Cluster cluster, ClusterId clusterId) => Reflector.SetFieldValue(cluster, nameof(_clusterId), clusterId);
-        public static void _description(this Cluster cluster, ClusterDescription clusterDescription) => Reflector.SetFieldValue(cluster, nameof(_description), clusterDescription);
         public static InterlockedInt32 _state(this Cluster cluster) => (InterlockedInt32)Reflector.GetFieldValue(cluster, nameof(_state));
     }
 }

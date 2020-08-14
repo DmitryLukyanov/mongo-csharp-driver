@@ -189,8 +189,6 @@ namespace MongoDB.Driver.Core.Servers
 
         private async Task MonitorServerAsync()
         {
-            await Task.Yield(); // return control immediately
-
             var metronome = new Metronome(_serverMonitorSettings.HeartbeatInterval);
             var monitorCancellationToken = _monitorCancellationTokenSource.Token;
 

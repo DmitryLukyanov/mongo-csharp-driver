@@ -13,6 +13,8 @@
 * limitations under the License.
 */
 
+using System;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Servers;
@@ -27,6 +29,7 @@ namespace MongoDB.Driver.Core.Events
         private readonly ConnectionId _connectionId;
         private readonly long? _operationId;
         private readonly int _responseTo;
+        private readonly DateTime _date;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionReceivingMessageEvent" /> struct.
@@ -39,6 +42,7 @@ namespace MongoDB.Driver.Core.Events
             _connectionId = connectionId;
             _responseTo = responseTo;
             _operationId = operationId;
+            _date = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -79,6 +83,19 @@ namespace MongoDB.Driver.Core.Events
         public ServerId ServerId
         {
             get { return _connectionId.ServerId; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return new BsonDocument
+            {
+                { "date", _date.ToString("HH:mm:ss.ffffzzz") },
+                { "type", this.GetType().Name }
+            }.ToString();
         }
     }
 }

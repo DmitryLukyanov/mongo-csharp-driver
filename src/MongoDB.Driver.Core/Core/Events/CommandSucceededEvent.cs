@@ -31,6 +31,7 @@ namespace MongoDB.Driver.Core.Events
         private readonly long? _operationId;
         private readonly int _requestId;
         private readonly BsonDocument _reply;
+        private readonly DateTime _date;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandSucceededEvent"/> struct.
@@ -49,6 +50,7 @@ namespace MongoDB.Driver.Core.Events
             _operationId = operationId;
             _requestId = requestId;
             _duration = duration;
+            _date = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -97,6 +99,20 @@ namespace MongoDB.Driver.Core.Events
         public int RequestId
         {
             get { return _requestId; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return new BsonDocument
+            {
+                { "CommandName", CommandName },
+                { "date", _date.ToString("HH:mm:ss.ffffzzz") },
+                { "type", this.GetType().Name }
+            }.ToString();
         }
     }
 }

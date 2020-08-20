@@ -128,7 +128,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             if (_state.TryChange(State.Initial, State.Open))
             {
-                _ = MonitorServerAsync().ConfigureAwait(false);
+                _ = Task.Factory.StartNew(() => MonitorServerAsync().ConfigureAwait(false)).ConfigureAwait(false);
                 _ = _roundTripTimeMonitor.RunAsync().ConfigureAwait(false);
             }
         }
@@ -189,8 +189,6 @@ namespace MongoDB.Driver.Core.Servers
 
         private async Task MonitorServerAsync()
         {
-            await Task.Yield(); // return control immediately
-
             var metronome = new Metronome(_serverMonitorSettings.HeartbeatInterval);
             var monitorCancellationToken = _monitorCancellationTokenSource.Token;
 

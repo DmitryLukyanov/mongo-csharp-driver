@@ -40,6 +40,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             var heartbeatInterval = heartbeatIntervalInMinutes == -1 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMinutes(heartbeatIntervalInMinutes);
             var minHeartbeatInterval = TimeSpan.FromSeconds(2);
+
             var stopwatch = Stopwatch.StartNew();
             var subject = new HeartbeatDelay(heartbeatInterval, minHeartbeatInterval);
             subject.RequestHeartbeat();
@@ -50,6 +51,7 @@ namespace MongoDB.Driver.Core.Servers
                 throw new Exception($"The test timeout {timeout} is exceeded.");
             }
             stopwatch.Stop();
+
             stopwatch.Elapsed.Should().BeGreaterOrEqualTo(minHeartbeatInterval - TimeSpan.FromMilliseconds(15));
         }
 

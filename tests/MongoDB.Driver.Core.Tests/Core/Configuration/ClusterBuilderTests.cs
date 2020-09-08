@@ -36,13 +36,13 @@ namespace MongoDB.Driver.Core.Configuration
         public void CreateServerMonitorFactory_should_return_expected_result(int connectTimeoutMilliseconds, int heartbeatTimeoutMilliseconds, int expectedServerMonitorConnectTimeoutMilliseconds, int expectedServerMonitorSocketTimeoutMilliseconds)
         {
             var connectTimeout = TimeSpan.FromMilliseconds(connectTimeoutMilliseconds);
-            var authenticators = new[] { new DefaultAuthenticator(new UsernamePasswordCredential("source", "username", "password")) };
+            Func<IEnumerable<IAuthenticator>> authenticatorsConfigurator = () => new[] { new DefaultAuthenticator(new UsernamePasswordCredential("source", "username", "password")) };
             var heartbeatTimeout = TimeSpan.FromMilliseconds(heartbeatTimeoutMilliseconds);
             var expectedServerMonitorConnectTimeout = TimeSpan.FromMilliseconds(expectedServerMonitorConnectTimeoutMilliseconds);
             var expectedServerMonitorSocketTimeout = TimeSpan.FromMilliseconds(expectedServerMonitorSocketTimeoutMilliseconds);
             var subject = new ClusterBuilder()
                 .ConfigureTcp(s => s.With(connectTimeout: connectTimeout))
-                .ConfigureConnection(s => s.With(authenticators: authenticators))
+                .ConfigureConnection(s => s.With(authenticatorsConfigurator: authenticatorsConfigurator))
                 .ConfigureServer(s => s.With(heartbeatTimeout: heartbeatTimeout));
 
             var result = (ServerMonitorFactory)subject.CreateServerMonitorFactory();

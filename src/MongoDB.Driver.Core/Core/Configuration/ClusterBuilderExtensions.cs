@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Security;
@@ -111,8 +112,8 @@ namespace MongoDB.Driver.Core.Configuration
             // Connection
             if (connectionString.Username != null)
             {
-                var authenticator = CreateAuthenticator(connectionString);
-                builder = builder.ConfigureConnection(s => s.With(authenticators: new[] { authenticator }));
+                Func<IEnumerable<IAuthenticator>> authenticatorConfigurator = () => new[] { CreateAuthenticator(connectionString) };
+                builder = builder.ConfigureConnection(s => s.With(authenticatorsConfigurator: authenticatorConfigurator));
             }
             if (connectionString.ApplicationName != null)
             {

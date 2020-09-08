@@ -13,11 +13,13 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Configuration;
@@ -105,13 +107,14 @@ namespace MongoDB.Driver
 
         private ConnectionSettings ConfigureConnection(ConnectionSettings settings, ClusterKey clusterKey)
         {
-            var authenticators = clusterKey.Credentials.Select(c => c.ToAuthenticator());
+            var credentials = clusterKey.Credentials;
+            Func<IEnumerable<IAuthenticator>> authenticatorConfigurator = () => credentials.Select(c => c.ToAuthenticator());
             return settings.With(
-                authenticators: Optional.Enumerable(authenticators),
                 compressors: Optional.Enumerable(clusterKey.Compressors),
                 maxIdleTime: clusterKey.MaxConnectionIdleTime,
                 maxLifeTime: clusterKey.MaxConnectionLifeTime,
-                applicationName: clusterKey.ApplicationName);
+                applicationName: clusterKey.ApplicationName,
+                authenticatorsConfigurator: authenticatorConfigurator);
         }
 
         private SdamLoggingSettings ConfigureSdamLogging(SdamLoggingSettings settings, ClusterKey clusterKey)

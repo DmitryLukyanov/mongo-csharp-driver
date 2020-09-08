@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -251,8 +252,7 @@ namespace MongoDB.Driver.Core.Configuration
 
         private IServerMonitorFactory CreateServerMonitorFactory()
         {
-            var serverMonitorConnectionSettings = _connectionSettings
-                .With(authenticators: new IAuthenticator[] { });
+            var serverMonitorConnectionSettings = _connectionSettings.With(authenticatorsConfigurator: Optional.Create<Func<IEnumerable<IAuthenticator>>>(() => new IAuthenticator[0]));
 
             var heartbeatConnectTimeout = _tcpStreamSettings.ConnectTimeout;
             if (heartbeatConnectTimeout == TimeSpan.Zero || heartbeatConnectTimeout == Timeout.InfiniteTimeSpan)

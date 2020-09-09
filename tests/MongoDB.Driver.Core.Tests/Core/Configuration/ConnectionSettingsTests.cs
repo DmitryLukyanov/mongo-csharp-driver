@@ -14,7 +14,6 @@
 */
 
 using System;
-using System.Linq;
 using FluentAssertions;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Authentication;
@@ -33,9 +32,7 @@ namespace MongoDB.Driver.Core.Configuration
             var subject = new ConnectionSettings();
 
             subject.ApplicationName.Should().BeNull();
-            subject.AuthenticatorFactories.Should().NotBeNull();
-            var authenticators = subject.AuthenticatorFactories.Select(a => a.Create());
-            authenticators.Should().BeEmpty();
+            subject.AuthenticatorFactories.Should().BeEmpty();
             subject.Compressors.Should().BeEmpty();
             subject.MaxIdleTime.Should().Be(TimeSpan.FromMinutes(10));
             subject.MaxLifeTime.Should().Be(TimeSpan.FromMinutes(30));
@@ -111,8 +108,6 @@ namespace MongoDB.Driver.Core.Configuration
             var subject = new ConnectionSettings(authenticatorFactories: authenticatorFactories);
 
             subject.ApplicationName.Should().BeNull();
-            subject.AuthenticatorFactories.Should().NotBeNull();
-            var authenticators = subject.AuthenticatorFactories.Select(a => a.Create());
             subject.AuthenticatorFactories.Should().Equal(authenticatorFactories);
             subject.Compressors.Should().BeEquivalentTo(__defaults.Compressors);
             subject.MaxIdleTime.Should().Be(__defaults.MaxIdleTime);

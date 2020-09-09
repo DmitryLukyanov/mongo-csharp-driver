@@ -32,9 +32,9 @@ namespace MongoDB.Driver.Core.Authentication
     {
         public static void Authenticate(IConnection connection, ConnectionDescription description, IReadOnlyList<IAuthenticator> authenticators, CancellationToken cancellationToken)
         {
-            Ensure.IsNotNull(authenticators, nameof(authenticators));
             Ensure.IsNotNull(connection, nameof(connection));
             Ensure.IsNotNull(description, nameof(description));
+            Ensure.IsNotNull(authenticators, nameof(authenticators));
 
             // authentication is currently broken on arbiters
             if (!description.IsMasterResult.IsArbiter)
@@ -48,9 +48,9 @@ namespace MongoDB.Driver.Core.Authentication
 
         public static async Task AuthenticateAsync(IConnection connection, ConnectionDescription description, IReadOnlyList<IAuthenticator> authenticators, CancellationToken cancellationToken)
         {
-            Ensure.IsNotNull(authenticators, nameof(authenticators));
             Ensure.IsNotNull(connection, nameof(connection));
             Ensure.IsNotNull(description, nameof(description));
+            Ensure.IsNotNull(authenticators, nameof(authenticators));
 
             // authentication is currently broken on arbiters
             if (!description.IsMasterResult.IsArbiter)

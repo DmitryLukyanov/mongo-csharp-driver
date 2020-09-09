@@ -106,12 +106,13 @@ namespace MongoDB.Driver
 
         private ConnectionSettings ConfigureConnection(ConnectionSettings settings, ClusterKey clusterKey)
         {
+            var authenticatorFactories = clusterKey.Credentials.Select(c => new AuthenticatorFactory(() => c.ToAuthenticator()));
             return settings.With(
+                authenticatorFactories: Optional.Enumerable<IAuthenticatorFactory>(authenticatorFactories),
                 compressors: Optional.Enumerable(clusterKey.Compressors),
                 maxIdleTime: clusterKey.MaxConnectionIdleTime,
                 maxLifeTime: clusterKey.MaxConnectionLifeTime,
-                applicationName: clusterKey.ApplicationName,
-                authenticatorsFactory: new AuthenticatorsFactory(() => clusterKey.Credentials.Select(c => c.ToAuthenticator())));
+                applicationName: clusterKey.ApplicationName);
         }
 
         private SdamLoggingSettings ConfigureSdamLogging(SdamLoggingSettings settings, ClusterKey clusterKey)

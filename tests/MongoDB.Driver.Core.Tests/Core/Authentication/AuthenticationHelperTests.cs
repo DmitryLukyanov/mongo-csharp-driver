@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System.Linq;
 using System.Net;
 using System.Security;
 using System.Threading;
@@ -58,9 +59,9 @@ namespace MongoDB.Driver.Core.Authentication
                 new BuildInfoResult(new BsonDocument("version", "2.8.0")));
 
             var mockAuthenticator = new Mock<IAuthenticator>();
-            var settings = new ConnectionSettings(authenticatorsFactory: new AuthenticatorsFactory(() => new[] { mockAuthenticator.Object }));
+            var settings = new ConnectionSettings(authenticatorFactories: new[] { new AuthenticatorFactory(() => mockAuthenticator.Object) });
+            var authenticators = settings.AuthenticatorFactories.Select(a => a.Create()).ToList();
 
-            var authenticators = settings.AuthenticatorsFactory.Create();
             var mockConnection = new Mock<IConnection>();
             mockConnection.SetupGet(c => c.Description).Returns(description);
             mockConnection.SetupGet(c => c.Settings).Returns(settings);
@@ -91,8 +92,8 @@ namespace MongoDB.Driver.Core.Authentication
                 new BuildInfoResult(new BsonDocument("version", "2.8.0")));
 
             var mockAuthenticator = new Mock<IAuthenticator>();
-            var settings = new ConnectionSettings(authenticatorsFactory: new AuthenticatorsFactory(() => new[] { mockAuthenticator.Object }));
-            var authenticators = settings.AuthenticatorsFactory.Create();
+            var settings = new ConnectionSettings(authenticatorFactories: new[] { new AuthenticatorFactory(() => mockAuthenticator.Object) });
+            var authenticators = settings.AuthenticatorFactories.Select(a => a.Create()).ToList();
 
             var mockConnection = new Mock<IConnection>();
             mockConnection.SetupGet(c => c.Description).Returns(description);

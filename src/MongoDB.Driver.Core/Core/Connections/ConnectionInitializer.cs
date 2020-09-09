@@ -14,6 +14,7 @@
 */
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -42,7 +43,7 @@ namespace MongoDB.Driver.Core.Connections
         public ConnectionDescription InitializeConnection(IConnection connection, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(connection, nameof(connection));
-            var authenticators = connection.Settings.AuthenticatorsFactory.Create();
+            var authenticators = connection.Settings.AuthenticatorFactories.Select(f => f.Create()).ToList();
             var isMasterCommand = CreateInitialIsMasterCommand(authenticators);
             var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
             var isMasterResult = IsMasterHelper.GetResult(connection, isMasterProtocol, cancellationToken);
@@ -80,7 +81,7 @@ namespace MongoDB.Driver.Core.Connections
         public async Task<ConnectionDescription> InitializeConnectionAsync(IConnection connection, CancellationToken cancellationToken)
         {
             Ensure.IsNotNull(connection, nameof(connection));
-            var authenticators = connection.Settings.AuthenticatorsFactory.Create();
+            var authenticators = connection.Settings.AuthenticatorFactories.Select(f => f.Create()).ToList();
             var isMasterCommand = CreateInitialIsMasterCommand(authenticators);
             var isMasterProtocol = IsMasterHelper.CreateProtocol(isMasterCommand);
             var isMasterResult = await IsMasterHelper.GetResultAsync(connection, isMasterProtocol, cancellationToken).ConfigureAwait(false);

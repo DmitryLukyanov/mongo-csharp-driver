@@ -13,19 +13,17 @@
 * limitations under the License.
 */
 
-using System.Collections.Generic;
-
 namespace MongoDB.Driver.Core.Authentication
 {
     /// <summary>
-    /// Represents an authenticators factory.
+    /// Represents an authenticator factory.
     /// </summary>
-    public interface IAuthenticatorsFactory
+    public interface IAuthenticatorFactory
     {
         /// <summary>
-        /// Create authenticators.
+        /// Create an authenticator.
         /// </summary>
-        /// <returns>The authenticators.</returns>
-        IReadOnlyList<IAuthenticator> Create();
+        /// <returns>The authenticator.</returns>
+        IAuthenticator Create();
     }
 }

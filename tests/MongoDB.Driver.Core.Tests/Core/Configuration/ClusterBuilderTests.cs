@@ -37,21 +37,20 @@ namespace MongoDB.Driver.Core.Configuration
         public void CreateServerMonitorFactory_should_return_expected_result(int connectTimeoutMilliseconds, int heartbeatTimeoutMilliseconds, int expectedServerMonitorConnectTimeoutMilliseconds, int expectedServerMonitorSocketTimeoutMilliseconds)
         {
             var connectTimeout = TimeSpan.FromMilliseconds(connectTimeoutMilliseconds);
-            var authenticatorFactory = new AuthenticatorFactory(() => new DefaultAuthenticator(new UsernamePasswordCredential("source", "username", "password")));
+            var authenticatorFactories = new[] { new AuthenticatorFactory(() => new DefaultAuthenticator(new UsernamePasswordCredential("source", "username", "password"))) };
             var heartbeatTimeout = TimeSpan.FromMilliseconds(heartbeatTimeoutMilliseconds);
             var expectedServerMonitorConnectTimeout = TimeSpan.FromMilliseconds(expectedServerMonitorConnectTimeoutMilliseconds);
             var expectedServerMonitorSocketTimeout = TimeSpan.FromMilliseconds(expectedServerMonitorSocketTimeoutMilliseconds);
             var subject = new ClusterBuilder()
                 .ConfigureTcp(s => s.With(connectTimeout: connectTimeout))
-                .ConfigureConnection(s => s.With(authenticatorFactories: new[] { authenticatorFactory }))
+                .ConfigureConnection(s => s.With(authenticatorFactories: authenticatorFactories))
                 .ConfigureServer(s => s.With(heartbeatTimeout: heartbeatTimeout));
 
             var result = (ServerMonitorFactory)subject.CreateServerMonitorFactory();
 
             var serverMonitorConnectionFactory = (BinaryConnectionFactory)result._connectionFactory();
             var serverMonitorConnectionSettings = serverMonitorConnectionFactory._settings();
-            var authenticators = serverMonitorConnectionSettings.AuthenticatorFactories.Select(a => a.Create());
-            authenticators.Should().HaveCount(0);
+            serverMonitorConnectionSettings.AuthenticatorFactories.Should().HaveCount(0);
 
             var serverMonitorStreamFactory = (TcpStreamFactory)serverMonitorConnectionFactory._streamFactory();
             var serverMonitorTcpStreamSettings = serverMonitorStreamFactory._settings();

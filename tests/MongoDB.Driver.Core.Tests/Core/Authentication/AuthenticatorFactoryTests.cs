@@ -26,6 +26,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Authentication
         public void constructor_should_throw_when_delegate_is_null()
         {
             var exception = Record.Exception(() => new AuthenticatorFactory(null));
+
             exception.Should().BeOfType<ArgumentNullException>();
         }
 
@@ -34,6 +35,7 @@ namespace MongoDB.Driver.Core.Tests.Core.Authentication
         {
             var subject = new AuthenticatorFactory(() => new PlainAuthenticator(new UsernamePasswordCredential("source", "user", "password")));
             var authenticator = subject.Create();
+
             var typedAuthenticator = authenticator.Should().BeOfType<PlainAuthenticator>().Subject;
             typedAuthenticator.DatabaseName.Should().Be("source");
         }

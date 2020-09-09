@@ -112,8 +112,7 @@ namespace MongoDB.Driver.Core.Configuration
             // Connection
             if (connectionString.Username != null)
             {
-                Func<IEnumerable<IAuthenticator>> authenticatorConfigurator = () => new[] { CreateAuthenticator(connectionString) };
-                builder = builder.ConfigureConnection(s => s.With(authenticatorsConfigurator: authenticatorConfigurator));
+                builder = builder.ConfigureConnection(s => s.With(authenticatorsFactory: new AuthenticatorsFactory(() => new[] { CreateAuthenticator(connectionString) })));
             }
             if (connectionString.ApplicationName != null)
             {

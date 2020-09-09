@@ -21,7 +21,6 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using MongoDB.Driver.Core.Authentication;
 using MongoDB.Driver.Core.Clusters;
-using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Misc;
 
@@ -107,14 +106,12 @@ namespace MongoDB.Driver
 
         private ConnectionSettings ConfigureConnection(ConnectionSettings settings, ClusterKey clusterKey)
         {
-            var credentials = clusterKey.Credentials;
-            Func<IEnumerable<IAuthenticator>> authenticatorConfigurator = () => credentials.Select(c => c.ToAuthenticator());
             return settings.With(
                 compressors: Optional.Enumerable(clusterKey.Compressors),
                 maxIdleTime: clusterKey.MaxConnectionIdleTime,
                 maxLifeTime: clusterKey.MaxConnectionLifeTime,
                 applicationName: clusterKey.ApplicationName,
-                authenticatorsConfigurator: authenticatorConfigurator);
+                authenticatorsFactory: new AuthenticatorsFactory(() => clusterKey.Credentials.Select(c => c.ToAuthenticator())));
         }
 
         private SdamLoggingSettings ConfigureSdamLogging(SdamLoggingSettings settings, ClusterKey clusterKey)

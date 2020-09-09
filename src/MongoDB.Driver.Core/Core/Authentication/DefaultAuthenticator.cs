@@ -35,7 +35,7 @@ namespace MongoDB.Driver.Core.Authentication
         // fields
         private readonly UsernamePasswordCredential _credential;
         private readonly IRandomStringGenerator _randomStringGenerator;
-        private readonly Lazy<IAuthenticator> _speculativeAuthenticator;
+        private IAuthenticator _speculativeAuthenticator;
 
         // constructors
         /// <summary>
@@ -51,7 +51,6 @@ namespace MongoDB.Driver.Core.Authentication
         {
             _credential = Ensure.IsNotNull(credential, nameof(credential));
             _randomStringGenerator = Ensure.IsNotNull(randomStringGenerator, nameof(randomStringGenerator));
-            _speculativeAuthenticator = new Lazy<IAuthenticator>(() => new ScramSha256Authenticator(_credential, _randomStringGenerator));
         }
 
         // properties
@@ -117,7 +116,8 @@ namespace MongoDB.Driver.Core.Authentication
         {
             var saslSupportedMechs = CreateSaslSupportedMechsRequest(_credential.Source, _credential.Username);
             isMasterCommand = isMasterCommand.Merge(saslSupportedMechs);
-            return _speculativeAuthenticator.Value.CustomizeInitialIsMasterCommand(isMasterCommand);
+            _speculativeAuthenticator = new ScramSha256Authenticator(_credential, _randomStringGenerator);
+            return _speculativeAuthenticator.CustomizeInitialIsMasterCommand(isMasterCommand);
         }
 
         private static BsonDocument CreateSaslSupportedMechsRequest(string authenticationDatabaseName, string userName)
@@ -152,8 +152,8 @@ namespace MongoDB.Driver.Core.Authentication
             /* It is possible to have for IsMaster["SpeculativeAuthenticate"] != null and for
              * _speculativeScramSha256Authenticator to be null in the case of multiple authenticators */
             var speculativeAuthenticateResult = description.IsMasterResult.SpeculativeAuthenticate;
-            var canUseSpeculativeAuthenticator = _speculativeAuthenticator.IsValueCreated && speculativeAuthenticateResult != null;
-            return canUseSpeculativeAuthenticator ? _speculativeAuthenticator.Value : CreateAuthenticator(connection, description);
+            var canUseSpeculativeAuthenticator = _speculativeAuthenticator != null && speculativeAuthenticateResult != null;
+            return canUseSpeculativeAuthenticator ? _speculativeAuthenticator : CreateAuthenticator(connection, description);
         }
     }
 }

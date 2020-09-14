@@ -714,10 +714,9 @@ namespace MongoDB.Driver.Core.Operations
         [Theory]
         [ParameterAttributeData]
         public void Hidden_get_and_set_should_work(
-            [Values(null, false, true)] bool? valueString)
+            [Values(null, false, true)] bool? value)
         {
             var subject = new CreateIndexRequest(new BsonDocument("x", 1));
-            var value = valueString == null ? null : valueString;
 
             subject.Hidden = value;
             var result = subject.Hidden;

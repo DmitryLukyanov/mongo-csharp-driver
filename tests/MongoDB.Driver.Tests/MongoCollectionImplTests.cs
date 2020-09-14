@@ -1838,7 +1838,7 @@ namespace MongoDB.Driver
             [Values(null, 1, 2)] int? commitQuorumW,
             [Values(null, -1, 0, 42, 9000)] int? milliseconds,
             [Values(false, true)] bool usingCreateOneIndexOptions,
-            [Values(false, true)] bool hidden,
+            [Values(null, false, true)] bool? hidden,
             [Values(false, true)] bool async)
         {
             var writeConcern = new WriteConcern(1);
@@ -1970,7 +1970,7 @@ namespace MongoDB.Driver
             [Values(null, 1, 2)] int? commitQuorumW,
             [Values(null, -1, 0, 42, 9000)] int? milliseconds,
             [Values(false, true)] bool usingCreateManyIndexesOptions,
-            [Values(false, true)] bool hidden,
+            [Values(null, false, true)] bool? hidden,
             [Values(false, true)] bool async)
         {
             var writeConcern = new WriteConcern(1);

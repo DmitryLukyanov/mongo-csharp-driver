@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Tests
         public void List_should_return_expected_result(
             [Values("{ singleIndex : 1 }", "{ compoundIndex1 : 1, compoundIndex2 : 1 }")] string key,
             [Values(false, true)] bool unique,
-            [Values(false, true)] bool hidden,
+            [Values(null, false, true)] bool? hidden,
             [Values(false, true)] bool async)
         {
             var indexKeyDocument = BsonDocument.Parse(key);
@@ -40,10 +40,10 @@ namespace MongoDB.Driver.Tests
             var collection = database.GetCollection<BsonDocument>(collectionName);
 
             var subject = collection.Indexes;
+            var isHiddenIndexSupported = Feature.HiddenIndex.IsSupported(CoreTestConfiguration.ServerVersion);
 
             try
             {
-                var isHiddenIndexSupported = Feature.HiddenIndex.IsSupported(CoreTestConfiguration.ServerVersion);
                 var indexOptions = new CreateIndexOptions() { Unique = unique };
                 if (isHiddenIndexSupported)
                 {
@@ -65,44 +65,44 @@ namespace MongoDB.Driver.Tests
                 AssertIndex(collection.CollectionNamespace, indexes[0], "_id_");
                 var indexName = IndexNameHelper.GetIndexName(indexKeyDocument);
                 AssertIndex(collection.CollectionNamespace, indexes[1], indexName, expectedUnique: unique, expectedHidden: hidden);
-
-                void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string expectedName, bool expectedUnique = false, bool expectedHidden = false)
-                {
-                    index["name"].AsString.Should().Be(expectedName);
-
-                    if (expectedUnique)
-                    {
-                        index["unique"].AsBoolean.Should().BeTrue();
-                    }
-                    else
-                    {
-                        index.Contains("unique").Should().BeFalse();
-                    }
-
-                    if (expectedHidden && isHiddenIndexSupported)
-                    {
-                        index["hidden"].AsBoolean.Should().BeTrue();
-                    }
-                    else
-                    {
-                        index.Contains("hidden").Should().BeFalse();
-                    }
-
-                    if (CoreTestConfiguration.ServerVersion < new SemanticVersion(4, 3, 0))
-                    {
-                        index["ns"].AsString.Should().Be(collectionNamespace.ToString());
-                    }
-                    else
-                    {
-                        // the server doesn't return ns anymore
-                        index.Contains("ns").Should().BeFalse();
-                    }
-                }
             }
             finally
             {
                 // make sure that index has been removed
                 database.DropCollection(collectionName);
+            }
+
+            void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string expectedName, bool expectedUnique = false, bool? expectedHidden = false)
+            {
+                index["name"].AsString.Should().Be(expectedName);
+
+                if (expectedUnique)
+                {
+                    index["unique"].AsBoolean.Should().BeTrue();
+                }
+                else
+                {
+                    index.Contains("unique").Should().BeFalse();
+                }
+
+                if (expectedHidden.GetValueOrDefault() && isHiddenIndexSupported)
+                {
+                    index["hidden"].AsBoolean.Should().BeTrue();
+                }
+                else
+                {
+                    index.Contains("hidden").Should().BeFalse();
+                }
+
+                if (CoreTestConfiguration.ServerVersion < new SemanticVersion(4, 3, 0))
+                {
+                    index["ns"].AsString.Should().Be(collectionNamespace.ToString());
+                }
+                else
+                {
+                    // the server doesn't return ns anymore
+                    index.Contains("ns").Should().BeFalse();
+                }
             }
         }
     }

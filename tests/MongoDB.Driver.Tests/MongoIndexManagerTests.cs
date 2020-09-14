@@ -29,6 +29,7 @@ namespace MongoDB.Driver.Tests
         public void List_should_return_expected_result(
             [Values("{ singleIndex : 1 }", "{ compoundIndex1 : 1, compoundIndex2 : 1 }")] string key,
             [Values(false, true)] bool unique,
+            [Values(false, true)] bool hidden,
             [Values(false, true)] bool async)
         {
             var indexKeyDocument = BsonDocument.Parse(key);
@@ -42,7 +43,17 @@ namespace MongoDB.Driver.Tests
 
             try
             {
-                subject.CreateOne(new CreateIndexModel<BsonDocument>(indexKeyDocument, new CreateIndexOptions() { Unique = unique }));
+                var isHiddenIndexSupported = Feature.HiddenIndex.IsSupported(CoreTestConfiguration.ServerVersion);
+                var indexOptions = new CreateIndexOptions() { Unique = unique };
+                if (isHiddenIndexSupported)
+                {
+                    indexOptions.Hidden = hidden;
+                }
+
+                subject.CreateOne(
+                    new CreateIndexModel<BsonDocument>(
+                        indexKeyDocument,
+                        indexOptions));
 
                 var indexesCursor =
                     async
@@ -53,9 +64,9 @@ namespace MongoDB.Driver.Tests
                 indexes.Count.Should().Be(2);
                 AssertIndex(collection.CollectionNamespace, indexes[0], "_id_");
                 var indexName = IndexNameHelper.GetIndexName(indexKeyDocument);
-                AssertIndex(collection.CollectionNamespace, indexes[1], indexName, expectedUnique: unique);
+                AssertIndex(collection.CollectionNamespace, indexes[1], indexName, expectedUnique: unique, expectedHidden: hidden);
 
-                void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string expectedName, bool expectedUnique = false)
+                void AssertIndex(CollectionNamespace collectionNamespace, BsonDocument index, string expectedName, bool expectedUnique = false, bool expectedHidden = false)
                 {
                     index["name"].AsString.Should().Be(expectedName);
 
@@ -66,6 +77,15 @@ namespace MongoDB.Driver.Tests
                     else
                     {
                         index.Contains("unique").Should().BeFalse();
+                    }
+
+                    if (expectedHidden && isHiddenIndexSupported)
+                    {
+                        index["hidden"].AsBoolean.Should().BeTrue();
+                    }
+                    else
+                    {
+                        index.Contains("hidden").Should().BeFalse();
                     }
 
                     if (CoreTestConfiguration.ServerVersion < new SemanticVersion(4, 3, 0))

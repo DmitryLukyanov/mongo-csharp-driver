@@ -44,6 +44,7 @@ namespace MongoDB.Driver
         UnknownReplWriteConcern = 79,
         UnsatisfiableWriteConcern = 100,
         WriteConcernFailed = 64,
-        MaxTimeMSExpired = 50
+        MaxTimeMSExpired = 50,
+        NamespaceNotFound = 26
     }
 }

@@ -26,28 +26,46 @@ namespace MongoDB.Driver.Tests.Jira
 {
     public class CSharp3188Tests
     {
-        [SkippableTheory]
+        [SkippableTheory(Skip = "skip")]
         [ParameterAttributeData]
         public void Ensure_that_MongoConnectionException_contains_expected_attributes([Values(false, true)] bool async)
         {
-            var serverResponseDelay = TimeSpan.FromMilliseconds(500);
+            var serverResponseDelay = TimeSpan.FromMilliseconds(700);
 
             var mongoClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
             mongoClientSettings.SocketTimeout = TimeSpan.FromMilliseconds(100);
 
             using (var client = DriverTestConfiguration.CreateDisposableClient(mongoClientSettings))
             {
-                var db = client.GetDatabase("db");
-                var collectionName = "coll_" + async;
-                db.DropCollection(collectionName);
-                var coll = db.GetCollection<BsonDocument>(collectionName);
-                coll.InsertOne(new BsonDocument());
-                // each collection document will trigger delay
-                var filterWithDelay = $"{{ $where : 'function() {{ sleep({serverResponseDelay.TotalMilliseconds}); return true; }}' }}";
+                var database = client.GetDatabase("db");
+                var collection = database.GetCollection<BsonDocument>("coll");
+
+                var stringFieldDefinition = $@"
+                {{
+                    done : {{
+                        $function : {{
+                            body : 'function() {{ sleep({serverResponseDelay.TotalMilliseconds}); return true }}',
+                            args : [ ],
+                            lang : 'js'
+                        }}
+                    }}
+                }}";
+                var projectionDefinition = Builders<BsonDocument>
+                    .Projection
+                    .Combine(BsonDocument.Parse(stringFieldDefinition));
+                var pipeline = new EmptyPipelineDefinition<BsonDocument>()
+                    .AppendStage<BsonDocument, BsonDocument, BsonDocument>("{ $collStats : { } }")
+                    .Limit(1)
+                    .Project(projectionDefinition);
 
                 if (async)
                 {
-                    var exception = Record.Exception(() => coll.FindAsync(filterWithDelay).GetAwaiter().GetResult());
+                    var exception = Record.Exception(() => collection.AggregateAsync(pipeline).GetAwaiter().GetResult());
+
+                    //if (!(exception is MongoConnectionException))
+                    //{
+                    //    throw exception;
+                    //}
 
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeFalse();
@@ -58,7 +76,12 @@ namespace MongoDB.Driver.Tests.Jira
                 }
                 else
                 {
-                    var exception = Record.Exception(() => coll.FindSync(filterWithDelay));
+                    var exception = Record.Exception(() => collection.Aggregate(pipeline));
+
+                    //if (!(exception is MongoConnectionException))
+                    //{
+                    //    throw exception;
+                    //}
 
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeTrue();

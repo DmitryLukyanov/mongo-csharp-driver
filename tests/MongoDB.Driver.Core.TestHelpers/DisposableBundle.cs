@@ -33,9 +33,18 @@ namespace MongoDB.Driver.Core.TestHelpers
 
         public void Dispose()
         {
-            foreach (var disposable in _disposables)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
             {
-                disposable.Dispose();
+                foreach (var disposable in _disposables)
+                {
+                    disposable.Dispose();
+                }
             }
         }
     }

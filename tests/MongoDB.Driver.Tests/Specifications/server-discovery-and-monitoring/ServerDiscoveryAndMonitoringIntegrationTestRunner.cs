@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,21 +31,23 @@ using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
-    public class ServerDiscoveryAndMonitoringIntegrationTestRunner : DisposableJsonDrivenTestRunner, IJsonDrivenTestRunner
+    public class ServerDiscoveryAndMonitoringIntegrationTestRunner : MongoClientJsonDrivenTestRunnerBase, IJsonDrivenTestRunner
     {
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
+
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
 
         // public methods
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = FailPoint.Configure(server, session, failCommand);
-            AddDisposable(failPoint);
+            _disposables.Add(failPoint);
         }
 
         public async Task ConfigureFailPointAsync(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = await Task.Run(() => FailPoint.Configure(server, session, failCommand)).ConfigureAwait(false);
-            AddDisposable(failPoint);
+            _disposables.Add(failPoint);
         }
 
         [SkippableTheory]
@@ -55,6 +58,11 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
         }
 
         // protected methods
+        protected override IDisposable ConfigureTestClientRelatedDisposable()
+        {
+            return new DisposableBundle(_disposables);
+        }
+
         protected override JsonDrivenTestFactory CreateJsonDrivenTestFactory(IMongoClient mongoClient, string databaseName, string collectionName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
         {
             return new JsonDrivenTestFactory(this, mongoClient, databaseName, collectionName, bucketName: null, objectMap, eventCapturer);

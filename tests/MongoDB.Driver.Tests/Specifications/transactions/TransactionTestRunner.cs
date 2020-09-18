@@ -32,11 +32,12 @@ using MongoDB.Driver.Core.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.TestHelpers;
 using MongoDB.Driver.Tests.JsonDrivenTests;
+using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.transactions
 {
-    public sealed class TransactionTestRunner : IJsonDrivenTestRunner, IDisposable
+    public sealed class TransactionTestRunner : IJsonDrivenTestRunner
     {
         #region static
         private static readonly HashSet<string> __commandsToNotCapture = new HashSet<string>
@@ -53,9 +54,9 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         #endregion
 
         // private fields
+        private string _collectionName = "test";
         private string _databaseName = "transaction-tests";
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        private string _collectionName = "test";
 
         // public methods
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
@@ -70,12 +71,6 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
             _disposables.Add(failPoint);
         }
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
         [SkippableTheory]
         [ClassData(typeof(TestCaseFactory))]
         public void Run(JsonDrivenTestCase testCase)
@@ -84,17 +79,6 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         }
 
         // private methods
-        private void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                foreach (var disposable in _disposables)
-                {
-                    disposable.Dispose();
-                }
-            }
-        }
-
         private void Run(BsonDocument shared, BsonDocument test)
         {
             if (test.Contains("skipReason"))
@@ -143,6 +127,7 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
 
             var useMultipleShardRouters = test.GetValue("useMultipleMongoses", false).ToBoolean();
             using (var client = CreateDisposableClient(test, eventCapturer, useMultipleShardRouters))
+            using (new DisposableBundle(_disposables))
             using (ConfigureFailPointOnPrimaryOrShardRoutersIfNeeded(client, test))
             {
                 Dictionary<string, BsonValue> sessionIdMap;

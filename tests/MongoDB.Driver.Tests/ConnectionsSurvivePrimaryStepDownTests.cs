@@ -59,8 +59,7 @@ namespace MongoDB.Driver.Tests
 
                 using (ConfigureFailPoint(client, errorCode))
                 {
-                    var document = new BsonDocument("test", 1);
-                    var exception = Record.Exception(() => { collection.InsertOne(document); });
+                    var exception = Record.Exception(() => { collection.InsertOne(new BsonDocument("test", 1)); });
 
                     var e = exception.Should().BeOfType<MongoNodeIsRecoveringException>().Subject;
                     e.Code.Should().Be(errorCode);
@@ -68,7 +67,7 @@ namespace MongoDB.Driver.Tests
                     eventCapturer.Next().Should().BeOfType<ConnectionPoolClearedEvent>();
                     eventCapturer.Events.Should().BeEmpty();
 
-                    collection.InsertOne(document);
+                    collection.InsertOne(new BsonDocument("test", 1));
                     eventCapturer.Next().Should().BeOfType<ConnectionCreatedEvent>();
                     eventCapturer.Events.Should().BeEmpty();
                 }
@@ -163,8 +162,7 @@ namespace MongoDB.Driver.Tests
 
                 using (ConfigureFailPoint(client, 10107))
                 {
-                    var document = new BsonDocument("test", 1);
-                    var exception = Record.Exception(() => { collection.InsertOne(document); });
+                    var exception = Record.Exception(() => { collection.InsertOne(new BsonDocument("test", 1)); });
 
                     var e = exception.Should().BeOfType<MongoNotPrimaryException>().Subject;
                     e.Code.Should().Be(10107);
@@ -179,7 +177,7 @@ namespace MongoDB.Driver.Tests
                         eventCapturer.Events.Should().BeEmpty();
                     }
 
-                    collection.InsertOne(document);
+                    collection.InsertOne(new BsonDocument("test", 1));
                     if (shouldConnectionPoolBeCleared)
                     {
                         eventCapturer.Next().Should().BeOfType<ConnectionCreatedEvent>();

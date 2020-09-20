@@ -117,6 +117,7 @@ if [[ "$CLIENT_PEM" != "nil" ]]; then
   CLIENT_PEM=${CLIENT_PEM} source evergreen/convert-client-cert-to-pkcs12.sh
 fi
 
+echo "Before PS"
 if [[ -z "$MONGO_X509_CLIENT_CERTIFICATE_PATH" && -z "$MONGO_X509_CLIENT_CERTIFICATE_PASSWORD" ]]; then
   powershell.exe '.\build.ps1 -target' $TARGET
 else
@@ -125,3 +126,4 @@ else
     '$env:MONGO_X509_CLIENT_CERTIFICATE_PASSWORD="'${MONGO_X509_CLIENT_CERTIFICATE_PASSWORD}'";'\
     '.\build.ps1 -target' $TARGET
 fi
+echo "After PS"

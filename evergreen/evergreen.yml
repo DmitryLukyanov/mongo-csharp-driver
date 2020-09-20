@@ -213,6 +213,11 @@ functions:
     - command: expansions.update
       params:
         file: mo-expansion.yml
+    - command: shell.exec
+      params:
+        script: |
+          ${PREPARE_SHELL}
+          echo 'orch_ended'
 
   ocsp-bootstrap-mongo-orchestration:
     - command: shell.exec

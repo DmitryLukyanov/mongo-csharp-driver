@@ -282,6 +282,8 @@ Write-Host "MONGO_X509_CLIENT_CERTIFICATE_PASSWORD = " $env:MONGO_X509_CLIENT_CE
 
 # Start Cake
 Write-Host "Running build script..."
+echo "Cake started"
 echo $CAKE_EXE $cakeArguments
 &$CAKE_EXE $cakeArguments
+echo "Cake ended"
 exit $LASTEXITCODE

@@ -524,7 +524,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        [SkippableTheory]
+        [SkippableTheory(Skip = "skip")]
         [ParameterAttributeData]
         public void Execute_should_return_expected_results_for_updates(
             [Values(ChangeStreamFullDocumentOption.Default, ChangeStreamFullDocumentOption.UpdateLookup)] ChangeStreamFullDocumentOption fullDocument,

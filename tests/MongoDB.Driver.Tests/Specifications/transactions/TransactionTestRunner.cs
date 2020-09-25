@@ -21,12 +21,12 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
+using MongoDB.Driver;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Events;
-using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.JsonDrivenTests;
@@ -58,17 +58,28 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         private string _databaseName = "transaction-tests";
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
+        public IMongoClient FailPointClient
+        {
+            get
+            {
+                var regularClient = DriverTestConfiguration.Client;
+                return regularClient.Cluster.Description.Type == ClusterType.Sharded
+                    ? DriverTestConfiguration.ClientWithMultipleShardRouters
+                    : regularClient;
+            }
+        }
+
         // public methods
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = FailPoint.Configure(server, session, failCommand);
-            _disposables.Add(new DisposableWithRetryInDispose(failPoint, 10));
+            _disposables.Add(failPoint);
         }
 
         public async Task ConfigureFailPointAsync(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = await Task.Run(() => FailPoint.Configure(server, session, failCommand)).ConfigureAwait(false);
-            _disposables.Add(new DisposableWithRetryInDispose(failPoint, 10));
+            _disposables.Add(failPoint);
         }
 
         [SkippableTheory]
@@ -491,38 +502,6 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         }
 
         // nested types
-        private class DisposableWithRetryInDispose : IDisposable
-        {
-            private readonly IDisposable _disposable;
-            private readonly int _maxRetries;
-
-            public DisposableWithRetryInDispose(IDisposable disposable, int maxRetries)
-            {
-                _disposable = Ensure.IsNotNull(disposable, nameof(disposable));
-                _maxRetries = Ensure.IsGreaterThanZero(maxRetries, nameof(maxRetries));
-            }
-
-            public void Dispose()
-            {
-                for (var retryAttempt = 0; ; retryAttempt++)
-                {
-                    try
-                    {
-                        _disposable.Dispose();
-                        break;
-                    }
-                    catch
-                    {
-                        if (retryAttempt < _maxRetries)
-                        {
-                            continue;
-                        }
-                        throw;
-                    }
-                }
-            }
-        }
-
         public class TestCaseFactory : JsonDrivenTestCaseFactory
         {
             // protected properties

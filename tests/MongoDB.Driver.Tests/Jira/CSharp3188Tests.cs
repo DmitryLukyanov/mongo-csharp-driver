@@ -16,30 +16,37 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Threading;
 using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
+using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Jira
 {
     public class CSharp3188Tests
     {
-        [SkippableTheory(Skip = "skip")]
+        [SkippableTheory]
         [ParameterAttributeData]
-        public void Ensure_that_MongoConnectionException_contains_expected_attributes([Values(false, true)] bool async)
+        public void Connection_timeout_should_throw_expected_exception([Values(false, true)] bool async)
         {
-            var serverResponseDelay = TimeSpan.FromMilliseconds(700);
+            RequireServer
+                .Check()
+                .Supports(Feature.AggregateFunction)
+                .ClusterTypes(ClusterType.Standalone, ClusterType.ReplicaSet); // server sleep doesn't correctly work with sharded
 
-            var mongoClientSettings = DriverTestConfiguration.GetClientSettings().Clone();
-            mongoClientSettings.SocketTimeout = TimeSpan.FromMilliseconds(100);
+            var socketTimeout = TimeSpan.FromMilliseconds(100);
+            var clientSettings = DriverTestConfiguration.GetClientSettings().Clone();
+            clientSettings.SocketTimeout = socketTimeout;
 
-            using (var client = DriverTestConfiguration.CreateDisposableClient(mongoClientSettings))
+            using (var client = DriverTestConfiguration.CreateDisposableClient(clientSettings))
             {
                 var database = client.GetDatabase("db");
                 var collection = database.GetCollection<BsonDocument>("coll");
 
+                var serverResponseDelay = socketTimeout + TimeSpan.FromMilliseconds(500);
                 var stringFieldDefinition = $@"
                 {{
                     done : {{
@@ -62,11 +69,6 @@ namespace MongoDB.Driver.Tests.Jira
                 {
                     var exception = Record.Exception(() => collection.AggregateAsync(pipeline).GetAwaiter().GetResult());
 
-                    //if (!(exception is MongoConnectionException))
-                    //{
-                    //    throw exception;
-                    //}
-
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeFalse();
                     mongoConnectionException.ContainsTimeoutException.Should().BeTrue();
@@ -77,11 +79,6 @@ namespace MongoDB.Driver.Tests.Jira
                 else
                 {
                     var exception = Record.Exception(() => collection.Aggregate(pipeline));
-
-                    //if (!(exception is MongoConnectionException))
-                    //{
-                    //    throw exception;
-                    //}
 
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeTrue();

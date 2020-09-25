@@ -14,8 +14,11 @@
 */
 
 using System.Collections.Generic;
+using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
@@ -23,20 +26,39 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
     public sealed class JsonDrivenTargetedFailPointTest : JsonDrivenConfigureFailPointTest
     {
         public JsonDrivenTargetedFailPointTest(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap)
-            : base(testRunner, client: null, objectMap)
+            : base(testRunner, objectMap)
         {
         }
 
         protected override IServer GetServer()
         {
-            var pinnedServer = GetPinnedServer();
-            pinnedServer.Should().NotBeNull();
-            return pinnedServer;
+            var pinnedServerEndpoint = AssertAndGetPinnedServerEndpoint();
+            var pinnedServerSelector = CreateServerSelector(pinnedServerEndpoint);
+            return TestRunner.FailPointClient.Cluster.SelectServer(pinnedServerSelector, CancellationToken.None);
         }
 
         protected async override Task<IServer> GetServerAsync()
         {
-            return await Task.Run(() => GetServer()).ConfigureAwait(false);
+            var pinnedServerEndpoint = AssertAndGetPinnedServerEndpoint();
+            var pinnedServerSelector = CreateServerSelector(pinnedServerEndpoint);
+            return await TestRunner.FailPointClient.Cluster.SelectServerAsync(pinnedServerSelector, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        // private methods
+        private EndPoint AssertAndGetPinnedServerEndpoint()
+        {
+            var pinnedServerEndpoint = GetPinnedServerEndpoint();
+            pinnedServerEndpoint.Should().NotBeNull();
+            return pinnedServerEndpoint;
+        }
+
+        private IServerSelector CreateServerSelector(EndPoint endpoint)
+        {
+            return new CompositeServerSelector(new[]
+            {
+                (IServerSelector)WritableServerSelector.Instance,
+                new EndPointServerSelector(endpoint)
+            });
         }
     }
 }

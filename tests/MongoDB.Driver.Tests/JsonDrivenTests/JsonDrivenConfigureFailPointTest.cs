@@ -25,13 +25,11 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 {
     public class JsonDrivenConfigureFailPointTest : JsonDrivenTestRunnerTest
     {
-        private readonly IMongoClient _client;
         protected BsonDocument _failCommand;
 
-        public JsonDrivenConfigureFailPointTest(IJsonDrivenTestRunner testRunner, IMongoClient client, Dictionary<string, object> objectMap)
+        public JsonDrivenConfigureFailPointTest(IJsonDrivenTestRunner testRunner, Dictionary<string, object> objectMap)
             : base(testRunner, objectMap)
         {
-            _client = client;
         }
 
         protected override void CallMethod(CancellationToken cancellationToken)
@@ -48,13 +46,13 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected virtual IServer GetServer()
         {
-            var cluster = _client.Cluster;
+            var cluster = TestRunner.FailPointClient.Cluster;
             return cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
         }
 
         protected async virtual Task<IServer> GetServerAsync()
         {
-            var cluster = _client.Cluster;
+            var cluster = TestRunner.FailPointClient.Cluster;
             return await cluster.SelectServerAsync(WritableServerSelector.Instance, CancellationToken.None).ConfigureAwait(false);
         }
 

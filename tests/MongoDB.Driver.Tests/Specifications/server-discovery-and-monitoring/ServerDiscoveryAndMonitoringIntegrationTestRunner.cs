@@ -35,6 +35,8 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
     {
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
+        public IMongoClient FailPointClient => DriverTestConfiguration.Client;
+
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
 
         // public methods

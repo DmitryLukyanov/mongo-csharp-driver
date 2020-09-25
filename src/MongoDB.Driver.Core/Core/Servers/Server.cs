@@ -318,8 +318,6 @@ namespace MongoDB.Driver.Core.Servers
 
         private void HandleBeforeHandshakeCompletesException(IConnection connection, Exception ex)
         {
-            Console.WriteLine($"####{ex}###");
-
             if (ex is MongoAuthenticationException)
             {
                 _connectionPool.Clear();

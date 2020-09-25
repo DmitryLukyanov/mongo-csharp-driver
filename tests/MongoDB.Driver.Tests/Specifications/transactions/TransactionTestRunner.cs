@@ -26,13 +26,13 @@ using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
 using MongoDB.Driver.Core.Events;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.TestHelpers;
 using MongoDB.Driver.Tests.JsonDrivenTests;
-using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.transactions
@@ -62,13 +62,13 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = FailPoint.Configure(server, session, failCommand);
-            _disposables.Add(failPoint);
+            _disposables.Add(new DisposableWithRetryInDispose(failPoint, 10));
         }
 
         public async Task ConfigureFailPointAsync(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = await Task.Run(() => FailPoint.Configure(server, session, failCommand)).ConfigureAwait(false);
-            _disposables.Add(failPoint);
+            _disposables.Add(new DisposableWithRetryInDispose(failPoint, 10));
         }
 
         [SkippableTheory]
@@ -491,6 +491,38 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         }
 
         // nested types
+        private class DisposableWithRetryInDispose : IDisposable
+        {
+            private readonly IDisposable _disposable;
+            private readonly int _maxRetries;
+
+            public DisposableWithRetryInDispose(IDisposable disposable, int maxRetries)
+            {
+                _disposable = Ensure.IsNotNull(disposable, nameof(disposable));
+                _maxRetries = Ensure.IsGreaterThanZero(maxRetries, nameof(maxRetries));
+            }
+
+            public void Dispose()
+            {
+                for (var retryAttempt = 0; ; retryAttempt++)
+                {
+                    try
+                    {
+                        _disposable.Dispose();
+                        break;
+                    }
+                    catch
+                    {
+                        if (retryAttempt < _maxRetries)
+                        {
+                            continue;
+                        }
+                        throw;
+                    }
+                }
+            }
+        }
+
         public class TestCaseFactory : JsonDrivenTestCaseFactory
         {
             // protected properties

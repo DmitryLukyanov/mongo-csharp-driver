@@ -23,16 +23,17 @@ namespace MongoDB.Bson
     /// </summary>
     [AttributeUsage(AttributeTargets.All)]
     [EditorBrowsable(EditorBrowsableState.Never)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "Copied from the doc: https://docs.microsoft.com/en-us/xamarin/ios/deploy-test/linker?tabs=windows#preserving-code")]
     public sealed class PreserveAttribute : Attribute
     {
         /// <summary>
         /// When used on a class rather than a property, ensures that all members of this type are preserved.
         /// </summary>
-        public bool AllMembers { get; set; }
+        public bool AllMembers;
 
         /// <summary>
         /// Flags the method as a method to preserve during linking if the container class is pulled in.
         /// </summary>
-        public bool Conditional { get; set; }
+        public bool Conditional;
     }
 }

@@ -16,7 +16,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using MongoDB.Bson.Internals;
+using MongoDB.Bson;
 
 [assembly: CLSCompliant(true)]
 [assembly: ComVisible(false)]

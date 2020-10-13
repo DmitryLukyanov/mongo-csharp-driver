@@ -69,7 +69,7 @@ var query = collection.AsQueryable()
 ]
 ```
 
-Also, there is a list of aggregate options that can be applied for the whole pipeline via [`AggregationOptions`]({{< apiref "T_MongoDB_Driver_AggregateOptions" >}}). Below is an example of [`Collation`]({{< docsref "reference/collation/" >}}) configuring:
+Also, there is a list of aggregate options that can be applied for the whole pipeline via [`AggregationOptions`]({{< apiref "T_MongoDB_Driver_AggregateOptions" >}}). Below is an example of configuring a [`Collation`]({{< docsref "reference/collation/" >}}):
 
 ```csharp
 var collation = new Collation("en_US", strength: CollationStrength.Secondary);

@@ -40,7 +40,8 @@ namespace MongoDB.Driver
         [Obsolete("Use the overload with truncatedArrays.")]
         public ChangeStreamUpdateDescription(
             BsonDocument updatedFields,
-            string[] removedFields) : this(updatedFields, removedFields, null)
+            string[] removedFields)
+            : this(updatedFields, removedFields, null)
         {
         }
 

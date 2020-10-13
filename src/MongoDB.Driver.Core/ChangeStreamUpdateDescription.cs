@@ -37,7 +37,6 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="updatedFields">The updated fields.</param>
         /// <param name="removedFields">The removed fields.</param>
-        [Obsolete("Use the overload with truncatedArrays.")]
         public ChangeStreamUpdateDescription(
             BsonDocument updatedFields,
             string[] removedFields)

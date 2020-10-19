@@ -595,7 +595,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 };
                 exception = Record.Exception(() => TestCase(testCaseMasterKey));
                 exception.Should().NotBeNull();
-                exception.InnerException.Should().BeAssignableTo<SocketException>();
+                var e = exception.InnerException.Should().BeAssignableTo<CryptException>().Subject;
+                e.Message.Should().Be("Invalid endpoint, expected .: $test$");
 
                 void TestCase(BsonDocument masterKey)
                 {
@@ -947,13 +948,13 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             var awsRegion = Environment.GetEnvironmentVariable("FLE_AWS_REGION") ?? "us-east-1";
             var awsAccessKey = Environment.GetEnvironmentVariable("FLE_AWS_ACCESS_KEY_ID") ?? throw new Exception("The FLE_AWS_ACCESS_KEY_ID system variable should be configured on the machine.");
             var awsSecretAccessKey = Environment.GetEnvironmentVariable("FLE_AWS_SECRET_ACCESS_KEY") ?? throw new Exception("The FLE_AWS_SECRET_ACCESS_KEY system variable should be configured on the machine.");
-            var kmsOptions = new Dictionary<string, object>
+            var awsKmsOptions = new Dictionary<string, object>
             {
                 { "region", awsRegion },
                 { "accessKeyId", awsAccessKey },
                 { "secretAccessKey", awsSecretAccessKey }
             };
-            kmsProviders.Add("aws", kmsOptions);
+            kmsProviders.Add("aws", awsKmsOptions);
 
             var localOptions = new Dictionary<string, object>
             {

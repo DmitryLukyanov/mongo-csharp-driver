@@ -65,24 +65,21 @@ namespace MongoDB.Driver.Core.Clusters
 
         private CryptOptions CreateCryptOptions()
         {
-            Dictionary<KmsType, IKmsCredentials> kmsProvidersMap = null;
+            Dictionary<KmsType, KmsCredentials> kmsProvidersMap = null;
             if (_kmsProviders != null && _kmsProviders.Count > 0)
             {
-                kmsProvidersMap = new Dictionary<KmsType, IKmsCredentials>();
-                if (_kmsProviders.TryGetValue("aws", out var awsProvider))
+                kmsProvidersMap = new Dictionary<KmsType, KmsCredentials>();
+                foreach (var kmsProvider in _kmsProviders)
                 {
-                    if (awsProvider.TryGetValue("accessKeyId", out var accessKeyId) &&
-                        awsProvider.TryGetValue("secretAccessKey", out var secretAccessKey))
+                    if (!Enum.TryParse<KmsType>(kmsProvider.Key, true, out var kmsType))
                     {
-                        kmsProvidersMap.Add(KmsType.Aws, new AwsKmsCredentials((string)secretAccessKey, (string)accessKeyId));
+                        var message = $"The provided kms provider {kmsProvider.Key} is not supported. The list of supported providers: {string.Join(", ", Enum.GetValues(typeof(KmsType)))}.";
+                        throw new NotSupportedException(message);
                     }
-                }
-                if (_kmsProviders.TryGetValue("local", out var localProvider))
-                {
-                    if (localProvider.TryGetValue("key", out var keyObject) && keyObject is byte[] key)
-                    {
-                        kmsProvidersMap.Add(KmsType.Local, new LocalKmsCredentials(key));
-                    }
+                    var kmsTypeDocumentKey = kmsProvider.Key.ToLower();
+                    var kmsProviderDocument = CreateProviderDocument(kmsTypeDocumentKey, kmsProvider.Value);
+                    var kmsCredentials = new KmsCredentials(kmsType, credentialsBytes: kmsProviderDocument.ToBson());
+                    kmsProvidersMap.Add(kmsType, kmsCredentials);
                 }
             }
             else
@@ -106,6 +103,17 @@ namespace MongoDB.Driver.Core.Clusters
             }
 
             return new CryptOptions(kmsProvidersMap, schemaBytes);
+        }
+
+        private BsonDocument CreateProviderDocument(string kmsType, IReadOnlyDictionary<string, object> data)
+        {
+            var providerContent = new BsonDocument();
+            foreach (var record in data)
+            {
+                providerContent.Add(new BsonElement(record.Key, BsonValue.Create(record.Value)));
+            }
+            var providerDocument = new BsonDocument(kmsType, providerContent);
+            return providerDocument;
         }
     }
 }

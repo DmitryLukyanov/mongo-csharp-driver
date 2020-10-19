@@ -76,7 +76,7 @@ var collation = new Collation("en_US", strength: CollationStrength.Secondary);
 var aggregateOptions = new AggregateOptions { Collation = collation };
 var query = collection
     .AsQueryable(aggregateOptions)
-    .Where(x => p.Name == "tom");
+    .Where(p => p.Name == "tom");
 ```
 
 ### Stages

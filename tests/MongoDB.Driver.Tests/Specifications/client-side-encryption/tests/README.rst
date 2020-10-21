@@ -75,7 +75,11 @@ Each YAML file has the following keys:
 
       - ``kmsProviders`` A dictionary of KMS providers to set on the key vault ("aws" or "local")
 
-        - ``aws`` The AWS KMS provider. An empty object. Drivers MUST fill in AWS credentials from the environment.
+        - ``aws`` The AWS KMS provider. An empty object. Drivers MUST fill in AWS credentials (`accessKeyId`, `secretAccessKey`) from the environment.
+
+        - ``azure`` The Azure KMS provider credentials. An empty object. Drivers MUST fill in Azure credentials (`tenantId`, `clientId`, and `clientSecret`) from the environment.
+
+        - ``gcp`` The GCP KMS provider credentials. An empty object. Drivers MUST fill in GCP credentials (`email`, `privateKey`) from the environment.
 
         - ``local`` The local KMS provider.
 
@@ -143,7 +147,7 @@ Then for each element in ``tests``:
 
 #. Create a **new** MongoClient using ``clientOptions``.
 
-   #. If ``autoEncryptOpts`` includes ``aws`` as a KMS provider, pass in AWS credentials from the environment.
+   #. If ``autoEncryptOpts`` includes ``aws``, ``azure``, and/or ``gcp`` as a KMS provider, pass in credentials from the environment.
    #. If ``autoEncryptOpts`` does not include ``keyVaultNamespace``, default it to ``keyvault.datakeys``.
 
 #. For each element in ``operations``:
@@ -436,19 +440,21 @@ The corpus test exhaustively enumerates all ways to encrypt all BSON value types
 
 2. Using ``client``, drop and create the collection ``db.coll`` configured with the included JSON schema `corpus/corpus-schema.json <../corpus/corpus-schema.json>`_.
 
-3. Using ``client``, drop the collection ``keyvault.datakeys``. Insert the documents `corpus/corpus-key-local.json <../corpus/corpus-key-local.json>`_ and `corpus/corpus-key-aws.json <../corpus/corpus-key-aws.json>`_.
+3. Using ``client``, drop the collection ``keyvault.datakeys``. Insert the documents `corpus/corpus-key-local.json <../corpus/corpus-key-local.json>`_, `corpus/corpus-key-aws.json <../corpus/corpus-key-aws.json>`_, `corpus/corpus-key-azure.json <../corpus/corpus-key-azure.json>`_, and `corpus/corpus-key-gcp.json <../corpus/corpus-key-gcp.json>`_.
 
 4. Create the following:
 
    - A MongoClient configured with auto encryption (referred to as ``client_encrypted``)
    - A ``ClientEncryption`` object (referred to as ``client_encryption``)
 
-   Configure both objects with ``aws`` and the ``local`` KMS providers as follows:
+   Configure both objects with ``aws``, ``azure``, ``gcp``, and ``local`` KMS providers as follows:
 
    .. code:: javascript
 
       {
           "aws": { <AWS credentials> },
+          "azure": { <Azure credentials> },
+          "gcp": { <GCP credentials> },
           "local": { "key": <base64 decoding of LOCAL_MASTERKEY> }
       }
 
@@ -462,7 +468,7 @@ The corpus test exhaustively enumerates all ways to encrypt all BSON value types
 
 5. Load `corpus/corpus.json <../corpus/corpus.json>`_ to a variable named ``corpus``. The corpus contains subdocuments with the following fields:
 
-   - ``kms`` is either ``aws`` or ``local``
+   - ``kms`` is either ``aws``, ``azure``, ``gcp``, or ``local``
    - ``type`` is a BSON type string `names coming from here <https://docs.mongodb.com/manual/reference/operator/query/type/>`_)
    - ``algo`` is either ``rand`` or ``det`` for random or deterministic encryption
    - ``method`` is either ``auto``, for automatic encryption or ``explicit`` for  explicit encryption
@@ -473,7 +479,7 @@ The corpus test exhaustively enumerates all ways to encrypt all BSON value types
    Create a new BSON document, named ``corpus_copied``.
    Iterate over each field of ``corpus``.
 
-   - If the field name is ``_id``, ``altname_aws`` and ``altname_local``, copy the field to ``corpus_copied``.
+   - If the field name is ``_id``, ``altname_aws``, ``altname_local``, ``altname_azure``, or ``altname_gcp``, copy the field to ``corpus_copied``.
    - If ``method`` is ``auto``, copy the field to ``corpus_copied``.
    - If ``method`` is ``explicit``, use ``client_encryption`` to explicitly encrypt the value.
 
@@ -482,11 +488,15 @@ The corpus test exhaustively enumerates all ways to encrypt all BSON value types
 
        - If ``kms`` is ``local`` set the key_id to the UUID with base64 value ``LOCALAAAAAAAAAAAAAAAAA==``.
        - If ``kms`` is ``aws`` set the key_id to the UUID with base64 value ``AWSAAAAAAAAAAAAAAAAAAA==``.
+       - If ``kms`` is ``azure`` set the key_id to the UUID with base64 value ``AZUREAAAAAAAAAAAAAAAAA==``.
+       - If ``kms`` is ``gcp`` set the key_id to the UUID with base64 value ``GCPAAAAAAAAAAAAAAAAAAA==``.
 
      - If ``identifier`` is ``altname``
 
        - If ``kms`` is ``local`` set the key_alt_name to "local".
        - If ``kms`` is ``aws`` set the key_alt_name to "aws".
+       - If ``kms`` is ``azure`` set the key_alt_name to "azure".
+       - If ``kms`` is ``gcp`` set the key_alt_name to "gcp".
 
      If ``allowed`` is true, copy the field and encrypted value to ``corpus_copied``.
      If ``allowed`` is false. verify that an exception is thrown. Copy the unencrypted value to to ``corpus_copied``.
@@ -595,6 +605,97 @@ Data keys created with AWS KMS may specify a custom endpoint to contact (instead
       }
 
    Expect this to fail with an exception with a message containing the string: "parse error"
+
+Azure and GCP custom endpoints
+``````````````````````````````
+
+Test specifying custom endpoints for authenticating Azure and GCP and for a custom GCP KMS endpoint.
+
+1. Create a ``ClientEncryption`` object (referred to as ``client_encryption``).
+
+   Configure with KMS providers as follows:
+
+   .. code:: javascript
+
+      {
+         "azure": {
+            "tenantId": <set from environment>,
+            "clientId": <set from environment>,
+            "clientSecret": <set from environment>,
+            "identityPlatformEndpoint": "login.microsoftonline.com:443"
+         },
+            "gcp": {
+            "email": <set from environment>,
+            "privateKey": <set from environment>,
+            "endpoint": "oauth2.googleapis.com:443"
+         }
+      }
+
+   Create a new ``ClientEncryption`` object (referred to as ``client_encryption_invalid``).
+
+   Configure with KMS providers as follows:
+
+   .. code:: javascript
+
+      {
+         "azure": {
+            "tenantId": <set from environment>,
+            "clientId": <set from environment>,
+            "clientSecret": <set from environment>,
+            "identityPlatformEndpoint": "example.com:443"
+         },
+            "gcp": {
+            "email": <set from environment>,
+            "privateKey": <set from environment>,
+            "endpoint": "example.com:443"
+         }
+      }
+
+   Configure both ``ClientEncryption`` objects with ``keyVaultNamespace`` set to ``keyvault.datakeys``, and a default MongoClient as the ``keyVaultClient``.
+
+2. Call `client_encryption.createDataKey()` with "azure" as the provider and the following masterKey:
+
+   .. code:: javascript
+
+      {
+        "keyVaultEndpoint": "key-vault-kevinalbs.vault.azure.net",
+        "keyName": "test-key"
+      }
+
+   Expect this to succeed. Use the returned UUID of the key to explicitly encrypt and decrypt the string "test" to validate it works.
+
+   Call ``client_encryption_invalid`` with the same masterKey. Expect this to fail with an exception with a message containing the string: "parse error".
+
+3. Call `client_encryption.createDataKey()` with "gcp" as the provider and the following masterKey:
+
+   .. code:: javascript
+
+      {
+        "projectId": "csfle-poc",
+        "location": "global",
+        "keyRing": "test",
+        "keyName": "quickstart",
+        "endpoint": "cloudkms.googleapis.com:443"
+      }
+
+   Expect this to succeed. Use the returned UUID of the key to explicitly encrypt and decrypt the string "test" to validate it works.
+
+   Call ``client_encryption_invalid`` with the same masterKey. Expect this to fail with an exception with a message containing the string: "parse error".
+
+4. Call `client_encryption.createDataKey()` with "gcp" as the provider and the following masterKey:
+
+   .. code:: javascript
+
+      {
+        "provider": "gcp",
+        "projectId": "csfle-poc",
+        "location": "global",
+        "keyRing": "test",
+        "keyName": "quickstart",
+        "endpoint": "example.com:443"
+      }
+
+   Expect this to fail with an exception with a message containing the string: "Error parsing JSON in KMS response".
 
 Bypass spawning mongocryptd
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

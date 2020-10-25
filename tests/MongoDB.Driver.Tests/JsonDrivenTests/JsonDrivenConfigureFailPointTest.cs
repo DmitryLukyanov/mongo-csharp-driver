@@ -34,25 +34,25 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
 
         protected override void CallMethod(CancellationToken cancellationToken)
         {
-            var server = GetServer();
+            var server = GetFailPointServer();
             TestRunner.ConfigureFailPoint(server, NoCoreSession.NewHandle(), _failCommand);
         }
 
         protected override async Task CallMethodAsync(CancellationToken cancellationToken)
         {
-            var server = await GetServerAsync().ConfigureAwait(false);
+            var server = await GetFailPointServerAsync().ConfigureAwait(false);
             await TestRunner.ConfigureFailPointAsync(server, NoCoreSession.NewHandle(), _failCommand).ConfigureAwait(false);
         }
 
-        protected virtual IServer GetServer()
+        protected virtual IServer GetFailPointServer()
         {
-            var cluster = TestRunner.FailPointClient.Cluster;
+            var cluster = TestRunner.FailPointCluster;
             return cluster.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
         }
 
-        protected async virtual Task<IServer> GetServerAsync()
+        protected async virtual Task<IServer> GetFailPointServerAsync()
         {
-            var cluster = TestRunner.FailPointClient.Cluster;
+            var cluster = TestRunner.FailPointCluster;
             return await cluster.SelectServerAsync(WritableServerSelector.Instance, CancellationToken.None).ConfigureAwait(false);
         }
 

@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using System.Net;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Tests.JsonDrivenTests
 {

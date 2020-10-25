@@ -195,12 +195,6 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
             database.CreateCollection(collectionName);
         }
 
-        protected virtual IDisposable ConfigureTestClientRelatedDisposable()
-        {
-            // do nothing by default
-            return null;
-        }
-
         protected virtual MongoClient CreateClientForTestSetup()
         {
             return DriverTestConfiguration.Client;
@@ -269,8 +263,7 @@ namespace MongoDB.Driver.Tests.Specifications.Runner
         protected virtual void RunTest(BsonDocument shared, BsonDocument test, EventCapturer eventCapturer)
         {
             using (var client = CreateDisposableClient(test, eventCapturer))
-            using (ConfigureTestClientRelatedDisposable())
-            { 
+            {
                 ExecuteOperations(client, objectMap: null, test, eventCapturer);
             }
         }

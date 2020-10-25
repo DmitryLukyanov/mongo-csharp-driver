@@ -105,13 +105,14 @@ namespace MongoDB.Driver
         {
             get
             {
-                if (ContainsSocketTimeoutException)
-                {
-                    return true;
-                }
-
                 for (var exception = InnerException; exception != null; exception = exception.InnerException)
                 {
+                    if (exception is SocketException socketException &&
+                        socketException.SocketErrorCode == SocketError.TimedOut)
+                    {
+                        return true;
+                    }
+
                     if (exception is TimeoutException)
                     {
                         return true;

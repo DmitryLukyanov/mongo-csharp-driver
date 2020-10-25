@@ -409,6 +409,115 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
+        [Fact]
+        public void ReceiveMessage_and_cancellation_MOCKED()
+        {
+            #region not_related_to_test_itself_and_needs_just_to_avoid_validation_errors
+            var messageToReceive10 = MessageHelper.BuildReply<BsonDocument>(new BsonDocument("_id", 10), BsonDocumentSerializer.Instance, responseTo: 10);
+            var bytes10 = GetBytes(messageToReceive10);
+
+            var bytesResponse = new Queue<byte[]>();
+            bytesResponse.Enqueue(BitConverter.GetBytes(bytes10.Length)); // Receive 1. Message size
+            bytesResponse.Enqueue(bytes10); // Receive 1. Message content
+            #endregion
+
+            // the second Receive won't start until the first calling of Receive
+            var firstReceiveStarted = new TaskCompletionSource<bool>();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            var mockStream = new Mock<BlockingMemoryStream>();
+            mockStream
+                // Affects only message 10
+                .Setup(s => s.Read(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>()))
+                .Returns<byte[], int, int>((buffer, offset, count) =>
+                {
+                    // we're here: https://github.com/mongodb/mongo-csharp-driver/blob/master/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L366
+                    FillBuffer(buffer);
+
+                    ThrowCancellationExceptionForSecondReadInMessage10();
+
+                    // trigger starting of the second Receive
+                    if (firstReceiveStarted.TrySetResult(true))  // do the below only once for first Receive for message 10
+                    {
+                        // do not cancel operations until the message 11 will pass the first validation,
+                        // so just waiting when message 11 will skip this line: https://github.com/mongodb/mongo-csharp-driver/blob/master/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L457
+                        WaitFor10And11MessageProcessingHaveStarted();
+
+                        // the message 11 is now waiting here https://github.com/mongodb/mongo-csharp-driver/blob/master/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L357
+
+                        // cancel operations.
+                        // 10 - will fail on line 441 during the second Read
+                        // 11 - will fail here https://github.com/mongodb/mongo-csharp-driver/blob/master/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L426
+                        cancellationTokenSource.Cancel();
+                    }
+                    return buffer.Count();
+                });
+
+            using (var stream = mockStream.Object)
+            {
+                _mockStreamFactory.Setup(f => f.CreateStream(_endPoint, CancellationToken.None))
+                    .Returns(stream);
+                _subject.Open(CancellationToken.None);
+                _capturedEvents.Clear();
+
+                var encoderSelector = new ReplyMessageEncoderSelector<BsonDocument>(BsonDocumentSerializer.Instance);
+
+                Task<ResponseMessage> receivedTask10;
+                {
+                    receivedTask10 = Task.Run(() => _subject.ReceiveMessage(10, encoderSelector, _messageEncoderSettings, cancellationTokenSource.Token));
+                }
+
+                // do not start message 11 until message 10 will start reading
+                Task.WaitAny(firstReceiveStarted.Task);
+
+                Task<ResponseMessage> receivedTask11;
+                {
+                    receivedTask11 = Task.Run(() => _subject.ReceiveMessage(11, encoderSelector, _messageEncoderSettings, cancellationTokenSource.Token));
+                }
+
+                // do not start validation before finishing the tasks
+                Task.WaitAny(receivedTask10);
+                Task.WaitAny(receivedTask11);
+
+                _subject._dropbox._messages.Count.Should().Be(2); // if _message.Count == 1, then it means that the message 1 (10) has been managed to remove.
+                                                                  // The reason for that, cancellationToken hasn't affect ReceiveBuffer call 1 (10) and this line was called https://github.com/MikalaiMazurenka/mongo-csharp-driver/blob/csharp3102-2/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L368
+                                                                  // before cancellationToken.Throw
+
+                var messages = _subject._dropbox._messages.ToList();
+                messages.First().Value.Task.Status.Should().Be(TaskStatus.Faulted);
+                messages.Last().Value.Task.Status.Should().Be(TaskStatus.Faulted);
+            }
+
+            byte[] GetBytes(ResponseMessage responseMessage)
+            {
+                using (var blockingMemoryStream = new BlockingMemoryStream())
+                {
+                    MessageHelper.WriteResponsesToStream(blockingMemoryStream, new[] { responseMessage }); // out of order
+                    var result = new byte[blockingMemoryStream.Length];
+                    blockingMemoryStream.Read(result, 0, (int)blockingMemoryStream.Length);
+                    return result;
+                }
+            }
+
+            void FillBuffer(byte[] buffer)
+            {
+                var readResponse = bytesResponse.Dequeue();
+                Buffer.BlockCopy(readResponse, 0, buffer, 0, readResponse.Count());
+            }
+
+            void ThrowCancellationExceptionForSecondReadInMessage10()
+            {
+                cancellationTokenSource.Token.ThrowIfCancellationRequested(); // emulate cancellation exception here: https://github.com/MikalaiMazurenka/mongo-csharp-driver/blob/csharp3102-2/src/MongoDB.Driver.Core/Core/Connections/BinaryConnection.cs#L337
+            }
+
+            void WaitFor10And11MessageProcessingHaveStarted()
+            {
+                _capturedEvents.WaitForOrThrowIfTimeout(
+                    events => events.Count(e => e is ConnectionReceivingMessageEvent) == 2, // two requests were started (but it says nothing about what requests were finished)
+                    TimeSpan.FromSeconds(10));  // means nothing
+            }
+        }
+
         [Theory]
         [ParameterAttributeData]
         public void ReceiveMessage_should_handle_out_of_order_replies(

@@ -46,7 +46,9 @@ namespace MongoDB.Driver.Core.Connections
         private readonly IConnectionInitializer _connectionInitializer;
         private EndPoint _endPoint;
         private ConnectionDescription _description;
-        private readonly Dropbox _dropbox = new Dropbox();
+
+        // TODO: revert
+        internal readonly Dropbox _dropbox = new Dropbox();
         private bool _failedEventHasBeenRaised;
         private DateTime _lastUsedAtUtc;
         private DateTime _openedAtUtc;
@@ -759,9 +761,10 @@ namespace MongoDB.Driver.Core.Connections
         }
 
         // nested classes
-        private class Dropbox
+        internal class Dropbox
         {
-            private readonly ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>> _messages = new ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>>();
+            // TODO: revert
+            public readonly ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>> _messages = new ConcurrentDictionary<int, TaskCompletionSource<IByteBuffer>>();
 
             // public methods
             public void AddException(Exception exception)

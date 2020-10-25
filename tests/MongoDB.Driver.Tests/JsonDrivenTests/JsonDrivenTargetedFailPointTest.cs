@@ -30,22 +30,22 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
         {
         }
 
-        protected override IServer GetServer()
+        protected override IServer GetFailPointServer()
         {
-            var pinnedServerEndpoint = AssertAndGetPinnedServerEndpoint();
+            var pinnedServerEndpoint = GetPinnedServerEndpointAndAssertNotNull();
             var pinnedServerSelector = CreateServerSelector(pinnedServerEndpoint);
-            return TestRunner.FailPointClient.Cluster.SelectServer(pinnedServerSelector, CancellationToken.None);
+            return TestRunner.FailPointCluster.SelectServer(pinnedServerSelector, CancellationToken.None);
         }
 
-        protected async override Task<IServer> GetServerAsync()
+        protected async override Task<IServer> GetFailPointServerAsync()
         {
-            var pinnedServerEndpoint = AssertAndGetPinnedServerEndpoint();
+            var pinnedServerEndpoint = GetPinnedServerEndpointAndAssertNotNull();
             var pinnedServerSelector = CreateServerSelector(pinnedServerEndpoint);
-            return await TestRunner.FailPointClient.Cluster.SelectServerAsync(pinnedServerSelector, CancellationToken.None).ConfigureAwait(false);
+            return await TestRunner.FailPointCluster.SelectServerAsync(pinnedServerSelector, CancellationToken.None).ConfigureAwait(false);
         }
 
         // private methods
-        private EndPoint AssertAndGetPinnedServerEndpoint()
+        private EndPoint GetPinnedServerEndpointAndAssertNotNull()
         {
             var pinnedServerEndpoint = GetPinnedServerEndpoint();
             pinnedServerEndpoint.Should().NotBeNull();

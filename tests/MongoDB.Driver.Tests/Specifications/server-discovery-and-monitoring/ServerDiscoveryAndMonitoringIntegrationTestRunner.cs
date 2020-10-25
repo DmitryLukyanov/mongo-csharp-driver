@@ -22,6 +22,7 @@ using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver;
 using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Servers;
 using MongoDB.Driver.Core.TestHelpers;
@@ -31,11 +32,9 @@ using Xunit;
 
 namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
 {
-    public class ServerDiscoveryAndMonitoringIntegrationTestRunner : MongoClientJsonDrivenTestRunnerBase, IJsonDrivenTestRunner
+    public class ServerDiscoveryAndMonitoringIntegrationTestRunner : DisposableJsonDrivenTestRunner, IJsonDrivenTestRunner
     {
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
-
-        public IMongoClient FailPointClient => DriverTestConfiguration.Client;
+        public ICluster FailPointCluster => DriverTestConfiguration.Client.Cluster;
 
         protected override string[] ExpectedTestColumns => new[] { "description", "failPoint", "clientOptions", "operations", "expectations", "outcome", "async" };
 
@@ -43,13 +42,13 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
         public void ConfigureFailPoint(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = FailPoint.Configure(server, session, failCommand);
-            _disposables.Add(failPoint);
+            AddDisposable(failPoint);
         }
 
         public async Task ConfigureFailPointAsync(IServer server, ICoreSessionHandle session, BsonDocument failCommand)
         {
             var failPoint = await Task.Run(() => FailPoint.Configure(server, session, failCommand)).ConfigureAwait(false);
-            _disposables.Add(failPoint);
+            AddDisposable(failPoint);
         }
 
         [SkippableTheory]
@@ -60,11 +59,6 @@ namespace MongoDB.Driver.Tests.Specifications.server_discovery_and_monitoring
         }
 
         // protected methods
-        protected override IDisposable ConfigureTestClientRelatedDisposable()
-        {
-            return new DisposableBundle(_disposables);
-        }
-
         protected override JsonDrivenTestFactory CreateJsonDrivenTestFactory(IMongoClient mongoClient, string databaseName, string collectionName, Dictionary<string, object> objectMap, EventCapturer eventCapturer)
         {
             return new JsonDrivenTestFactory(this, mongoClient, databaseName, collectionName, bucketName: null, objectMap, eventCapturer);

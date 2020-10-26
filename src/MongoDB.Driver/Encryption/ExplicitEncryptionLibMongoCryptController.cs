@@ -226,17 +226,12 @@ namespace MongoDB.Driver.Encryption
                 wrappedAlternateKeyNamesBytes = alternateKeyNames.Select(GetWrappedAlternateKeyNameBytes);
             }
 
-            if (!Enum.TryParse<KmsType>(kmsProvider, true, out var kmsType))
-            {
-                var message = $"The provided kms provider {kmsProvider} is not supported. The list of supported providers: {string.Join(", ", Enum.GetValues(typeof(KmsType)))}.";
-                throw new NotSupportedException(message);
-            }
             var dataKeyDocument = new BsonDocument("provider", kmsProvider.ToLower());
             if (masterKey != null)
             {
                 dataKeyDocument.AddRange(masterKey.Elements);
             }
-            return new KmsKeyId(kmsType, dataKeyDocument.ToBson(), wrappedAlternateKeyNamesBytes);
+            return new KmsKeyId(dataKeyDocument.ToBson(), wrappedAlternateKeyNamesBytes);
         }
 
         private byte[] GetWrappedAlternateKeyNameBytes(string value)

@@ -552,7 +552,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         [InlineData("azure", "key-vault-kevinalbs.vault.azure.net", null, "parse error")]
         // gcp
         [InlineData("gcp", "cloudkms.googleapis.com:443", null, "parse error")]
-        [InlineData("gcp", "example.com:443", "Invalid KMS response, no access_token returned. HTTP status=200", null)]
+        [InlineData("gcp", "example.com:443", "Invalid KMS response", null)]
         public void CustomEndpointTest(
             string kmsType,
             string customEndpoint,

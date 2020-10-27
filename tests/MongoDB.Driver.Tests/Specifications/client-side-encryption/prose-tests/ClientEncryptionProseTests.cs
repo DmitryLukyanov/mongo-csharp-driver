@@ -31,6 +31,7 @@ using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Operations;
+using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Encryption;
 using MongoDB.Driver.TestHelpers;
@@ -543,7 +544,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         [InlineData("aws", null, null, null)]
         [InlineData("aws", "kms.us-east-1.amazonaws.com", null, null)]
         [InlineData("aws", "kms.us-east-1.amazonaws.com:443", null, null)]
-        [InlineData("aws", "kms.us-east-1.amazonaws.com:12345", typeof(SocketException), null)]
+        [InlineData("aws", "kms.us-east-1.amazonaws.com:12345", "$ConnectionRefusedSocketException$", null)]
         [InlineData("aws", "kms.us-east-2.amazonaws.com", "us-east-1", null)]
         [InlineData("aws", "example.com", "parse error", null)]
         // additional not spec tests
@@ -556,8 +557,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public void CustomEndpointTest(
             string kmsType,
             string customEndpoint,
-            object expectedExceptionInfoForValidEncryption,
-            object expectedExceptionInfoForInvalidEncryption)
+            string expectedExceptionInfoForValidEncryption,
+            string expectedExceptionInfoForInvalidEncryption)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
 
@@ -643,14 +644,18 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     }
                 }
 
-                void AssertResult(Exception ex, object expectedExceptionInfo)
+                void AssertResult(Exception ex, string expectedExceptionInfo)
                 {
                     if (expectedExceptionInfo != null)
                     {
                         var innerException = ex.Should().BeOfType<MongoEncryptionException>().Subject.InnerException;
-                        if (expectedExceptionInfo is Type exceptionType && exceptionType.Name.EndsWith(nameof(Exception)))
+
+                        if (expectedExceptionInfo.StartsWith("$") && expectedExceptionInfo.EndsWith("Exception$"))
                         {
-                            innerException.GetType().GetTypeInfo().IsSubclassOf(exceptionType).Should().BeTrue();
+                            var expectedException = CoreExceptionHelper.CreateException(expectedExceptionInfo.Trim('$'));
+                            var excectedExceptionType = expectedException.GetType();
+                            innerException.GetType().Should().Be(excectedExceptionType);
+                            innerException.Message.Should().StartWith(expectedException.Message);
                         }
                         else
                         {

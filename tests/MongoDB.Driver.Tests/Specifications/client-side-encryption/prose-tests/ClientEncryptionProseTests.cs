@@ -549,7 +549,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         // additional not spec tests
         [InlineData("aws", "$test$", "Invalid endpoint, expected dot separator in host, but got: $test$", null)]
         // azure
-        [InlineData("azure", "key-vault-kevinalbs.vault.azure.net", null, "parse error")]
+        [InlineData("azure", "key-vault-csfle.vault.azure.net", null, "parse error")]
         // gcp
         [InlineData("gcp", "cloudkms.googleapis.com:443", null, "parse error")]
         [InlineData("gcp", "example.com:443", "Invalid KMS response", null)]
@@ -612,7 +612,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                             testCaseMasterKey = new BsonDocument
                             {
                                 { "keyVaultEndpoint", customEndpoint },
-                                { "keyName", "test-key" }
+                                { "keyName", "key-name-csfle" }
                             };
                         }
                         break;
@@ -620,10 +620,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         {
                             testCaseMasterKey = new BsonDocument
                             {
-                                { "projectId", "csfle-poc" },
+                                { "projectId", "devprod-drivers" },
                                 { "location", "global" },
-                                { "keyRing", "test" },
-                                { "keyName", "quickstart" },
+                                { "keyRing", "key-ring-csfle" },
+                                { "keyName", "key-name-csfle" },
                                 { "endpoint", customEndpoint }
                             };
                         }
@@ -860,8 +860,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 case "azure":
                     var azureMasterKey = new BsonDocument
                     {
-                        { "keyName", "test-key" },
-                        { "keyVaultEndpoint", "key-vault-kevinalbs.vault.azure.net" }
+                        { "keyName", "key-name-csfle" },
+                        { "keyVaultEndpoint", "key-vault-csfle.vault.azure.net" }
                     };
                     return new DataKeyOptions(
                         alternateKeyNames: alternateKeyNames,
@@ -869,10 +869,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 case "gcp":
                     var gcpMasterKey = new BsonDocument
                     {
-                        { "projectId", "csfle-poc" },
+                        { "projectId", "devprod-drivers" },
                         { "location", "global" },
-                        { "keyRing", "test" },
-                        { "keyName", "quickstart" }
+                        { "keyRing", "key-ring-csfle" },
+                        { "keyName", "key-name-csfle" }
                     };
                     return new DataKeyOptions(
                         alternateKeyNames: alternateKeyNames,

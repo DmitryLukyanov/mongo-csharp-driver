@@ -33,7 +33,7 @@ namespace MongoDB.Driver.Core.Compression
             _compressionLevel = compressionLevel.WithDefault(_defaultCompressionLevel);
         }
 
-        public CompressorType Type => CompressorType.ZStandard;
+        public CompressorType Type => CompressorType.Zstd;
 
         public void Compress(Stream input, Stream output)
         {

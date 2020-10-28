@@ -562,38 +562,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
 
-            Action<string, Dictionary<string, object>> setValidKmsEndpointFunc =
-                (kt, ko) =>
-                    {
-                        switch (kt)
-                        {
-                            // these values are default, so set them just to show the difference with incorrect values
-                            // NOTE: "aws" and "local" don't have a way to set endpoints here
-                            case "azure":
-                                ko.Add("identityPlatformEndpoint", "login.microsoftonline.com:443");
-                                break;
-                            case "gcp":
-                                ko.Add("endpoint", "oauth2.googleapis.com:443");
-                                break;
-                        }
-                    };
-            Action<string, Dictionary<string, object>> setInvalidKmsEndpointFunc =
-                (kt, ko) =>
-                {
-                    switch (kt)
-                    {
-                        case "azure":
-                            ko.Add("identityPlatformEndpoint", "example.com:443");
-                            break;
-                        case "gcp":
-                            ko.Add("endpoint", "example.com:443");
-                            break;
-                    }
-                };
-
             using (var client = ConfigureClient())
-            using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, setValidKmsEndpointFunc))
-            using (var clientEncryptionInvalid = ConfigureClientEncryption(client.Wrapped as MongoClient, setInvalidKmsEndpointFunc))
+            using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, SetValidKmsEndpointFunc))
+            using (var clientEncryptionInvalid = ConfigureClientEncryption(client.Wrapped as MongoClient, SetInvalidKmsEndpointFunc))
             {
                 BsonDocument testCaseMasterKey = null;
                 switch (kmsType)
@@ -688,6 +659,34 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     decrypted.Should().Be(BsonValue.Create(value));
                 }
             }
+
+            void SetInvalidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
+            {
+                switch (kt)
+                {
+                    case "azure":
+                        ko.Add("identityPlatformEndpoint", "example.com:443");
+                        break;
+                    case "gcp":
+                        ko.Add("endpoint", "example.com:443");
+                        break;
+                }
+            };
+
+            void SetValidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
+            {
+                switch (kt)
+                {
+                    // these values are default, so set them just to show the difference with incorrect values
+                    // NOTE: "aws" and "local" don't have a way to set endpoints here
+                    case "azure":
+                        ko.Add("identityPlatformEndpoint", "login.microsoftonline.com:443");
+                        break;
+                    case "gcp":
+                        ko.Add("endpoint", "oauth2.googleapis.com:443");
+                        break;
+                }
+            };
         }
 
         [SkippableTheory]

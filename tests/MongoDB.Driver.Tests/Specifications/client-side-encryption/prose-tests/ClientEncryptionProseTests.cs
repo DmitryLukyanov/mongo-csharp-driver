@@ -615,49 +615,37 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     }
                 }
 
-                void AssertResult(Exception ex, string expectedExceptionInfo)
-                {
-                    if (expectedExceptionInfo != null)
-                    {
-                        var innerException = ex.Should().BeOfType<MongoEncryptionException>().Subject.InnerException;
+            }
 
-                        if (expectedExceptionInfo.StartsWith("$") && expectedExceptionInfo.EndsWith("Exception$"))
-                        {
-                            var expectedException = CoreExceptionHelper.CreateException(expectedExceptionInfo.Trim('$'));
-                            var excectedExceptionType = expectedException.GetType();
-                            innerException.GetType().Should().Be(excectedExceptionType);
-                            innerException.Message.Should().StartWith(expectedException.Message);
-                        }
-                        else
-                        {
-                            var e = innerException.Should().BeOfType<CryptException>().Subject;
-                            e.Message.Should().Contain(expectedExceptionInfo.ToString());
-                        }
+            void AssertResult(Exception ex, string expectedExceptionInfo)
+            {
+                if (expectedExceptionInfo != null)
+                {
+                    var innerException = ex.Should().BeOfType<MongoEncryptionException>().Subject.InnerException;
+
+                    if (expectedExceptionInfo.StartsWith("$") && expectedExceptionInfo.EndsWith("Exception$"))
+                    {
+                        var expectedException = CoreExceptionHelper.CreateException(expectedExceptionInfo.Trim('$'));
+                        var excectedExceptionType = expectedException.GetType();
+                        innerException.GetType().Should().Be(excectedExceptionType);
+                        innerException.Message.Should().StartWith(expectedException.Message);
                     }
                     else
                     {
-                        ex.Should().BeNull();
+                        var e = innerException.Should().BeOfType<CryptException>().Subject;
+                        e.Message.Should().Contain(expectedExceptionInfo.ToString());
                     }
                 }
-
-                Guid CreateDataKeyTestCaseStep(ClientEncryption testCaseClientEncription, BsonDocument masterKey, bool async)
+                else
                 {
-                    var dataKeyOptions = new DataKeyOptions(masterKey: masterKey);
-                    return CreateDataKey(testCaseClientEncription, kmsType, dataKeyOptions, async);
+                    ex.Should().BeNull();
                 }
+            }
 
-                void TestCase(ClientEncryption testCaseClientEncription, BsonDocument masterKey, bool async)
-                {
-                    var dataKey = CreateDataKeyTestCaseStep(testCaseClientEncription, masterKey, async);
-
-                    var encryptOptions = new EncryptOptions(
-                        algorithm: EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                        keyId: dataKey);
-                    var value = "test";
-                    var encrypted = ExplicitEncrypt(testCaseClientEncription, encryptOptions, value, async);
-                    var decrypted = ExplicitDecrypt(testCaseClientEncription, encrypted, async);
-                    decrypted.Should().Be(BsonValue.Create(value));
-                }
+            Guid CreateDataKeyTestCaseStep(ClientEncryption testCaseClientEncription, BsonDocument masterKey, bool async)
+            {
+                var dataKeyOptions = new DataKeyOptions(masterKey: masterKey);
+                return CreateDataKey(testCaseClientEncription, kmsType, dataKeyOptions, async);
             }
 
             void SetInvalidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
@@ -671,7 +659,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         ko.Add("endpoint", "example.com:443");
                         break;
                 }
-            };
+            }
 
             void SetValidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
             {
@@ -686,7 +674,20 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         ko.Add("endpoint", "oauth2.googleapis.com:443");
                         break;
                 }
-            };
+            }
+
+            void TestCase(ClientEncryption testCaseClientEncription, BsonDocument masterKey, bool async)
+            {
+                var dataKey = CreateDataKeyTestCaseStep(testCaseClientEncription, masterKey, async);
+
+                var encryptOptions = new EncryptOptions(
+                    algorithm: EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                    keyId: dataKey);
+                var value = "test";
+                var encrypted = ExplicitEncrypt(testCaseClientEncription, encryptOptions, value, async);
+                var decrypted = ExplicitDecrypt(testCaseClientEncription, encrypted, async);
+                decrypted.Should().Be(BsonValue.Create(value));
+            }
         }
 
         [SkippableTheory]

@@ -627,7 +627,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     {
                         var expectedException = CoreExceptionHelper.CreateException(expectedExceptionInfo.Trim('$'));
                         var excectedExceptionType = expectedException.GetType();
-                        innerException.GetType().Should().Be(excectedExceptionType);
+                        innerException.GetType().GetTypeInfo().IsAssignableFrom(excectedExceptionType);
                         innerException.Message.Should().StartWith(expectedException.Message);
                     }
                     else

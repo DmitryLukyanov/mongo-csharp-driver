@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Threading;
 using FluentAssertions;
@@ -563,8 +562,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
 
             using (var client = ConfigureClient())
-            using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, SetValidKmsEndpointFunc))
-            using (var clientEncryptionInvalid = ConfigureClientEncryption(client.Wrapped as MongoClient, SetInvalidKmsEndpointFunc))
+            using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, ValidKmsEndpointConfigurator))
+            using (var clientEncryptionInvalid = ConfigureClientEncryption(client.Wrapped as MongoClient, InvalidKmsEndpointConfigurator))
             {
                 BsonDocument testCaseMasterKey = null;
                 switch (kmsType)
@@ -648,7 +647,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 return CreateDataKey(testCaseClientEncription, kmsType, dataKeyOptions, async);
             }
 
-            void SetInvalidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
+            void InvalidKmsEndpointConfigurator(string kt, Dictionary<string, object> ko)
             {
                 switch (kt)
                 {
@@ -661,7 +660,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 }
             }
 
-            void SetValidKmsEndpointFunc(string kt, Dictionary<string, object> ko)
+            void ValidKmsEndpointConfigurator(string kt, Dictionary<string, object> ko)
             {
                 switch (kt)
                 {
@@ -805,12 +804,12 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             return clientEncrypted;
         }
 
-        private ClientEncryption ConfigureClientEncryption(MongoClient client, Action<string, Dictionary<string, object>> updateKmsProviderFunc = null)
+        private ClientEncryption ConfigureClientEncryption(MongoClient client, Action<string, Dictionary<string, object>> kmsProviderConfigurator = null)
         {
             var clientEncryptionOptions = new ClientEncryptionOptions(
                 keyVaultClient: client.Settings.AutoEncryptionOptions?.KeyVaultClient ?? client,
                 keyVaultNamespace: __keyVaultCollectionNamespace,
-                kmsProviders: GetKmsProviders(updateKmsProviderFunc));
+                kmsProviders: GetKmsProviders(kmsProviderConfigurator));
 
             return new ClientEncryption(clientEncryptionOptions);
         }
@@ -1042,8 +1041,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             defaultValue ??
             throw new Exception($"{variableName} system variable should be configured on the machine.");
 
-
-        private IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> GetKmsProviders(Action<string, Dictionary<string, object>> updateKmsProviderFunc = null)
+        private IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> GetKmsProviders(Action<string, Dictionary<string, object>> kmsProviderConfigurator = null)
         {
             var kmsProviders = new Dictionary<string, IReadOnlyDictionary<string, object>>();
 
@@ -1054,14 +1052,14 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 { "accessKeyId", awsAccessKey },
                 { "secretAccessKey", awsSecretAccessKey }
             };
-            updateKmsProviderFunc?.Invoke("aws", awsKmsOptions);
+            kmsProviderConfigurator?.Invoke("aws", awsKmsOptions);
             kmsProviders.Add("aws", awsKmsOptions);
 
             var localOptions = new Dictionary<string, object>
             {
                 { "key", new BsonBinaryData(Convert.FromBase64String(LocalMasterKey)).Bytes }
             };
-            updateKmsProviderFunc?.Invoke("local", localOptions);
+            kmsProviderConfigurator?.Invoke("local", localOptions);
             kmsProviders.Add("local", localOptions);
 
             var azureTenantId = GetEnvironmentVariableOrDefaultOrThrowIfNothing("FLE_AZURE_TENANT_ID");
@@ -1073,7 +1071,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 { "clientId", azureClientId },
                 { "clientSecret", azureClientSecret }
             };
-            updateKmsProviderFunc?.Invoke("azure", azureKmsOptions);
+            kmsProviderConfigurator?.Invoke("azure", azureKmsOptions);
             kmsProviders.Add("azure", azureKmsOptions);
 
             var gcpEmail = GetEnvironmentVariableOrDefaultOrThrowIfNothing("FLE_GCP_EMAIL");
@@ -1083,7 +1081,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 { "email", gcpEmail },
                 { "privateKey", gcpPrivateKey }
             };
-            updateKmsProviderFunc?.Invoke("gcp", gcpKmsOptions);
+            kmsProviderConfigurator?.Invoke("gcp", gcpKmsOptions);
             kmsProviders.Add("gcp", gcpKmsOptions);
 
             return new ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>(kmsProviders);

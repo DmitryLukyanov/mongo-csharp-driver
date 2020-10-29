@@ -626,8 +626,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     if (expectedExceptionInfo.StartsWith("$") && expectedExceptionInfo.EndsWith("Exception$"))
                     {
                         var expectedException = CoreExceptionHelper.CreateException(expectedExceptionInfo.Trim('$'));
-                        var excectedExceptionType = expectedException.GetType();
-                        innerException.GetType().GetTypeInfo().IsAssignableFrom(excectedExceptionType);
+                        var excectedExceptionType = expectedException.GetType().GetTypeInfo();
+                        excectedExceptionType.IsAssignableFrom(innerException.GetType()).Should().BeTrue();
                         innerException.Message.Should().StartWith(expectedException.Message);
                     }
                     else

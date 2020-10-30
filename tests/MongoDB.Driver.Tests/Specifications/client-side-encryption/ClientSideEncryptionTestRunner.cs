@@ -210,7 +210,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
         private string GetEnvironmentVariableOrDefaultOrThrowIfNothing(string variableName, string defaultValue = null) =>
             Environment.GetEnvironmentVariable(variableName) ??
             defaultValue ??
-            throw new Exception($"{variableName} system variable should be configured on the machine.");
+            throw new Exception($"{variableName} environment variable must be configured on the machine.");
 
         private ReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> ParseKmsProviders(BsonDocument kmsProviders)
         {

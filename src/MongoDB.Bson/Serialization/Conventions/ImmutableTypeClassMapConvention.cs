@@ -84,6 +84,10 @@ namespace MongoDB.Bson.Serialization.Conventions
                     {
                         continue;
                     }
+                    if (!MatchesSomeCreatorArgument(classMap, property))
+                    {
+                        continue;
+                    }
 
                     var memberMap = classMap.MapMember(property);
                     if (classMap.IsAnonymous)
@@ -100,6 +104,23 @@ namespace MongoDB.Bson.Serialization.Conventions
         {
             // CanWrite gets true even if a property has only a private setter
             return propertyInfo.CanWrite && (propertyInfo.SetMethod?.IsPublic ?? false);
+        }
+
+        private bool MatchesSomeCreatorArgument(BsonClassMap classMap, PropertyInfo propertyInfo)
+        {
+            foreach (var creatorMap in classMap.CreatorMaps)
+            {
+                var constructorInfo = (ConstructorInfo)creatorMap.MemberInfo;
+                foreach (var argument in constructorInfo.GetParameters())
+                {
+                    if (string.Equals(propertyInfo.Name, argument.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

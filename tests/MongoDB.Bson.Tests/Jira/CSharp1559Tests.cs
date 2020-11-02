@@ -41,7 +41,7 @@ namespace MongoDB.Bson.Tests.Jira
         [InlineData(typeof(DerivedImmutableWithMorePropertiesThanInConstructorButWithBsonIgnoreAttribute_AbstractBaseImmutableWithAbstractProperty), new[] { 2 }, "{ \"Y\" : 2 }")]
         [InlineData(typeof(DerivedImmutableWithMorePropertiesThanInConstructorButWithBsonIgnoreAttribute_AbstractBaseImmutableWithConstructor), new[] { 1 }, "{ \"X\" : 1 }")]
         [InlineData(typeof(ClassWithTwoConstructorsWhereTheFirstIsNotFullyMatchedAndTheSecondIsFullyMatched), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
-        [InlineData(typeof(ClassWithOneConstructorThatIsNotFullyMatched), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2, \"Z\" : null }")]
+        [InlineData(typeof(ClassWithOneConstructorThatIsNotFullyMatched), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
         public void Serialization_should_return_expected_result(Type testCaseType, int[] arguments, string expectedJson)
         {
             var testCase = Activator.CreateInstance(testCaseType, arguments.Select(a => (object)a).ToArray());

@@ -57,7 +57,7 @@ namespace MongoDB.Driver.Core.Compression
         [InlineData(CompressorType.Zlib, 0)]
         [InlineData(CompressorType.Zlib, 6)]
         [InlineData(CompressorType.Snappy, null)]
-        [InlineData(CompressorType.Zstd, null)]
+        [InlineData(CompressorType.ZStandard, null)]
         public void Encoder_should_read_the_previously_written_message(
             CompressorType compressorType,
             object compressionOption)

@@ -23,7 +23,6 @@ namespace MongoDB.Driver.Core.Compression
     public enum CompressorType
     {
         // NOTE: the numeric values of the enum members MUST be kept in sync with the binary wire protocol
-        // NOTE: the compression keys of the enum members MUST be kept in sync with the compressor connection string options
 
         /// <summary>
         /// The content of the message is uncompressed. This is realistically only used for testing.
@@ -40,7 +39,7 @@ namespace MongoDB.Driver.Core.Compression
         /// <summary>
         /// The content of the message is compressed using zstandard. 
         /// </summary>
-        Zstd = 3
+        ZStandard = 3
     }
 
     /// <summary>

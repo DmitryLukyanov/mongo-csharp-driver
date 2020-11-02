@@ -452,7 +452,10 @@ namespace MongoDB.Driver.Core.Configuration
         }
 
         [Theory]
+        [InlineData("mongodb://localhost?compressors=noop", CompressorType.Noop)]
         [InlineData("mongodb://localhost?compressors=zlib", CompressorType.Zlib)]
+        [InlineData("mongodb://localhost?compressors=snappy", CompressorType.Snappy)]
+        [InlineData("mongodb://localhost?compressors=zstd", CompressorType.ZStandard)]
         public void When_compressor_is_specified(string connectionString, CompressorType compressor)
         {
             var subject = new ConnectionString(connectionString);

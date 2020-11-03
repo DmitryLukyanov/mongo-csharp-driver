@@ -15,7 +15,7 @@
 
 namespace MongoDB.Driver.Core.Compression
 {
-    internal static class CompressorTypeMapping
+    internal static class CompressorTypeMapper
     {
         public static string ToServerName(CompressorType compressorType)
         {
@@ -34,10 +34,10 @@ namespace MongoDB.Driver.Core.Compression
             }
         }
 
-        public static bool TryToMap(string compression, out CompressorType compressorType)
+        public static bool TryFromServerName(string serverName, out CompressorType compressorType)
         {
             compressorType = default;
-            switch (compression)
+            switch (serverName)
             {
                 case "noop": compressorType = CompressorType.Noop; break;
                 case "zlib": compressorType = CompressorType.Zlib; break;

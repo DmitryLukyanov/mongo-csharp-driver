@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Core.Connections
                     .ToArray();
             var result = IsMasterHelper.AddCompressorsToCommand(command, compressors);
 
-            var expectedCompressions = string.Join(",", compressorsParameters.Select(c => $"'{CompressorTypeMapping.ToServerName(c)}'"));
+            var expectedCompressions = string.Join(",", compressorsParameters.Select(c => $"'{CompressorTypeMapper.ToServerName(c)}'"));
             result.Should().Be(BsonDocument.Parse($"{{ isMaster : 1, compression: [{expectedCompressions}] }}"));
         }
     }

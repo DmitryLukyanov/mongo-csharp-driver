@@ -38,7 +38,7 @@ namespace MongoDB.Driver.Core.Connections
 
         internal static BsonDocument AddCompressorsToCommand(BsonDocument command, IEnumerable<CompressorConfiguration> compressors)
         {
-            var compressorsArray = new BsonArray(compressors.Select(x => CompressorTypeMapping.ToServerName(x.Type)));
+            var compressorsArray = new BsonArray(compressors.Select(x => CompressorTypeMapper.ToServerName(x.Type)));
 
             return command.Add("compression", compressorsArray);
         }

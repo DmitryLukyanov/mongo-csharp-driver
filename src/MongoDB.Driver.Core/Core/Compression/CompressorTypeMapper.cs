@@ -39,7 +39,7 @@ namespace MongoDB.Driver.Core.Compression
         public static bool TryFromServerName(string serverName, out CompressorType compressorType)
         {
             compressorType = default;
-            switch (serverName)
+            switch (serverName.ToLowerInvariant())
             {
                 case "noop": compressorType = CompressorType.Noop; break;
                 case "zlib": compressorType = CompressorType.Zlib; break;

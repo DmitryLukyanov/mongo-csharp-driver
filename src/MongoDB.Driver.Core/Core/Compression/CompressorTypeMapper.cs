@@ -13,6 +13,8 @@
 * limitations under the License.
 */
 
+using System;
+
 namespace MongoDB.Driver.Core.Compression
 {
     internal static class CompressorTypeMapper
@@ -30,7 +32,7 @@ namespace MongoDB.Driver.Core.Compression
                 case CompressorType.ZStandard:
                     return "zstd";
                 default:
-                    return compressorType.ToString().ToLowerInvariant();
+                    throw new ArgumentOutOfRangeException(nameof(compressorType));
             }
         }
 

@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Examples
         private static readonly string __sampleNameValue = "John Doe";
         private static readonly int __sampleSsnValue = 145014000;
 
-        private static BsonDocument SampleDoc =
+        private static BsonDocument __sampleDocFields =
             new BsonDocument
             {
                 { "name", __sampleNameValue },
@@ -59,54 +59,54 @@ namespace MongoDB.Driver.Examples
             var keyVaultNamespace = CollectionNamespace.FromFullName("encryption.__keyVault");
             var medicalRecordsNamespace = CollectionNamespace.FromFullName("medicalRecords.patients");
 
-            var base64KeyId = ""; // paste the generated key in Standard GuidRepresentation form here
-
-            var ssnQuery = Builders<BsonDocument>.Filter.Eq("ssn", __sampleSsnValue);
+            var keyIdBase64 = ""; // paste the generated key in Standard GuidRepresentation form here
 
             // Construct a JSON Schema
-            var schema = JsonSchemaCreator.CreateJsonSchema(base64KeyId);
+            var schema = JsonSchemaCreator.CreateJsonSchema(keyIdBase64);
 
-            // Construct an encrypted client
-            var encryptedClient = CreateEncryptedClient(
+            // Construct an auto-encrypting client
+            var autoEncryptingClient = CreateAutoEncryptingClient(
                 medicalRecordsNamespace,
                 keyVaultNamespace,
                 schema);
-            var collection = encryptedClient
+            var collection = autoEncryptingClient
                 .GetDatabase(medicalRecordsNamespace.DatabaseNamespace.DatabaseName)
                 .GetCollection<BsonDocument>(medicalRecordsNamespace.CollectionName);
 
+            var ssnQuery = Builders<BsonDocument>.Filter.Eq("ssn", __sampleSsnValue);
+
             // Insert a document into the collection
-            collection.UpdateOne(ssnQuery, new BsonDocument("$set", SampleDoc), new UpdateOptions() { IsUpsert = true });
+            collection.UpdateOne(ssnQuery, new BsonDocument("$set", __sampleDocFields), new UpdateOptions() { IsUpsert = true });
             Console.WriteLine("Successfully upserted the sample document!");
 
-            // Query SSN field with encrypted client
+            // Query by SSN field with auto-encrypting client
             var result = collection.Find(ssnQuery).Single();
 
             Console.WriteLine("Encrypted client query by the SSN (deterministically-encrypted) field:\n" + result.ToJson());
 
             // Query SSN field with normal client without encryption
-            var normalMongoClient = new MongoClient(__connectionString);
-            collection = normalMongoClient
+            var nonAutoEncryptingClient = new MongoClient(__connectionString);
+            collection = nonAutoEncryptingClient
               .GetDatabase(medicalRecordsNamespace.DatabaseNamespace.DatabaseName)
               .GetCollection<BsonDocument>(medicalRecordsNamespace.CollectionName);
-            var normalClientResult = collection.Find(ssnQuery).FirstOrDefault();
-            if (normalClientResult != null)
+            result = collection.Find(ssnQuery).FirstOrDefault();
+            if (result != null)
             {
-                throw new Exception("Assert that the filtered data has not been found.");
+                throw new Exception("Expected no document to be found but one was found.");
             }
 
-            // Query name (non-encrypted) field with normal client without encryption
+            // Query by SSN field with a normal client that does not auto-encrypt
             var nameQuery = Builders<BsonDocument>.Filter.Eq("name", __sampleNameValue);
-            var normalClientNameResult = collection.Find(nameQuery).FirstOrDefault();
-            if (normalClientNameResult == null)
+            result = collection.Find(nameQuery).FirstOrDefault();
+            if (result == null)
             {
                 throw new Exception("Assert that the filtered data has been found.");
             }
 
-            Console.WriteLine($"Query by name returned the following document:\n {normalClientNameResult}.");
+            Console.WriteLine("Expected the document to be found but none was found.");
         }
 
-        private IMongoClient CreateEncryptedClient(
+        private IMongoClient CreateAutoEncryptingClient(
             CollectionNamespace medicalRecordsNamespace,
             CollectionNamespace keyVaultNamespace,
             BsonDocument schema)
@@ -114,8 +114,8 @@ namespace MongoDB.Driver.Examples
             var kmsProviders = new Dictionary<string, IReadOnlyDictionary<string, object>>();
 
             // For local master key
-            var localMasterKey = File.ReadAllText("master-key.txt");
-            var localMasterKeyBytes = Convert.FromBase64String(localMasterKey);
+            var localMasterKeyBase64 = File.ReadAllText("master-key.txt");
+            var localMasterKeyBytes = Convert.FromBase64String(localMasterKeyBase64);
 
             var localOptions = new Dictionary<string, object>
             {
@@ -163,20 +163,18 @@ namespace MongoDB.Driver.Examples
 
             var extraOptions = new Dictionary<string, object>()
             {
-                /* 
-                 *   uncomment the following line if you are running mongocryptd manually
-                { "mongocryptdBypassSpawn", true }
-                */
+                // uncomment the following line if you are running mongocryptd manually
+                // { "mongocryptdBypassSpawn", true }
             };
 
-            var mongoClientSettings = MongoClientSettings.FromConnectionString(__connectionString);
-            var autoEncryptionSettings = new AutoEncryptionOptions(
+            var clientSettings = MongoClientSettings.FromConnectionString(__connectionString);
+            var autoEncryptionOptions = new AutoEncryptionOptions(
                 keyVaultNamespace: keyVaultNamespace,
                 kmsProviders: kmsProviders,
                 schemaMap: schemaMap,
                 extraOptions: extraOptions);
-            mongoClientSettings.AutoEncryptionOptions = autoEncryptionSettings;
-            return new MongoClient(mongoClientSettings);
+            clientSettings.AutoEncryptionOptions = autoEncryptionOptions;
+            return new MongoClient(clientSettings);
         }
 
         [Fact]
@@ -237,9 +235,9 @@ namespace MongoDB.Driver.Examples
         private static readonly string DETERMINISTIC_ENCRYPTION_TYPE = "AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic";
         private static readonly string RANDOM_ENCRYPTION_TYPE = "AEAD_AES_256_CBC_HMAC_SHA_512-Random";
 
-        private static BsonDocument CreateEncryptMetadata(string base64KeyId)
+        private static BsonDocument CreateEncryptMetadata(string keyIdBase64)
         {
-            var guid = GuidConverter.FromBytes(Convert.FromBase64String(base64KeyId), GuidRepresentation.Standard);
+            var guid = GuidConverter.FromBytes(Convert.FromBase64String(keyIdBase64), GuidRepresentation.Standard);
             var binary = new BsonBinaryData(guid, GuidRepresentation.Standard);
             return new BsonDocument("keyId", new BsonArray(new[] { binary }));
         }

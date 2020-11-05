@@ -53,21 +53,21 @@ namespace MongoDB.Driver.Examples
 
             var connectionString = "mongodb://localhost:27017";
             var keyVaultNamespace = CollectionNamespace.FromFullName("encryption.__keyVault");
-            var keyVaultMongoClient = new MongoClient(connectionString);
+            var keyVaultClient = new MongoClient(connectionString);
             var clientEncryptionOptions = new ClientEncryptionOptions(
-                keyVaultClient: keyVaultMongoClient,
+                keyVaultClient: keyVaultClient,
                 keyVaultNamespace: keyVaultNamespace,
                 kmsProviders: kmsProviders);
 
             var clientEncryption = new ClientEncryption(clientEncryptionOptions);
             var dataKeyId = clientEncryption.CreateDataKey("local", new DataKeyOptions(), CancellationToken.None);
             Console.WriteLine($"DataKeyId [UUID]: {dataKeyId}");
-            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
-            Console.WriteLine($"DataKeyId [base64]: {base64DataKeyId}");
+            var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
+            Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
             // Validate key
-            var mongoClient = new MongoClient(connectionString);
-            var collection = mongoClient
+            var client = new MongoClient(connectionString);
+            var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
                 .GetCollection<BsonDocument>(
                     keyVaultNamespace.CollectionName,
@@ -100,9 +100,9 @@ namespace MongoDB.Driver.Examples
 
             var connectionString = "mongodb://localhost:27017";
             var keyVaultNamespace = CollectionNamespace.FromFullName("encryption.__keyVault");
-            var keyVaultMongoClient = new MongoClient(connectionString);
+            var keyVaultClient = new MongoClient(connectionString);
             var clientEncryptionOptions = new ClientEncryptionOptions(
-                keyVaultClient: keyVaultMongoClient,
+                keyVaultClient: keyVaultClient,
                 keyVaultNamespace: keyVaultNamespace,
                 kmsProviders: kmsProviders);
 
@@ -118,11 +118,11 @@ namespace MongoDB.Driver.Examples
 
             var dataKeyId = clientEncryption.CreateDataKey("aws", dataKeyOptions, CancellationToken.None);
             Console.WriteLine($"DataKeyId [UUID]: {dataKeyId}");
-            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
-            Console.WriteLine($"DataKeyId [base64]: {base64DataKeyId}");
+            var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
+            Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
-            var mongoClient = new MongoClient(connectionString);
-            var collection = mongoClient
+            var client = new MongoClient(connectionString);
+            var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
                 .GetCollection<BsonDocument>(
                     keyVaultNamespace.CollectionName,
@@ -158,9 +158,9 @@ namespace MongoDB.Driver.Examples
 
             var connectionString = "mongodb://localhost:27017";
             var keyVaultNamespace = CollectionNamespace.FromFullName("encryption.__keyVault");
-            var keyVaultMongoClient = new MongoClient(connectionString);
+            var keyVaultClient = new MongoClient(connectionString);
             var clientEncryptionOptions = new ClientEncryptionOptions(
-                keyVaultClient: keyVaultMongoClient,
+                keyVaultClient: keyVaultClient,
                 keyVaultNamespace: keyVaultNamespace,
                 kmsProviders: kmsProviders);
 
@@ -176,11 +176,11 @@ namespace MongoDB.Driver.Examples
 
             var dataKeyId = clientEncryption.CreateDataKey("azure", dataKeyOptions, CancellationToken.None);
             Console.WriteLine($"DataKeyId [UUID]: {dataKeyId}");
-            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
-            Console.WriteLine($"DataKeyId [base64]: {base64DataKeyId}");
+            var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
+            Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
-            var mongoClient = new MongoClient(connectionString);
-            var collection = mongoClient
+            var client = new MongoClient(connectionString);
+            var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
                 .GetCollection<BsonDocument>(
                     keyVaultNamespace.CollectionName,
@@ -204,7 +204,6 @@ namespace MongoDB.Driver.Examples
 
             var gcpPrivateKey = Environment.GetEnvironmentVariable("FLE_GCP_PRIVATE_KEY");
             var gcpEmail = Environment.GetEnvironmentVariable("FLE_GCP_EMAIL");
-
             var gcpKmsOptions = new Dictionary<string, object>
             {
                 { "privateKey", gcpPrivateKey },
@@ -214,9 +213,9 @@ namespace MongoDB.Driver.Examples
 
             var connectionString = "mongodb://localhost:27017";
             var keyVaultNamespace = CollectionNamespace.FromFullName("encryption.__keyVault");
-            var keyVaultMongoClient = new MongoClient(connectionString);
+            var keyVaultClient = new MongoClient(connectionString);
             var clientEncryptionOptions = new ClientEncryptionOptions(
-                keyVaultClient: keyVaultMongoClient,
+                keyVaultClient: keyVaultClient,
                 keyVaultNamespace: keyVaultNamespace,
                 kmsProviders: kmsProviders);
 
@@ -239,11 +238,11 @@ namespace MongoDB.Driver.Examples
 
             var dataKeyId = clientEncryption.CreateDataKey("gcp", dataKeyOptions, CancellationToken.None);
             Console.WriteLine($"DataKeyId [UUID]: {dataKeyId}");
-            var base64DataKeyId = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
-            Console.WriteLine($"DataKeyId [base64]: {base64DataKeyId}");
+            var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
+            Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
-            var mongoClient = new MongoClient(connectionString);
-            var collection = mongoClient
+            var client = new MongoClient(connectionString);
+            var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
                 .GetCollection<BsonDocument>(
                     keyVaultNamespace.CollectionName,

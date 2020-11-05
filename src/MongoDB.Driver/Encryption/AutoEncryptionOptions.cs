@@ -173,36 +173,32 @@ namespace MongoDB.Driver.Encryption
         public override string ToString()
         {
             var sb = new StringBuilder();
+            var jsonWriterSettings = new JsonWriterSettings();
+#pragma warning disable 618
+            if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+            {
+                jsonWriterSettings.GuidRepresentation = GuidRepresentation.Unspecified;
+            }
+#pragma warning restore 618
+
             sb.Append("{ ");
             sb.AppendFormat("BypassAutoEncryption : {0}, ", _bypassAutoEncryption);
-            sb.AppendFormat("KmsProviders : {0}, ", _kmsProviders.ToJson(CreateJsonWriterSettings()));
+            sb.AppendFormat("KmsProviders : {0}, ", _kmsProviders.ToJson(jsonWriterSettings));
             if (_keyVaultNamespace != null)
             {
                 sb.AppendFormat("KeyVaultNamespace : \"{0}\", ", _keyVaultNamespace.FullName);
             }
             if (_extraOptions != null)
             {
-                sb.AppendFormat("ExtraOptions : {0}, ", _extraOptions.ToJson(writerSettings: CreateJsonWriterSettings()));
+                sb.AppendFormat("ExtraOptions : {0}, ", _extraOptions.ToJson(jsonWriterSettings));
             }
             if (_schemaMap != null)
             {
-                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson(writerSettings: CreateJsonWriterSettings()));
+                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson(jsonWriterSettings));
             }
             sb.Remove(sb.Length - 2, 2);
             sb.Append(" }");
             return sb.ToString();
-
-            JsonWriterSettings CreateJsonWriterSettings()
-            {
-                var jsonWriterSettings = new JsonWriterSettings();
-#pragma warning disable 618
-                if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
-                {
-                    jsonWriterSettings.GuidRepresentation = GuidRepresentation.Unspecified;
-                }
-#pragma warning restore 618
-                return jsonWriterSettings;
-            }
         }
 
         // private methods

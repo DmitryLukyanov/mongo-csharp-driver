@@ -512,15 +512,13 @@ namespace MongoDB.Bson.Tests.IO
         }
 
         [Fact]
-        public void TestGuidWhenStandardGuidRepresentationShouldBeTakenFromStandardSubType()
+        public void TestUuidStandardWhenGuidRepresentationIsUnspecified()
         {
             var guid = new Guid("00112233445566778899aabbccddeeff");
-            var standardGuidRepresentation = GuidRepresentation.Standard;
-            var standardSubType = GuidConverter.GetSubType(standardGuidRepresentation);
-            var guidBytes = GuidConverter.ToBytes(guid, standardGuidRepresentation);
+            var guidBytes = GuidConverter.ToBytes(guid, GuidRepresentation.Standard);
 
-            var binary = new BsonBinaryData(guidBytes, standardSubType); // GuidRepresentation is Unspecified
-            var result = binary.ToJson(writerSettings: new JsonWriterSettings() // no exception
+            var binary = new BsonBinaryData(guidBytes, BsonBinarySubType.UuidStandard); // GuidRepresentation is Unspecified
+            var result = binary.ToJson(writerSettings: new JsonWriterSettings()
             {
 #pragma warning disable CS0618 // Type or member is obsolete
                 GuidRepresentation = GuidRepresentation.Unspecified

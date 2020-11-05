@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using MongoDB.Bson;
+using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Shared;
 
@@ -185,7 +186,14 @@ namespace MongoDB.Driver.Encryption
             }
             if (_schemaMap != null)
             {
-                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson());
+                var jsonWriterSettings = new JsonWriterSettings();
+#pragma warning disable 618
+                if (BsonDefaults.GuidRepresentationMode == GuidRepresentationMode.V2)
+                {
+                    jsonWriterSettings.GuidRepresentation = GuidRepresentation.Unspecified;
+                }
+#pragma warning restore 618
+                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson(jsonWriterSettings));
             }
             sb.Remove(sb.Length - 2, 2);
             sb.Append(" }");

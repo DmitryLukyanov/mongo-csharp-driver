@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Examples
         private static readonly string __sampleNameValue = "John Doe";
         private static readonly int __sampleSsnValue = 145014000;
 
-        private static BsonDocument __sampleDocFields =
+        private static readonly BsonDocument __sampleDocFields =
             new BsonDocument
             {
                 { "name", __sampleNameValue },
@@ -82,9 +82,9 @@ namespace MongoDB.Driver.Examples
             // Query by SSN field with auto-encrypting client
             var result = collection.Find(ssnQuery).Single();
 
-            Console.WriteLine("Encrypted client query by the SSN (deterministically-encrypted) field:\n" + result.ToJson());
+            Console.WriteLine("Query by SSN (deterministically-encrypted field) using auto-encrypting client returned:\n" + result.ToJson());
 
-            // Query SSN field with normal client without encryption
+            // Query by SSN field with a normal non-auto-encrypting client
             var nonAutoEncryptingClient = new MongoClient(__connectionString);
             collection = nonAutoEncryptingClient
               .GetDatabase(medicalRecordsNamespace.DatabaseNamespace.DatabaseName)
@@ -95,15 +95,15 @@ namespace MongoDB.Driver.Examples
                 throw new Exception("Expected no document to be found but one was found.");
             }
 
-            // Query by SSN field with a normal client that does not auto-encrypt
+            // Query by name field with a normal non-auto-encrypting client
             var nameQuery = Builders<BsonDocument>.Filter.Eq("name", __sampleNameValue);
             result = collection.Find(nameQuery).FirstOrDefault();
             if (result == null)
             {
-                throw new Exception("Assert that the filtered data has been found.");
+                throw new Exception("Expected the document to be found but none was found.");
             }
 
-            Console.WriteLine("Expected the document to be found but none was found.");
+            Console.WriteLine($"Query by name (non-encrypted field) using non-auto-encrypting client returned:\n" + result.ToJson());
         }
 
         private IMongoClient CreateAutoEncryptingClient(
@@ -237,9 +237,8 @@ namespace MongoDB.Driver.Examples
 
         private static BsonDocument CreateEncryptMetadata(string keyIdBase64)
         {
-            var guid = GuidConverter.FromBytes(Convert.FromBase64String(keyIdBase64), GuidRepresentation.Standard);
-            var binary = new BsonBinaryData(guid, GuidRepresentation.Standard);
-            return new BsonDocument("keyId", new BsonArray(new[] { binary }));
+            var keyId = new BsonBinaryData(Convert.FromBase64String(keyIdBase64), BsonBinarySubType.UuidStandard);
+            return new BsonDocument("keyId", new BsonArray(new[] { keyId }));
         }
 
         private static BsonDocument CreateEncryptedField(string bsonType, bool isDeterministic)

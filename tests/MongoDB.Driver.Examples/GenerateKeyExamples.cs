@@ -65,7 +65,7 @@ namespace MongoDB.Driver.Examples
             var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
             Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
-            // Validate key
+            // Verify that the key document was created
             var client = new MongoClient(connectionString);
             var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
@@ -81,6 +81,8 @@ namespace MongoDB.Driver.Examples
             var keyDocument = collection
                 .Find(query)
                 .Single();
+
+            Console.WriteLine(keyDocument);
         }
 
         // https://gist.github.com/DmitryLukyanov/8417d1f5c30f12ffeb2be29056aff455#file-awskmsprovider-cs
@@ -121,6 +123,7 @@ namespace MongoDB.Driver.Examples
             var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
             Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
+            // Verify that the key document was created
             var client = new MongoClient(connectionString);
             var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
@@ -136,6 +139,8 @@ namespace MongoDB.Driver.Examples
             var keyDocument = collection
                 .Find(query)
                 .Single();
+
+            Console.WriteLine(keyDocument);
         }
 
         // https://gist.github.com/DmitryLukyanov/8417d1f5c30f12ffeb2be29056aff455#file-azurekmsprovider-cs
@@ -179,6 +184,7 @@ namespace MongoDB.Driver.Examples
             var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
             Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
+            // Verify that the key document was created
             var client = new MongoClient(connectionString);
             var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
@@ -194,6 +200,8 @@ namespace MongoDB.Driver.Examples
             var keyDocument = collection
                 .Find(query)
                 .Single();
+
+            Console.WriteLine(keyDocument);
         }
 
         // https://gist.github.com/DmitryLukyanov/8417d1f5c30f12ffeb2be29056aff455#file-gcpkmsprovider-cs
@@ -241,6 +249,7 @@ namespace MongoDB.Driver.Examples
             var dataKeyIdBase64 = Convert.ToBase64String(GuidConverter.ToBytes(dataKeyId, GuidRepresentation.Standard));
             Console.WriteLine($"DataKeyId [base64]: {dataKeyIdBase64}");
 
+            // Verify that the key document was created
             var client = new MongoClient(connectionString);
             var collection = client
                 .GetDatabase(keyVaultNamespace.DatabaseNamespace.DatabaseName)
@@ -256,6 +265,8 @@ namespace MongoDB.Driver.Examples
             var keyDocument = collection
                 .Find(query)
                 .Single();
+
+            Console.WriteLine(keyDocument);
         }
     }
 }

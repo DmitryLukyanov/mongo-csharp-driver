@@ -175,16 +175,24 @@ namespace MongoDB.Driver.Encryption
             var sb = new StringBuilder();
             sb.Append("{ ");
             sb.AppendFormat("BypassAutoEncryption : {0}, ", _bypassAutoEncryption);
-            sb.AppendFormat("KmsProviders : {0}, ", _kmsProviders.ToJson());
+            sb.AppendFormat("KmsProviders : {0}, ", _kmsProviders.ToJson(CreateJsonWriterSettings()));
             if (_keyVaultNamespace != null)
             {
                 sb.AppendFormat("KeyVaultNamespace : \"{0}\", ", _keyVaultNamespace.FullName);
             }
             if (_extraOptions != null)
             {
-                sb.AppendFormat("ExtraOptions : {0}, ", _extraOptions.ToJson());
+                sb.AppendFormat("ExtraOptions : {0}, ", _extraOptions.ToJson(writerSettings: CreateJsonWriterSettings()));
             }
             if (_schemaMap != null)
+            {
+                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson(writerSettings: CreateJsonWriterSettings()));
+            }
+            sb.Remove(sb.Length - 2, 2);
+            sb.Append(" }");
+            return sb.ToString();
+
+            JsonWriterSettings CreateJsonWriterSettings()
             {
                 var jsonWriterSettings = new JsonWriterSettings();
 #pragma warning disable 618
@@ -193,11 +201,8 @@ namespace MongoDB.Driver.Encryption
                     jsonWriterSettings.GuidRepresentation = GuidRepresentation.Unspecified;
                 }
 #pragma warning restore 618
-                sb.AppendFormat("SchemaMap : {0}, ", _schemaMap.ToJson(jsonWriterSettings));
+                return jsonWriterSettings;
             }
-            sb.Remove(sb.Length - 2, 2);
-            sb.Append(" }");
-            return sb.ToString();
         }
 
         // private methods

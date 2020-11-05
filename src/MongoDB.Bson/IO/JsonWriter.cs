@@ -886,7 +886,7 @@ namespace MongoDB.Bson.IO
                 var message = string.Format("Length of binary subtype {0} must be 16, not {1}.", subType, bytes.Length);
                 throw new ArgumentException(message);
             }
-            if (guidRepresentation == GuidRepresentation.Unspecified && subType == BsonBinarySubType.UuidStandard)
+            if (subType == BsonBinarySubType.UuidStandard && guidRepresentation == GuidRepresentation.Unspecified)
             {
                 guidRepresentation = GuidRepresentation.Standard;
             }

@@ -84,7 +84,7 @@ namespace MongoDB.Bson.Serialization.Conventions
                     {
                         continue;
                     }
-                    if (!MatchesSomeCreatorArgument(classMap, property))
+                    if (!PropertyMatchesSomeCreatorParameter(classMap, property))
                     {
                         continue;
                     }
@@ -106,14 +106,25 @@ namespace MongoDB.Bson.Serialization.Conventions
             return propertyInfo.CanWrite && (propertyInfo.SetMethod?.IsPublic ?? false);
         }
 
-        private bool MatchesSomeCreatorArgument(BsonClassMap classMap, PropertyInfo propertyInfo)
+        private bool PropertyMatchesSomeCreatorParameter(BsonClassMap classMap, PropertyInfo propertyInfo)
         {
             foreach (var creatorMap in classMap.CreatorMaps)
             {
-                var constructorInfo = (ConstructorInfo)creatorMap.MemberInfo;
-                foreach (var argument in constructorInfo.GetParameters())
+                if (creatorMap.MemberInfo is ConstructorInfo constructorInfo)
                 {
-                    if (string.Equals(propertyInfo.Name, argument.Name, StringComparison.OrdinalIgnoreCase))
+                    if (PropertyMatchesSomeConstructorParameter(constructorInfo))
+                    {
+                        return true;
+                    }
+                }               
+            }
+
+            // also map properties that match some constructor parameter that might be called by a derived class
+            foreach (var constructorInfo in classMap.ClassType.GetTypeInfo().GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                if (classMap.ClassType.GetTypeInfo().IsAbstract || constructorInfo.IsFamily)
+                {
+                    if (PropertyMatchesSomeConstructorParameter(constructorInfo))
                     {
                         return true;
                     }
@@ -121,6 +132,19 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             return false;
+
+            bool PropertyMatchesSomeConstructorParameter(ConstructorInfo constructorInfo)
+            {
+                foreach (var parameter in constructorInfo.GetParameters())
+                {
+                    if (string.Equals(propertyInfo.Name, parameter.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
         }
     }
 }

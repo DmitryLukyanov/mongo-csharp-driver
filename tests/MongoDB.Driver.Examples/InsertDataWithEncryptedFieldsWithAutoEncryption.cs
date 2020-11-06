@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Examples
             // Query by SSN field with auto-encrypting client
             var result = collection.Find(ssnQuery).Single();
 
-            Console.WriteLine("Query by SSN (deterministically-encrypted field) using auto-encrypting client returned:\n" + result.ToJson());
+            Console.WriteLine($"Query by SSN (deterministically-encrypted field) using auto-encrypting client returned:\n {result}.");
 
             // Query by SSN field with a normal non-auto-encrypting client
             var nonAutoEncryptingClient = new MongoClient(__connectionString);
@@ -103,7 +103,7 @@ namespace MongoDB.Driver.Examples
                 throw new Exception("Expected the document to be found but none was found.");
             }
 
-            Console.WriteLine($"Query by name (non-encrypted field) using non-auto-encrypting client returned:\n" + result.ToJson());
+            Console.WriteLine($"Query by name (non-encrypted field) using non-auto-encrypting client returned:\n {result}.");
         }
 
         private IMongoClient CreateAutoEncryptingClient(

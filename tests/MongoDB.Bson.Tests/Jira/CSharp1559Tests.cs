@@ -30,6 +30,7 @@ namespace MongoDB.Bson.Tests.Jira
         [InlineData(typeof(DerivedWithoutSetter_BaseWithoutSetter), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
         [InlineData(typeof(DerivedWithoutSetter_BaseWithPrivateSetterAndWithProtectedConstructor), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
         [InlineData(typeof(DerivedWithoutSetterAndWithBsonElement_BaseWithoutSetterAndWithProtectedConstructor), new[] { 1, 2 }, "{ \"X\" : 1, \"y\" : 2 }")]
+        [InlineData(typeof(DerivedWithoutSetter_BaseWithoutSetterAndWithProtectedInternalConstructor), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
         [InlineData(typeof(DerivedWithoutSetterAndWithBsonElementAndWithPrivateConstructor_BaseWithoutSetter), new[] { 1, 2 }, "{ \"X\" : 1, \"y\" : 2 }")]
         [InlineData(typeof(DerivedWithoutSetterAndWithoutBsonElement_AbstractBaseWithoutSetterAndWithProtectedConstructor), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
         [InlineData(typeof(DerivedWithoutSetterAndWithoutBsonElement_AbstractBaseWithoutSetter), new[] { 1, 2 }, "{ \"X\" : 1, \"Y\" : 2 }")]
@@ -198,6 +199,16 @@ namespace MongoDB.Bson.Tests.Jira
             public int? X { get; }
         }
 
+        public class BaseWithoutSetterAndWithProtectedInternalConstructor
+        {
+            protected internal BaseWithoutSetterAndWithProtectedInternalConstructor(int? x)
+            {
+                X = x;
+            }
+
+            public int? X { get; }
+        }
+
         public class DerivedWithoutSetterAndWithBsonElement_BaseWithoutSetterAndWithProtectedConstructor : BaseWithoutSetterAndWithProtectedConstructor
         {
             public DerivedWithoutSetterAndWithBsonElement_BaseWithoutSetterAndWithProtectedConstructor(int? x, int y) : base(x)
@@ -206,6 +217,16 @@ namespace MongoDB.Bson.Tests.Jira
             }
 
             [BsonElement("y")]
+            public int Y { get; }
+        }
+
+        public class DerivedWithoutSetter_BaseWithoutSetterAndWithProtectedInternalConstructor : BaseWithoutSetterAndWithProtectedInternalConstructor
+        {
+            public DerivedWithoutSetter_BaseWithoutSetterAndWithProtectedInternalConstructor(int? x, int y) : base(x)
+            {
+                Y = y;
+            }
+
             public int Y { get; }
         }
 

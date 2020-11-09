@@ -25,6 +25,8 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// </summary>
     public class ImmutableTypeClassMapConvention : ConventionBase, IClassMapConvention
     {
+        private readonly BindingFlags _constructorBindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+
         /// <inheritdoc />
         public void Apply(BsonClassMap classMap)
         {
@@ -43,8 +45,7 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             var anyConstructorsWereFound = false;
-            var constructorBindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
-            foreach (var ctor in typeInfo.GetConstructors(constructorBindingFlags))
+            foreach (var ctor in typeInfo.GetConstructors(_constructorBindingFlags))
             {
                 if (ctor.IsPrivate)
                 {
@@ -116,13 +117,15 @@ namespace MongoDB.Bson.Serialization.Conventions
                     {
                         return true;
                     }
-                }               
+                }
             }
 
             // also map properties that match some constructor parameter that might be called by a derived class
-            foreach (var constructorInfo in classMap.ClassType.GetTypeInfo().GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            foreach (var constructorInfo in classMap.ClassType.GetTypeInfo().GetConstructors(_constructorBindingFlags))
             {
-                if (classMap.ClassType.GetTypeInfo().IsAbstract || constructorInfo.IsFamily)
+                if (classMap.ClassType.GetTypeInfo().IsAbstract || 
+                    constructorInfo.IsFamily || // protected
+                    constructorInfo.IsFamilyOrAssembly) // protected internal
                 {
                     if (PropertyMatchesSomeConstructorParameter(constructorInfo))
                     {

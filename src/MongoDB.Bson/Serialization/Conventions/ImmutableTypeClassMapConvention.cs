@@ -43,7 +43,7 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             var anyConstructorsWereFound = false;
-            var constructors = GetConstructors(typeInfo);
+            var constructors = GetSuitableConstructors(typeInfo);
             foreach (var ctor in constructors)
             {
                 if (ctor.IsPrivate)
@@ -106,7 +106,7 @@ namespace MongoDB.Bson.Serialization.Conventions
             return propertyInfo.CanWrite && (propertyInfo.SetMethod?.IsPublic ?? false);
         }
 
-        private ConstructorInfo[] GetConstructors(TypeInfo typeInfo)
+        private ConstructorInfo[] GetSuitableConstructors(TypeInfo typeInfo)
         {
             var constructorBindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
             return typeInfo.GetConstructors(constructorBindingFlags);
@@ -126,7 +126,7 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             // also map properties that match some constructor parameter that might be called by a derived class
-            var constructors = GetConstructors(classMap.ClassType.GetTypeInfo());
+            var constructors = GetSuitableConstructors(classMap.ClassType.GetTypeInfo());
             foreach (var constructorInfo in constructors)
             {
                 if (classMap.ClassType.GetTypeInfo().IsAbstract || 

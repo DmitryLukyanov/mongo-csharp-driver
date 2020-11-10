@@ -25,8 +25,6 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// </summary>
     public class ImmutableTypeClassMapConvention : ConventionBase, IClassMapConvention
     {
-        private readonly BindingFlags _constructorBindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
-
         /// <inheritdoc />
         public void Apply(BsonClassMap classMap)
         {
@@ -45,7 +43,8 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             var anyConstructorsWereFound = false;
-            foreach (var ctor in typeInfo.GetConstructors(_constructorBindingFlags))
+            var constructors = GetConstructors(typeInfo);
+            foreach (var ctor in constructors)
             {
                 if (ctor.IsPrivate)
                 {
@@ -107,6 +106,12 @@ namespace MongoDB.Bson.Serialization.Conventions
             return propertyInfo.CanWrite && (propertyInfo.SetMethod?.IsPublic ?? false);
         }
 
+        private ConstructorInfo[] GetConstructors(TypeInfo typeInfo)
+        {
+            var constructorBindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+            return typeInfo.GetConstructors(constructorBindingFlags);
+        }
+
         private bool PropertyMatchesSomeCreatorParameter(BsonClassMap classMap, PropertyInfo propertyInfo)
         {
             foreach (var creatorMap in classMap.CreatorMaps)
@@ -121,7 +126,8 @@ namespace MongoDB.Bson.Serialization.Conventions
             }
 
             // also map properties that match some constructor parameter that might be called by a derived class
-            foreach (var constructorInfo in classMap.ClassType.GetTypeInfo().GetConstructors(_constructorBindingFlags))
+            var constructors = GetConstructors(classMap.ClassType.GetTypeInfo());
+            foreach (var constructorInfo in constructors)
             {
                 if (classMap.ClassType.GetTypeInfo().IsAbstract || 
                     constructorInfo.IsFamily || // protected

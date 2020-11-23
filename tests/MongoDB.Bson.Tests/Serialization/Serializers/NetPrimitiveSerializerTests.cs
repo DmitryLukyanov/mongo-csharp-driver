@@ -1117,6 +1117,7 @@ namespace MongoDB.Bson.Tests.Serialization
             public float S;
         }
 
+#if !NETCOREAPP3_0
         [Fact]
         public void TestMin()
         {
@@ -1138,6 +1139,7 @@ namespace MongoDB.Bson.Tests.Serialization
             var rehydrated = BsonSerializer.Deserialize<TestClass>(bson);
             Assert.True(bson.SequenceEqual(rehydrated.ToBson()));
         }
+#endif
 
         [Fact]
         public void TestMinusOne()
@@ -1215,6 +1217,7 @@ namespace MongoDB.Bson.Tests.Serialization
             Assert.True(bson.SequenceEqual(rehydrated.ToBson()));
         }
 
+#if !NETCOREAPP3_0
         [Fact]
         public void TestMax()
         {
@@ -1236,6 +1239,7 @@ namespace MongoDB.Bson.Tests.Serialization
             var rehydrated = BsonSerializer.Deserialize<TestClass>(bson);
             Assert.True(bson.SequenceEqual(rehydrated.ToBson()));
         }
+#endif
 
         [Fact]
         public void TestNaN()

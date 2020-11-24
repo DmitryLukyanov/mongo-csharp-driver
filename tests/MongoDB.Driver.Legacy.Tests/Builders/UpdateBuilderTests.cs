@@ -839,7 +839,7 @@ namespace MongoDB.Driver.Tests.Builders
         }
 
         // tests fail on .NET Core 2.1 and higher frameworks with out of order key-value-pairs
-#if NET452 && NETCOREAPP1_1
+#if NET452 || NETCOREAPP1_1
         [Fact]
         public void TestReplace()
         {

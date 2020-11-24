@@ -58,6 +58,7 @@ namespace MongoDB.Driver.Tests.Specifications.transactions
         private string _databaseName = "transaction-tests";
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
+        // public properties
         public ICluster FailPointCluster
         {
             get

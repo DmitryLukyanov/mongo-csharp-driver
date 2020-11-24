@@ -44,21 +44,21 @@ namespace MongoDB.Driver.Tests.JsonDrivenTests
             return await TestRunner.FailPointCluster.SelectServerAsync(pinnedServerSelector, CancellationToken.None).ConfigureAwait(false);
         }
 
-        // private methods
+        // private methods 
+        private IServerSelector CreateServerSelector(EndPoint endpoint)
+        {
+            return new CompositeServerSelector(new IServerSelector[]
+            {
+                WritableServerSelector.Instance,
+                new EndPointServerSelector(endpoint)
+            });
+        }
+
         private EndPoint GetPinnedServerEndpointAndAssertNotNull()
         {
             var pinnedServerEndpoint = GetPinnedServerEndpoint();
             pinnedServerEndpoint.Should().NotBeNull();
             return pinnedServerEndpoint;
-        }
-
-        private IServerSelector CreateServerSelector(EndPoint endpoint)
-        {
-            return new CompositeServerSelector(new[]
-            {
-                (IServerSelector)WritableServerSelector.Instance,
-                new EndPointServerSelector(endpoint)
-            });
         }
     }
 }

@@ -70,7 +70,9 @@ namespace MongoDB.Driver.Tests.Jira
                     var exception = Record.Exception(() => collection.AggregateAsync(pipeline).GetAwaiter().GetResult());
 
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
+#pragma warning disable CS0618 // Type or member is obsolete
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeFalse();
+#pragma warning restore CS0618 // Type or member is obsolete
                     mongoConnectionException.ContainsTimeoutException.Should().BeTrue();
                     mongoConnectionException
                         .InnerException.Should().BeOfType<TimeoutException>().Subject
@@ -81,7 +83,9 @@ namespace MongoDB.Driver.Tests.Jira
                     var exception = Record.Exception(() => collection.Aggregate(pipeline));
 
                     var mongoConnectionException = exception.Should().BeOfType<MongoConnectionException>().Subject;
+#pragma warning disable CS0618 // Type or member is obsolete
                     mongoConnectionException.ContainsSocketTimeoutException.Should().BeTrue();
+#pragma warning restore CS0618 // Type or member is obsolete
                     mongoConnectionException.ContainsTimeoutException.Should().BeTrue();
                     var socketException = mongoConnectionException
                         .InnerException.Should().BeOfType<IOException>().Subject

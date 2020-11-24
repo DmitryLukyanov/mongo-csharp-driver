@@ -82,6 +82,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Whether or not this exception contains a socket timeout exception.
         /// </summary>
+        [Obsolete("Use ContainsTimeoutException instead.")]
         public bool ContainsSocketTimeoutException
         {
             get

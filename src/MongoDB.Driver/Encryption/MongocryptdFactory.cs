@@ -21,6 +21,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Shared;
 
 namespace MongoDB.Driver.Encryption
 {
@@ -118,9 +119,9 @@ namespace MongoDB.Driver.Encryption
                     path = string.Empty; // look at the PATH env variable
                 }
 
-                if (!Path.HasExtension(path))
+                if (Directory.Exists(path))
                 {
-                    string fileName = "mongocryptd.exe";
+                    string fileName = "mongocryptd";
                     path = Path.Combine(path, fileName);
                 }
 
@@ -151,8 +152,19 @@ namespace MongoDB.Driver.Encryption
 
                 if (!args.Contains("logpath")) // disable logging by the mongocryptd process
                 {
-                    // "nul" is the windows specific value. Unix-based platforms should use "/dev/null"
-                    args += " --logpath nul";
+                    switch (OperatingSystemHelper.CurrentOperatingSystem)
+                    {
+                        case OperatingSystemPlatform.Windows:
+                            // "nul" is the windows specific value.
+                            args += " --logpath nul";
+                            break;
+                        case OperatingSystemPlatform.Linux:
+                        case OperatingSystemPlatform.MacOS:
+                        default:
+                            // Unix - based platforms should use "/dev/null"
+                            args += " --logpath /dev/null";
+                            break;
+                    }
 
                     if (!args.Contains("logappend"))
                     {

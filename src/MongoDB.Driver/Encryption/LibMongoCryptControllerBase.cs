@@ -245,6 +245,7 @@ namespace MongoDB.Driver.Encryption
                     request.Feed(responseBytes);
                 }
             }
+            socket.Dispose();
         }
 
         private async Task SendKmsRequestAsync(KmsRequest request, CancellationToken cancellation)
@@ -271,6 +272,7 @@ namespace MongoDB.Driver.Encryption
                     request.Feed(responseBytes);
                 }
             }
+            socket.Dispose();
         }
 
         // nested type

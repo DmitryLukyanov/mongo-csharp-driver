@@ -157,9 +157,11 @@ namespace MongoDB.Driver.Encryption
             return keyVaultDatabase.GetCollection<BsonDocument>(_keyVaultNamespace.CollectionName, collectionSettings);
         }
 
-        private void ParseKmsEndPoint(string value, out string host, out int port)
+        private void ParseKmsEndPoint(string value, out DnsEndPoint dnsEndPoint)
         {
             var match = Regex.Match(value, @"^(?<host>.*):(?<port>\d+)$");
+            string host;
+            int port;
             if (match.Success)
             {
                 host = match.Groups["host"].Value;
@@ -170,6 +172,7 @@ namespace MongoDB.Driver.Encryption
                 host = value;
                 port = 443;
             }
+            dnsEndPoint = new DnsEndPoint(host, port);
         }
 
         private void ProcessNeedKmsState(CryptContext context, CancellationToken cancellationToken)
@@ -219,18 +222,19 @@ namespace MongoDB.Driver.Encryption
 
         private void SendKmsRequest(KmsRequest request, CancellationToken cancellation)
         {
-            ParseKmsEndPoint(request.Endpoint, out var host, out var port);
+            ParseKmsEndPoint(request.Endpoint, out var dnsEndpoint);
 
-            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            SocketHelper.ResolvedAndConnect(socket, new DnsEndPoint(host, port));
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp); // will be disposed via NetworkStream
+            var socketWrapper = new SocketWrapper(socket);
+            socketWrapper.Connect(dnsEndpoint);
 
-            using (var networkStream = new NetworkStream(socket, ownsSocket: true))
+            using (var networkStream = socketWrapper.CreateNetworkStream())
             using (var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false))
             {
 #if NETSTANDARD1_5
-                sslStream.AuthenticateAsClientAsync(host).ConfigureAwait(false).GetAwaiter().GetResult();
+                sslStream.AuthenticateAsClientAsync(dnsEndpoint.Host).ConfigureAwait(false).GetAwaiter().GetResult();
 #else
-                sslStream.AuthenticateAsClient(host);
+                sslStream.AuthenticateAsClient(dnsEndpoint.Host);
 #endif
 
                 var requestBytes = request.Message.ToArray();
@@ -245,20 +249,20 @@ namespace MongoDB.Driver.Encryption
                     request.Feed(responseBytes);
                 }
             }
-            socket.Dispose();
         }
 
         private async Task SendKmsRequestAsync(KmsRequest request, CancellationToken cancellation)
         {
-            ParseKmsEndPoint(request.Endpoint, out var host, out var port);
+            ParseKmsEndPoint(request.Endpoint, out var dnsEndpoint);
 
-            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            await SocketHelper.ResolveAndConnectAsync(socket, new DnsEndPoint(host, port)).ConfigureAwait(false);
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp); // will be disposed via NetworkStream
+            var socketWrapper = new SocketWrapper(socket);
+            await socketWrapper.ConnectAsync(dnsEndpoint).ConfigureAwait(false);
 
-            using (var networkStream = new NetworkStream(socket, ownsSocket: true))
+            using (var networkStream = socketWrapper.CreateNetworkStream())
             using (var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false))
             {
-                await sslStream.AuthenticateAsClientAsync(host).ConfigureAwait(false);
+                await sslStream.AuthenticateAsClientAsync(dnsEndpoint.Host).ConfigureAwait(false);
 
                 var requestBytes = request.Message.ToArray();
                 await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length).ConfigureAwait(false);
@@ -272,21 +276,27 @@ namespace MongoDB.Driver.Encryption
                     request.Feed(responseBytes);
                 }
             }
-            socket.Dispose();
         }
 
         // nested type
-        private static class SocketHelper
+        private class SocketWrapper
         {
-            public static void ResolvedAndConnect(Socket socket, EndPoint endPoint)
+            private readonly Socket _socket;
+
+            public SocketWrapper(Socket socket)
+            {
+                _socket = socket;
+            }
+
+            public void Connect(DnsEndPoint dnsEndpoint)
             {
 #if NETSTANDARD1_5
-                var resolved = ResolveEndPointsAsync(endPoint).GetAwaiter().GetResult();
+                var resolved = ResolveEndPointsAsync(dnsEndpoint).GetAwaiter().GetResult();
                 for (int i = 0; i < resolved.Length; i++)
                 {
                     try
                     {
-                        Connect(socket, resolved[i]);
+                        Connect(_socket, resolved[i]);
                         return;
                     }
                     catch
@@ -300,19 +310,19 @@ namespace MongoDB.Driver.Encryption
                     }
                 }
 #else
-                Connect(socket, endPoint);
+                Connect(_socket, dnsEndpoint);
 #endif
             }
 
-            public static async Task ResolveAndConnectAsync(Socket socket, EndPoint endPoint)
+            public async Task ConnectAsync(DnsEndPoint dnsEndpoint)
             {
 #if NETSTANDARD1_5
-                var resolved = await ResolveEndPointsAsync(endPoint).ConfigureAwait(false);
+                var resolved = await ResolveEndPointsAsync(dnsEndpoint).ConfigureAwait(false);
                 for (int i = 0; i < resolved.Length; i++)
                 {
                     try
                     {
-                        await ConnectAsync(socket, resolved[i]).ConfigureAwait(false);
+                        await ConnectAsync(_socket, resolved[i]).ConfigureAwait(false);
                         return;
                     }
                     catch
@@ -326,27 +336,34 @@ namespace MongoDB.Driver.Encryption
                     }
                 }
 #else
-                await ConnectAsync(socket, endPoint).ConfigureAwait(false);
+                await ConnectAsync(_socket, dnsEndpoint).ConfigureAwait(false);
 #endif
+            }
+
+            public NetworkStream CreateNetworkStream()
+            {
+                return new NetworkStream(_socket, ownsSocket: true);
             }
 
             // private methods
-            private static void Connect(Socket socket, EndPoint endPoint)
+            private void Connect(Socket socket, EndPoint endPoint)
             {
-                var dnsEndPoint = endPoint as DnsEndPoint;
-                if (dnsEndPoint != null)
+                switch (endPoint)
                 {
-                    // mono doesn't support DnsEndPoint in its BeginConnect method.
-                    socket.Connect(dnsEndPoint.Host, dnsEndPoint.Port);
-                }
-                else
-                {
-                    var ip = (IPEndPoint)endPoint;
-                    socket.Connect(ip.Address, ip.Port);
+                    case DnsEndPoint dnsEndPoint:
+                        // mono doesn't support DnsEndPoint in its BeginConnect method.
+                        socket.Connect(dnsEndPoint.Host, dnsEndPoint.Port);
+                        break;
+                    case IPEndPoint ipEndPoint:
+                        socket.Connect(ipEndPoint.Address, ipEndPoint.Port);
+                        break;
+                    default:
+                        socket.Connect(endPoint); // should not be reached
+                        break;
                 }
             }
 
-            private static async Task ConnectAsync(Socket socket, EndPoint endPoint)
+            private async Task ConnectAsync(Socket socket, EndPoint endPoint)
             {
                 var dnsEndPoint = endPoint as DnsEndPoint;
 #if NET452
@@ -364,7 +381,7 @@ namespace MongoDB.Driver.Encryption
 #endif
             }
 
-            private static async Task<EndPoint[]> ResolveEndPointsAsync(EndPoint initial)
+            private async Task<EndPoint[]> ResolveEndPointsAsync(EndPoint initial)
             {
                 var dnsInitial = initial as DnsEndPoint;
                 if (dnsInitial == null)
@@ -372,8 +389,7 @@ namespace MongoDB.Driver.Encryption
                     return new[] { initial };
                 }
 
-                IPAddress address;
-                if (IPAddress.TryParse(dnsInitial.Host, out address))
+                if (IPAddress.TryParse(dnsInitial.Host, out var address))
                 {
                     return new[] { new IPEndPoint(address, dnsInitial.Port) };
                 }

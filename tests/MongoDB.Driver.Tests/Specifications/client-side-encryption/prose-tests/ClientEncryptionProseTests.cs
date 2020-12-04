@@ -77,7 +77,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
@@ -245,7 +245,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
@@ -280,7 +280,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
@@ -313,6 +313,11 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequirePlatform
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                // it's required only for gcp, but the test design doesn't allow skipping only required steps
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21);
 
             var corpusSchema = JsonFileReader.Instance.Documents["corpus.corpus-schema.json"];
             var schemaMap = useLocalSchema ? new BsonDocument("db.coll", corpusSchema) : null;
@@ -347,11 +352,6 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     var kms = corpusValue["kms"].AsString;
                     var abbreviatedAlgorithmName = corpusValue["algo"].AsString;
                     var identifier = corpusValue["identifier"].AsString;
-
-                    RequireClient
-                        .Create()
-                        .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                        .SkipWhen(() => identifier == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21);
 
                     var allowed = corpusValue["allowed"].ToBoolean();
                     var value = corpusValue["value"];
@@ -493,7 +493,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
                 .SkipWhen(() => kmsProvider == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
@@ -580,7 +580,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             string expectedExceptionInfoForInvalidEncryption)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
                 .SkipWhen(() => kmsType == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
@@ -720,7 +720,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
@@ -764,7 +764,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public void ViewAreProhibitedTest([Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
-            RequireClient
+            RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
@@ -787,6 +787,93 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                         async,
                         documents: new BsonDocument("test", 1)));
                 exception.Message.Should().Be("Encryption related exception: cannot auto encrypt a view.");
+            }
+        }
+
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void UnsupportedPlatformsTests(
+            [Values("local", "aws", "azure", "gcp")] string kmsProvider,
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ClientSideEncryption);
+
+            using (var clientEncrypted = ConfigureClientEncrypted())
+            using (var clientEncryption = ConfigureClientEncryption(clientEncrypted.Wrapped as MongoClient))
+            {
+                Guid? dataKeyId = null;
+                var dataKeyOptions = CreateDataKeyOptions(kmsProvider);
+                var exception = Record.Exception(() => dataKeyId = CreateDataKey(clientEncryption, kmsProvider, dataKeyOptions, async));
+                if (kmsProvider == "azure") // azure doesn't call hooks for CreateDataKey
+                {
+                    exception.Should().BeNull();
+                    dataKeyId.Should().HaveValue(); // CreateDataKey was successfully called
+
+                    var encryptOptions = new EncryptOptions(
+                            EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+                            keyId: dataKeyId);
+                    exception = Record.Exception(() => ExplicitEncrypt(
+                        clientEncryption,
+                        encryptOptions,
+                        $"hello {kmsProvider}",
+                        async));
+                }
+                AsserResult(exception);
+            }
+
+            void AsserResult(Exception ex)
+            {
+                var isLinux = RequirePlatform.GetCurrentOperatingSystem() == SupportedOperatingSystem.Linux;
+
+                switch (kmsProvider)
+                {
+                    case "local" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                        {
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
+                            errorMessage.Should().Be($"Cryptography.RijndaelManaged is not supported on .netstandard1.5.");
+                        }
+                        break;
+                    case "aws" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                        {
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
+                            errorMessage.Should().Be("failed to create KMS message");
+                        }
+                        break;
+                    case "azure" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                        {
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
+                            errorMessage.Should().Be("HMACSHA.TransformFinalBlock is not supported on .netstandard1.5.");
+                        }
+                        break;
+                    case "gcp" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11, SupportedTargetFramework.NetCoreApp21):
+                        {
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
+                            errorMessage.Should().Be("error constructing KMS message: Failed to create GCP oauth request signature");
+                        }
+                        break;
+                    default:
+                        ex.Should().BeNull(); // the rest of cases should not throw
+                        break;
+                }
+            }
+
+            string AssertExceptionTypesAndReturnErrorMessage(Exception ex)
+            {
+                var e = ex.Should().BeOfType<MongoEncryptionException>().Subject;
+                return e.InnerException.Should().BeOfType<CryptException>().Subject.Message;
+            }
+
+            bool ContainsCurrentTargetFramework(params SupportedTargetFramework[] supportedTargetFrameworks)
+            {
+                var currentTargetFramework = RequirePlatform.GetCurrentTargetFramework();
+                foreach (var supportedTargetFramework in supportedTargetFrameworks)
+                {
+                    if (currentTargetFramework == supportedTargetFramework)
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 

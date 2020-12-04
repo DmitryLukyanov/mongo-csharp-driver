@@ -34,35 +34,12 @@ namespace MongoDB.Driver.TestHelpers
         MacOS
     }
 
-    public class RequireClient
+    public class RequirePlatform
     {
         #region static
-        public static RequireClient Create() => new RequireClient();
-        #endregion
+        public static RequirePlatform Create() => new RequirePlatform();
 
-        public RequireClient SkipWhen(SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
-        {
-            var currentOperatingSystem = GetCurrentOperatingSystem();
-            var currentTargetFramework = GetCurrentTargetFramework();
-            if (operatingSystem == currentOperatingSystem && targetFrameworks.Contains(currentTargetFramework))
-            {
-                throw new SkipException($"Test skipped because it's not supported on {currentOperatingSystem} with {currentTargetFramework}.");
-            }
-
-            return this;
-        }
-
-        public RequireClient SkipWhen(Func<bool> condition, SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
-        {
-            if (condition())
-            {
-                SkipWhen(operatingSystem, targetFrameworks);
-            }
-
-            return this;
-        }
-
-        private SupportedOperatingSystem GetCurrentOperatingSystem()
+        public static SupportedOperatingSystem GetCurrentOperatingSystem()
         {
 #if WINDOWS
             return SupportedOperatingSystem.Windows;
@@ -78,13 +55,13 @@ namespace MongoDB.Driver.TestHelpers
         }
 
 
-        private SupportedTargetFramework GetCurrentTargetFramework()
+        public static SupportedTargetFramework GetCurrentTargetFramework()
         {
 #if NET452
             return SupportedTargetFramework.Net452;
 #endif
 #if NETSTANDARD1_5
-                    return SupportedTargetFramework.NetCoreApp11;
+            return SupportedTargetFramework.NetCoreApp11;
 #endif
 #if NETSTANDARD2_0
             return SupportedTargetFramework.NetCoreApp21;
@@ -94,6 +71,29 @@ namespace MongoDB.Driver.TestHelpers
 #endif
 
             throw new InvalidOperationException($"Unable to determine current target framework.");
+        }
+        #endregion
+
+        public RequirePlatform SkipWhen(SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
+        {
+            var currentOperatingSystem = GetCurrentOperatingSystem();
+            var currentTargetFramework = GetCurrentTargetFramework();
+            if (operatingSystem == currentOperatingSystem && (targetFrameworks == null || targetFrameworks.Contains(currentTargetFramework)))
+            {
+                throw new SkipException($"Test skipped because it's not supported on {currentOperatingSystem} with {currentTargetFramework}.");
+            }
+
+            return this;
+        }
+
+        public RequirePlatform SkipWhen(Func<bool> condition, SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
+        {
+            if (condition())
+            {
+                SkipWhen(operatingSystem, targetFrameworks);
+            }
+
+            return this;
         }
     }
 }

@@ -351,7 +351,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     RequireClient
                         .Create()
                         .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                        .SkipWhen(SupportedOperatingSystem.Linux, () => identifier == "gcp", SupportedTargetFramework.NetCoreApp21);
+                        .SkipWhen(() => identifier == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21);
 
                     var allowed = corpusValue["allowed"].ToBoolean();
                     var value = corpusValue["value"];
@@ -496,7 +496,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireClient
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                .SkipWhen(SupportedOperatingSystem.Linux, () => kmsProvider == "gcp", SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+                .SkipWhen(() => kmsProvider == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncrypted = ConfigureClientEncrypted(BsonDocument.Parse(SchemaMap)))
@@ -583,7 +583,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireClient
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                .SkipWhen(SupportedOperatingSystem.Linux, () => kmsType == "gcp", SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+                .SkipWhen(() => kmsType == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, ValidKmsEndpointConfigurator))

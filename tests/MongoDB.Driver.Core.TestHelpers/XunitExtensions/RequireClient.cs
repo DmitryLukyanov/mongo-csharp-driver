@@ -14,7 +14,7 @@
 */
 
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace MongoDB.Driver.TestHelpers
@@ -42,79 +42,58 @@ namespace MongoDB.Driver.TestHelpers
 
         public RequireClient SkipWhen(SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
         {
-            return SkipWhen(operatingSystem, () => true, targetFrameworks);
-        }
-
-        public RequireClient SkipWhen(SupportedOperatingSystem operatingSystem, Func<bool> condition, params SupportedTargetFramework[] targetFrameworks)
-        {
-            if (condition() && IsTheSameAsCurrentOperatingSystem(operatingSystem))
+            var currentOperatingSystem = GetCurrentOperatingSystem();
+            var currentTargetFramework = GetCurrentTargetFramework();
+            if (operatingSystem == currentOperatingSystem && targetFrameworks.Contains(currentTargetFramework))
             {
-                foreach (var targetFramework in targetFrameworks)
-                {
-                    if (IsTheSameAsCurrentTargetFramework(targetFramework))
-                    {
-                        throw new SkipException($"Test skipped because it's not supported on {targetFrameworks} with {targetFramework}.");
-                    }
-                }
+                throw new SkipException($"Test skipped because it's not supported on {currentOperatingSystem} with {currentTargetFramework}.");
             }
+
             return this;
         }
 
-        private bool IsTheSameAsCurrentOperatingSystem(SupportedOperatingSystem operatingSystemPlatform)
+        public RequireClient SkipWhen(Func<bool> condition, SupportedOperatingSystem operatingSystem, params SupportedTargetFramework[] targetFrameworks)
         {
-            var result = false;
-            switch (operatingSystemPlatform)
+            if (condition())
             {
-                case SupportedOperatingSystem.Windows:
-#if WINDOWS
-                    result = true;
-#endif
-                    break;
-                case SupportedOperatingSystem.Linux:
-#if LINUX
-                    result = true;
-#endif
-                    break;
-                case SupportedOperatingSystem.MacOS:
-#if MACOS
-                    result = true;
-#endif
-                    break;
-                default:
-                    throw new Exception($"Unsupported {nameof(operatingSystemPlatform)} {operatingSystemPlatform}.");
+                SkipWhen(operatingSystem, targetFrameworks);
             }
-            return result;
+
+            return this;
         }
 
-        private bool IsTheSameAsCurrentTargetFramework(SupportedTargetFramework targetFramework)
+        private SupportedOperatingSystem GetCurrentOperatingSystem()
         {
-            var result = false;
-            switch (targetFramework)
-            {
-                case SupportedTargetFramework.Net452:
+#if WINDOWS
+            return SupportedOperatingSystem.Windows;
+#endif
+#if LINUX
+            return SupportedOperatingSystem.Linux;
+#endif
+#if MACOS
+            return case SupportedOperatingSystem.MacOS.
+#endif
+
+            throw new InvalidOperationException($"Unable to determine current operating system.");
+        }
+
+
+        private SupportedTargetFramework GetCurrentTargetFramework()
+        {
 #if NET452
-                    result = true;
+            return SupportedTargetFramework.Net452;
 #endif
-                    break;
-                case SupportedTargetFramework.NetCoreApp11:
 #if NETSTANDARD1_5
-                    result = true;
+                    return SupportedTargetFramework.NetCoreApp11;
 #endif
-                    break;
-                case SupportedTargetFramework.NetCoreApp21:
 #if NETSTANDARD2_0
-                    result = true;
+            return SupportedTargetFramework.NetCoreApp21;
 #endif
-                    break;
-                case SupportedTargetFramework.NetCoreApp30:
 #if NETSTANDARD2_1
-                    result = true;
+            return SupportedTargetFramework.NetCoreApp30;
 #endif
-                    break;
-                default:
-                    throw new Exception($"Unsupported {nameof(targetFramework)} {targetFramework}.");
-            }
-            return result;
+
+            throw new InvalidOperationException($"Unable to determine current target framework.");
         }
     }
 }

@@ -41,7 +41,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
             RequireClient
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                .SkipWhen(SupportedOperatingSystem.Linux, () => testCase.Name.Contains("gcpKMS.json"), SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+                .SkipWhen(() => testCase.Name.Contains("gcpKMS.json"), SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             SetupAndRunTest(testCase);
         }

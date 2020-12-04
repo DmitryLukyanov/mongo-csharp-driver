@@ -22,6 +22,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Encryption;
+using MongoDB.Driver.TestHelpers;
 using MongoDB.Driver.Tests.Specifications.Runner;
 using Xunit;
 
@@ -37,6 +38,11 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption
         [ClassData(typeof(TestCaseFactory))]
         public void Run(JsonDrivenTestCase testCase)
         {
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.Linux, () => testCase.Name.Contains("gcpKMS.json"), SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+
             SetupAndRunTest(testCase);
         }
 

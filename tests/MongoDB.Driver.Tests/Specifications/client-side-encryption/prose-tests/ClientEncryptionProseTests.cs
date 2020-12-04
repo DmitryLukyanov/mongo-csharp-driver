@@ -77,6 +77,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
             var eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => e.CommandName == "insert");
             using (var client = ConfigureClient())
@@ -242,6 +245,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
             var extraOptions = new Dictionary<string, object>
             {
@@ -274,6 +280,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
             var extraOptions = new Dictionary<string, object>
             {
@@ -338,6 +347,12 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                     var kms = corpusValue["kms"].AsString;
                     var abbreviatedAlgorithmName = corpusValue["algo"].AsString;
                     var identifier = corpusValue["identifier"].AsString;
+
+                    RequireClient
+                        .Create()
+                        .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                        .SkipWhen(SupportedOperatingSystem.Linux, () => identifier == "gcp", SupportedTargetFramework.NetCoreApp21);
+
                     var allowed = corpusValue["allowed"].ToBoolean();
                     var value = corpusValue["value"];
                     var method = corpusValue["method"].AsString;
@@ -478,6 +493,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.Linux, () => kmsProvider == "gcp", SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncrypted = ConfigureClientEncrypted(BsonDocument.Parse(SchemaMap)))
@@ -561,6 +580,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             string expectedExceptionInfoForInvalidEncryption)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.Linux, () => kmsType == "gcp", SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, ValidKmsEndpointConfigurator))
@@ -697,6 +720,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             [Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
             var clientEncryptedSchema = new BsonDocument("db.coll", JsonFileReader.Instance.Documents["external.external-schema.json"]);
             using (var client = ConfigureClient())
@@ -738,6 +764,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
         public void ViewAreProhibitedTest([Values(false, true)] bool async)
         {
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequireClient
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
 
             var viewName = CollectionNamespace.FromFullName("db.view");
             using (var client = ConfigureClient(false))

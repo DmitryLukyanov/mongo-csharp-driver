@@ -790,6 +790,101 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             }
         }
 
+        [SkippableTheory]
+        [ParameterAttributeData]
+        public void ValidateBehaviorOnUnsupportedPlatforms(
+            [Values("local", "aws", "azure", "gcp")] string kmsProvider,
+            [Values(false, true)] bool async)
+        {
+            RequireServer.Check().Supports(Feature.ClientSideEncryption);
+            RequirePlatform
+                .Create()
+                .SkipWhen(SupportedOperatingSystem.Windows)
+                .SkipWhen(() => kmsProvider != "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21)
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp30);
+
+            using (var clientEncrypted = ConfigureClientEncrypted(bypassAutoEncryption: false)) // configure auto encryption
+            {
+                var collection = GetCollection(clientEncrypted, __collCollectionNamespace);
+                collection.InsertOne(new BsonDocument());
+            }
+            //using (var clientEncryption = ConfigureClientEncryption(clientEncrypted.Wrapped as MongoClient))
+            //{
+            //    var dataKeyOptions = CreateDataKeyOptions(kmsProvider);
+            //    var exception = Record.Exception(() => CreateDataKey(clientEncryption, kmsProvider, dataKeyOptions, async));
+            //    if (kmsProvider != "local") // local kms provider doesn't call encryption hooks here
+            //    {
+            //        var innerException = exception
+            //            .Should().BeOfType<MongoEncryptionException>().Subject.InnerException
+            //            .Should().BeOfType<CryptException>().Subject;
+            //        innerException.Message.Should().Be($"error constructing KMS message: Failed to create {kmsProvider.ToUpper()} oauth request signature");
+            //    }
+
+            //    var keyId = Guid.NewGuid();
+
+            //    var encryptOptions = new EncryptOptions(
+            //        EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+            //        keyId: Guid.NewGuid());
+
+            //    exception = Record.Exception(() => ExplicitEncrypt(
+            //        clientEncryption,
+            //        encryptOptions,
+            //        $"hello {kmsProvider}",
+            //        async));
+
+            //    //var keyVaultCollection = GetCollection(client, __keyVaultCollectionNamespace);
+            //    //var keyVaultDocument =
+            //    //    Find(
+            //    //        keyVaultCollection,
+            //    //        new BsonDocument("_id", new BsonBinaryData(dataKey, GuidRepresentation.Standard)),
+            //    //        async)
+            //    //    .Single();
+            //    //keyVaultDocument["masterKey"]["provider"].Should().Be(BsonValue.Create(kmsProvider));
+
+            //    //var encryptOptions = new EncryptOptions(
+            //    //    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+            //    //    keyId: dataKey);
+
+            //    //var encryptedValue = ExplicitEncrypt(
+            //    //    clientEncryption,
+            //    //    encryptOptions,
+            //    //    $"hello {kmsProvider}",
+            //    //    async);
+            //    //encryptedValue.SubType.Should().Be(BsonBinarySubType.Encrypted);
+
+            //    //var coll = GetCollection(clientEncrypted, __collCollectionNamespace);
+            //    //Insert(
+            //    //    coll,
+            //    //    async,
+            //    //    new BsonDocument
+            //    //    {
+            //    //        {"_id", kmsProvider},
+            //    //        {"value", encryptedValue}
+            //    //    });
+
+            //    //var findResult = Find(coll, new BsonDocument("_id", kmsProvider), async).Single();
+            //    //findResult["value"].ToString().Should().Be($"hello {kmsProvider}");
+
+            //    //encryptOptions = new EncryptOptions(
+            //    //    EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
+            //    //    alternateKeyName: $"{kmsProvider}_altname");
+            //    //var encryptedValueWithAlternateKeyName = ExplicitEncrypt(
+            //    //    clientEncryption,
+            //    //    encryptOptions,
+            //    //    $"hello {kmsProvider}",
+            //    //    async);
+            //    //encryptedValueWithAlternateKeyName.SubType.Should().Be(BsonBinarySubType.Encrypted);
+            //    //encryptedValueWithAlternateKeyName.Should().Be(encryptedValue);
+
+            //    //if (kmsProvider == "local") // the test description expects this assert only once for a local kms provider
+            //    //{
+            //    //    coll = GetCollection(clientEncrypted, __collCollectionNamespace);
+            //    //    var exception = Record.Exception(() => Insert(coll, async, new BsonDocument("encrypted_placeholder", encryptedValue)));
+            //    //    exception.Should().BeOfType<MongoEncryptionException>();
+            //    //}
+            //}
+        }
+
         // private methods
         private DisposableMongoClient ConfigureClient(bool clearCollections = true)
         {

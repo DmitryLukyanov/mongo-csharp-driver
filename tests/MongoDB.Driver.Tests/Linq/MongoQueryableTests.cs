@@ -132,6 +132,17 @@ namespace Tests.MongoDB.Driver.Linq
         }
 
         [Fact]
+        public void GroupBy_with_document_in_key()
+        {
+            var query = CreateQuery().GroupBy(x => x);
+
+            Assert(
+                query,
+                2,
+                "{ $group : { '_id' : '$$ROOT' } }");
+        }
+
+        [Fact]
         public void Count()
         {
             var result = CreateQuery().Count();
@@ -904,6 +915,17 @@ namespace Tests.MongoDB.Driver.Linq
             Assert(query,
                 2,
                 "{ $project: { Id: '$_id', A: '$A', _id: 0} }");
+        }
+
+        [Fact]
+        public void Select_for_document()
+        {
+            var query = CreateQuery().Select(x => new { Result = x } );
+
+            Assert(
+                query,
+                2,
+                "{ $project : { Result : '$$ROOT', _id : 0 } }");
         }
 
         [Fact]

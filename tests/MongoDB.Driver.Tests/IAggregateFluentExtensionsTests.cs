@@ -175,6 +175,17 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
+        public void Group_with_document_in_key_should_generate_the_correct_document_using_expressions()
+        {
+            var subject = CreateSubject()
+                .Group(x => x, g => new { Name = g.Select(x => x + " " + x.LastName).First() });
+
+            var expectedGroup = BsonDocument.Parse("{ $group : { _id : '$$ROOT', Name: { '$first' : { '$concat' : [ '$FirstName', ' ', '$LastName' ] } } } }");
+
+            AssertLast(subject, expectedGroup);
+        }
+
+        [Fact]
         public void Lookup_should_generate_the_correct_group_when_using_BsonDocument()
         {
             var subject = CreateSubject()
@@ -267,12 +278,32 @@ namespace MongoDB.Driver.Tests
         }
 
         [Fact]
+        public void Project_with_document_should_generate_the_correct_document_using_expressions()
+        {
+            var subject = CreateSubject().Project(x => new { Name = x });
+
+            var expectedProject = BsonDocument.Parse("{ $project : { Name : '$$ROOT' , _id : 0 } }");
+
+            AssertLast(subject, expectedProject);
+        }
+
+        [Fact]
         public void ReplaceRoot_should_generate_the_correct_stage()
         {
             var subject = CreateSubject()
                 .ReplaceRoot(x => x.PhoneNumber);
 
             var expectedStage = BsonDocument.Parse("{ $replaceRoot : { newRoot:  '$PhoneNumber' } }");
+
+            AssertLast(subject, expectedStage);
+        }
+
+        [Fact]
+        public void ReplaceRoot_for_document_should_generate_the_correct_stage()
+        {
+            var subject = CreateSubject().ReplaceRoot(x => x);
+
+            var expectedStage = BsonDocument.Parse("{ $replaceRoot : { newRoot :  '$$ROOT' } }");
 
             AssertLast(subject, expectedStage);
         }
@@ -295,6 +326,16 @@ namespace MongoDB.Driver.Tests
                 .ReplaceWith(x => x.PhoneNumber);
 
             var expectedStage = BsonDocument.Parse("{ $replaceWith : '$PhoneNumber' }");
+
+            AssertLast(subject, expectedStage);
+        }
+
+        [Fact]
+        public void ReplaceWith_for_document_should_generate_the_correct_stage()
+        {
+            var subject = CreateSubject().ReplaceWith(x => x);
+
+            var expectedStage = BsonDocument.Parse("{ $replaceWith : '$$ROOT' }");
 
             AssertLast(subject, expectedStage);
         }
@@ -478,6 +519,16 @@ namespace MongoDB.Driver.Tests
                 .SortByCount(x => x.Age);
 
             var expectedStage = BsonDocument.Parse("{ $sortByCount : '$Age' }");
+
+            AssertLast(subject, expectedStage);
+        }
+
+        [Fact]
+        public void SortByCount_with_document_in_id_should_generate_the_correct_stage()
+        {
+            var subject = CreateSubject().SortByCount(x => x);
+
+            var expectedStage = BsonDocument.Parse("{ $sortByCount : '$$ROOT' }");
 
             AssertLast(subject, expectedStage);
         }

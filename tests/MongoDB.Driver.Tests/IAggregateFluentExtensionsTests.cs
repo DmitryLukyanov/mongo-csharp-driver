@@ -180,7 +180,7 @@ namespace MongoDB.Driver.Tests
             var subject = CreateSubject()
                 .Group(x => x, g => new { Name = g.Select(x => x + " " + x.LastName).First() });
 
-            var expectedGroup = BsonDocument.Parse("{ $group : { _id : '$$ROOT', Name: { '$first' : { '$concat' : [ '$FirstName', ' ', '$LastName' ] } } } }");
+            var expectedGroup = BsonDocument.Parse("{ $group : { _id : '$$ROOT', Name : { '$first' : { '$concat' : [ { '$add' : ['$$ROOT', ' '] }, '$LastName' ] } } } }");
 
             AssertLast(subject, expectedGroup);
         }

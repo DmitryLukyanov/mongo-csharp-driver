@@ -79,7 +79,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
             RequirePlatform
                 .Create()
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11);
 
             var eventCapturer = new EventCapturer().Capture<CommandStartedEvent>(e => e.CommandName == "insert");
             using (var client = ConfigureClient())
@@ -247,7 +248,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
             RequirePlatform
                 .Create()
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11);
 
             var extraOptions = new Dictionary<string, object>
             {
@@ -282,7 +284,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
             RequirePlatform
                 .Create()
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11);
 
             var extraOptions = new Dictionary<string, object>
             {
@@ -317,7 +320,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
                 // it's required only for gcp, but the test design doesn't allow skipping only required steps
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11)
+                // it's required only for gcp, but the test design doesn't allow skipping only required steps
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp21);
 
             var corpusSchema = JsonFileReader.Instance.Documents["corpus.corpus-schema.json"];
             var schemaMap = useLocalSchema ? new BsonDocument("db.coll", corpusSchema) : null;
@@ -496,7 +502,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                .SkipWhen(() => kmsProvider == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+                .SkipWhen(() => kmsProvider == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21) // gcp is supported starting from netstandard2.1
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(() => kmsProvider == "gcp", SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncrypted = ConfigureClientEncrypted(BsonDocument.Parse(SchemaMap)))
@@ -583,7 +591,9 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequirePlatform
                 .Create()
                 .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
-                .SkipWhen(() => kmsType == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
+                .SkipWhen(() => kmsType == "gcp", SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp21) // gcp is supported starting from netstandard2.1
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(() => kmsType == "gcp", SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp21); // gcp is supported starting from netstandard2.1
 
             using (var client = ConfigureClient())
             using (var clientEncryption = ConfigureClientEncryption(client.Wrapped as MongoClient, ValidKmsEndpointConfigurator))
@@ -722,7 +732,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
             RequirePlatform
                 .Create()
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11);
 
             var clientEncryptedSchema = new BsonDocument("db.coll", JsonFileReader.Instance.Documents["external.external-schema.json"]);
             using (var client = ConfigureClient())
@@ -766,7 +777,8 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             RequireServer.Check().Supports(Feature.ClientSideEncryption);
             RequirePlatform
                 .Create()
-                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11);
+                .SkipWhen(SupportedOperatingSystem.Linux, SupportedTargetFramework.NetCoreApp11)
+                .SkipWhen(SupportedOperatingSystem.MacOS, SupportedTargetFramework.NetCoreApp11);
 
             var viewName = CollectionNamespace.FromFullName("db.view");
             using (var client = ConfigureClient(false))
@@ -810,18 +822,18 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
 
             void AsserResult(Exception ex)
             {
-                var isLinux = RequirePlatform.GetCurrentOperatingSystem() == SupportedOperatingSystem.Linux;
+                var canThrowPlatformNotSupported = RequirePlatform.GetCurrentOperatingSystem() != SupportedOperatingSystem.Windows;
 
                 switch (kmsProvider)
                 {
                     // all crypto hooks fail on linux with .netstandard1.5
-                    case var _ when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                    case var _ when canThrowPlatformNotSupported && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
                         {
                             var errorMessage = AssertExceptionTypesAndReturnErrorMessage<PlatformNotSupportedException>(ex);
                             errorMessage.Should().Be($"Field-level encryption is not supported on Linux with .netstandard1.5.");
                         }
                         break;
-                    case "gcp" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp21):
+                    case "gcp" when canThrowPlatformNotSupported && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp21):
                         {
                             var errorMessage = AssertExceptionTypesAndReturnErrorMessage<CryptException>(ex);
                             errorMessage.Should().Be("error constructing KMS message: Failed to create GCP oauth request signature");

@@ -48,7 +48,7 @@ namespace MongoDB.Driver.TestHelpers
             return SupportedOperatingSystem.Linux;
 #endif
 #if MACOS
-            return case SupportedOperatingSystem.MacOS.
+            return SupportedOperatingSystem.MacOS;
 #endif
 
             throw new InvalidOperationException($"Unable to determine current operating system.");

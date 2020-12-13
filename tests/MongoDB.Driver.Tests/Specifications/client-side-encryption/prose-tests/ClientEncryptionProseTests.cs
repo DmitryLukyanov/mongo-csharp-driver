@@ -790,6 +790,7 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
             }
         }
 
+        // NOTE: this test is not presented in the prose tests
         [SkippableTheory]
         [ParameterAttributeData]
         public void UnsupportedPlatformsTests(
@@ -804,20 +805,6 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 Guid? dataKeyId = null;
                 var dataKeyOptions = CreateDataKeyOptions(kmsProvider);
                 var exception = Record.Exception(() => dataKeyId = CreateDataKey(clientEncryption, kmsProvider, dataKeyOptions, async));
-                if (kmsProvider == "azure") // azure doesn't call hooks for CreateDataKey
-                {
-                    exception.Should().BeNull();
-                    dataKeyId.Should().HaveValue(); // CreateDataKey was successfully called
-
-                    var encryptOptions = new EncryptOptions(
-                            EncryptionAlgorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic.ToString(),
-                            keyId: dataKeyId);
-                    exception = Record.Exception(() => ExplicitEncrypt(
-                        clientEncryption,
-                        encryptOptions,
-                        $"hello {kmsProvider}",
-                        async));
-                }
                 AsserResult(exception);
             }
 
@@ -827,27 +814,15 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
 
                 switch (kmsProvider)
                 {
-                    case "local" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                    case var _ when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
                         {
-                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
-                            errorMessage.Should().Be($"Cryptography.RijndaelManaged is not supported on .netstandard1.5.");
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage<PlatformNotSupportedException>(ex);
+                            errorMessage.Should().Be($"Field-level encryption is not supported on Linux with .netstandard1.5.");
                         }
                         break;
-                    case "aws" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
+                    case "gcp" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp21):
                         {
-                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
-                            errorMessage.Should().Be("failed to create KMS message");
-                        }
-                        break;
-                    case "azure" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11):
-                        {
-                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
-                            errorMessage.Should().Be("HMACSHA.TransformFinalBlock is not supported on .netstandard1.5.");
-                        }
-                        break;
-                    case "gcp" when isLinux && ContainsCurrentTargetFramework(SupportedTargetFramework.NetCoreApp11, SupportedTargetFramework.NetCoreApp21):
-                        {
-                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage(ex);
+                            var errorMessage = AssertExceptionTypesAndReturnErrorMessage<CryptException>(ex);
                             errorMessage.Should().Be("error constructing KMS message: Failed to create GCP oauth request signature");
                         }
                         break;
@@ -857,10 +832,10 @@ namespace MongoDB.Driver.Tests.Specifications.client_side_encryption.prose_tests
                 }
             }
 
-            string AssertExceptionTypesAndReturnErrorMessage(Exception ex)
+            string AssertExceptionTypesAndReturnErrorMessage<TException>(Exception ex) where TException : Exception
             {
                 var e = ex.Should().BeOfType<MongoEncryptionException>().Subject;
-                return e.InnerException.Should().BeOfType<CryptException>().Subject.Message;
+                return e.InnerException.Should().BeOfType<TException>().Subject.Message;
             }
 
             bool ContainsCurrentTargetFramework(params SupportedTargetFramework[] supportedTargetFrameworks)

@@ -172,11 +172,11 @@ namespace MongoDB.Driver.Encryption
                 switch (currentOperatingSystem)
                 {
                     case OperatingSystemPlatform.Windows:
-                        // "nul" is the windows specific value.
                         return ".exe";
                     case OperatingSystemPlatform.Linux:
                     case OperatingSystemPlatform.MacOS:
-                    default: return string.Empty;
+                    default:
+                        return "";
                 }
             }
 
@@ -185,11 +185,14 @@ namespace MongoDB.Driver.Encryption
                 var currentOperatingSystem = OperatingSystemHelper.CurrentOperatingSystem;
                 switch (currentOperatingSystem)
                 {
-                    case OperatingSystemPlatform.Windows: return "nul";
+                    case OperatingSystemPlatform.Windows:
+                        // "nul" is the windows specific value
+                        return "nul";
                     // Unix - based platforms should use "/dev/null"
                     case OperatingSystemPlatform.Linux:
                     case OperatingSystemPlatform.MacOS:
-                    default: return "/dev/null";
+                    default:
+                        return "/dev/null";
                 }
             }
         }

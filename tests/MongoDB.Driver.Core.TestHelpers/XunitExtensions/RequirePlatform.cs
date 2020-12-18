@@ -37,7 +37,7 @@ namespace MongoDB.Driver.TestHelpers
     public class RequirePlatform
     {
         #region static
-        public static RequirePlatform Create() => new RequirePlatform();
+        public static RequirePlatform Check() => new RequirePlatform();
 
         public static SupportedOperatingSystem GetCurrentOperatingSystem()
         {

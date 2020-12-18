@@ -121,7 +121,7 @@ namespace MongoDB.Driver.Encryption
 
                 if (Directory.Exists(path))
                 {
-                    string fileName = "mongocryptd";
+                    string fileName = $"mongocryptd{GetMongocryptdExtension()}";
                     path = Path.Combine(path, fileName);
                 }
 
@@ -152,19 +152,7 @@ namespace MongoDB.Driver.Encryption
 
                 if (!args.Contains("logpath")) // disable logging by the mongocryptd process
                 {
-                    switch (OperatingSystemHelper.CurrentOperatingSystem)
-                    {
-                        case OperatingSystemPlatform.Windows:
-                            // "nul" is the windows specific value.
-                            args += " --logpath nul";
-                            break;
-                        case OperatingSystemPlatform.Linux:
-                        case OperatingSystemPlatform.MacOS:
-                        default:
-                            // Unix - based platforms should use "/dev/null"
-                            args += " --logpath /dev/null";
-                            break;
-                    }
+                    args += $" --logpath {GetLogPath()}";
 
                     if (!args.Contains("logappend"))
                     {
@@ -177,6 +165,33 @@ namespace MongoDB.Driver.Encryption
             }
 
             return false;
+
+            string GetMongocryptdExtension()
+            {
+                var currentOperatingSystem = OperatingSystemHelper.CurrentOperatingSystem;
+                switch (currentOperatingSystem)
+                {
+                    case OperatingSystemPlatform.Windows:
+                        // "nul" is the windows specific value.
+                        return ".exe";
+                    case OperatingSystemPlatform.Linux:
+                    case OperatingSystemPlatform.MacOS:
+                    default: return string.Empty;
+                }
+            }
+
+            string GetLogPath()
+            {
+                var currentOperatingSystem = OperatingSystemHelper.CurrentOperatingSystem;
+                switch (currentOperatingSystem)
+                {
+                    case OperatingSystemPlatform.Windows: return "nul";
+                    // Unix - based platforms should use "/dev/null"
+                    case OperatingSystemPlatform.Linux:
+                    case OperatingSystemPlatform.MacOS:
+                    default: return "/dev/null";
+                }
+            }
         }
 
         private void StartProcess(string path, string args)

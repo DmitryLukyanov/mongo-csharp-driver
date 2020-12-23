@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Libmongocrypt;
 using MongoDB.Shared;
 
@@ -31,6 +32,7 @@ namespace MongoDB.Driver.Encryption
     {
         // protected fields
         protected readonly CryptClient _cryptClient;
+        protected readonly Lazy<IMongoClient> _internalClient;
         protected readonly IMongoClient _keyVaultClient;
         protected readonly Lazy<IMongoCollection<BsonDocument>> _keyVaultCollection;
         protected readonly CollectionNamespace _keyVaultNamespace;
@@ -40,14 +42,48 @@ namespace MongoDB.Driver.Encryption
              CryptClient cryptClient,
              IMongoClient keyVaultClient,
              CollectionNamespace keyVaultNamespace)
+            : this(
+                  client: null,
+                  cryptClient,
+                  Ensure.IsNotNull(keyVaultClient, nameof(keyVaultClient)),
+                  keyVaultNamespace)
+        {
+        }
+
+        protected LibMongoCryptControllerBase(
+            IMongoClient client,
+             CryptClient cryptClient,
+             IMongoClient keyVaultClient,
+             CollectionNamespace keyVaultNamespace)
         {
             _cryptClient = cryptClient;
-            _keyVaultClient = keyVaultClient; // _keyVaultClient might not be fully constructed at this point, don't call any instance methods on it yet
+            _internalClient = new Lazy<IMongoClient>(() => CreateInternalClient(client), isThreadSafe: true);
+            _keyVaultClient = GetKeyVaultClient(); // _keyVaultClient might not be fully constructed at this point, don't call any instance methods on it yet
             _keyVaultNamespace = keyVaultNamespace;
             _keyVaultCollection = new Lazy<IMongoCollection<BsonDocument>>(GetKeyVaultCollection); // delay use _keyVaultClient
+
+            IMongoClient GetKeyVaultClient()
+            {
+                if (keyVaultClient != null)
+                {
+                    return keyVaultClient;
+                }
+                else
+                {
+                    return _internalClient.Value;
+                }
+            }
         }
 
         // protected methods
+        protected IMongoClient CreateInternalClient(IMongoClient client)
+        {
+            var internalClientMongoSettings = client.Settings.Clone();
+            internalClientMongoSettings.AutoEncryptionOptions = null;
+            internalClientMongoSettings.MinConnectionPoolSize = 0;
+            return new MongoClient(internalClientMongoSettings);
+        }
+
         protected void FeedResult(CryptContext context, BsonDocument document)
         {
 #pragma warning disable 618

@@ -293,8 +293,8 @@ For each KMS provider (``aws``, ``azure``, ``gcp``, and ``local``), referred to 
      .. code:: javascript
 
         {
-          "keyVaultEndpoint": "key-vault-kevinalbs.vault.azure.net",
-          "keyName": "test-key"
+          "keyVaultEndpoint": "key-vault-csfle.vault.azure.net",
+          "keyName": "key-name-csfle"
         }
 
      For "gcp":
@@ -302,10 +302,10 @@ For each KMS provider (``aws``, ``azure``, ``gcp``, and ``local``), referred to 
      .. code:: javascript
 
         {
-          "projectId": "csfle-poc",
+          "projectId": "devprod-drivers",
           "location": "global",
-          "keyRing": "test",
-          "keyName": "quickstart"
+          "keyRing": "key-ring-csfle",
+          "keyName": "key-name-csfle"
         }
 
      For "local", do not set a masterKey document.
@@ -318,7 +318,7 @@ For each KMS provider (``aws``, ``azure``, ``gcp``, and ``local``), referred to 
 
    - Expect the return value to be a BSON binary subtype 6, referred to as ``encrypted``.
    - Use ``client_encrypted`` to insert ``{ _id: "<provider_name>", "value": <encrypted> }`` into ``db.coll``.
-   - Use ``client_encrypted`` to run a find querying with ``_id`` of "<provider_name>" and expect ``value`` to be "hello local".
+   - Use ``client_encrypted`` to run a find querying with ``_id`` of "<provider_name>" and expect ``value`` to be "hello <provider_name>".
 
 #. Call ``client_encryption.encrypt()`` with the value "hello <provider_name>", the algorithm ``AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic``, and the ``key_alt_name`` of ``<provider_name>_altname``.
 
@@ -668,8 +668,8 @@ Test cases
    .. code:: javascript
 
       {
-        "keyVaultEndpoint": "key-vault-kevinalbs.vault.azure.net",
-        "keyName": "test-key"
+         "keyVaultEndpoint": "key-vault-csfle.vault.azure.net",
+         "keyName": "key-name-csfle"
       }
 
    Expect this to succeed. Use the returned UUID of the key to explicitly encrypt and decrypt the string "test" to validate it works.
@@ -681,10 +681,10 @@ Test cases
    .. code:: javascript
 
       {
-        "projectId": "csfle-poc",
+        "projectId": "devprod-drivers",
         "location": "global",
-        "keyRing": "test",
-        "keyName": "quickstart",
+        "keyRing": "key-ring-csfle",
+        "keyName": "key-name-csfle",
         "endpoint": "cloudkms.googleapis.com:443"
       }
 
@@ -697,10 +697,10 @@ Test cases
    .. code:: javascript
 
       {
-        "projectId": "csfle-poc",
+        "projectId": "devprod-drivers",
         "location": "global",
-        "keyRing": "test",
-        "keyName": "quickstart",
+        "keyRing": "key-ring-csfle",
+        "keyName": "key-name-csfle",
         "endpoint": "example.com:443"
       }
 

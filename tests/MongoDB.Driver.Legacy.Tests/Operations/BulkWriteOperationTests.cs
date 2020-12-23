@@ -460,6 +460,7 @@ namespace MongoDB.Driver.Tests.Operations
         public void TestNonDefaultWriteConcern(bool ordered)
         {
             RequireServer.Check().ClusterType(ClusterType.Standalone);
+            RequirePlatform.Check().SkipWhen(SupportedOperatingSystem.MacOS);
             _collection.Drop();
 
             var documents = new[]

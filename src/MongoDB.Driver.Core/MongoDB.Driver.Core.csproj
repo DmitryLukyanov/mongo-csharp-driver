@@ -56,37 +56,24 @@
     <NoWarn>NU5100</NoWarn>
   </PropertyGroup>
 
-  <!--Compression-->
+  <!--Compression-x64-->
   <PropertyGroup>
-    <CompressionRuntimesPath>runtimes/win/native</CompressionRuntimesPath>
+    <CompressionRuntimesPath64>runtimes/win-x64/native</CompressionRuntimesPath64>
   </PropertyGroup>
 
   <!--Snappy-->
-  <ItemGroup>
-    <None Remove="snappy32.dll" />
-    <None Remove="snappy64.dll" />
-  </ItemGroup>
-
   <PropertyGroup>
     <SnappyBinaries>Core/Compression/Snappy/lib/win</SnappyBinaries>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(IsWindows)' == true ">
-    <Content Include="$(SnappyBinaries)/snappy32.dll">
-      <Pack>true</Pack>
-      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
-    </Content>
+  <ItemGroup>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <Pack>true</Pack>
-      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath64)</PackagePath>
     </Content>
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(IsWindows)' == true ">
-    <Content Include="$(SnappyBinaries)/snappy32.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>snappy32.dll</Link>
-    </Content>
+  <ItemGroup>
     <Content Include="$(SnappyBinaries)/snappy64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>snappy64.dll</Link>
@@ -102,17 +89,37 @@
     <ZstdBinaries>Core/Compression/Zstandard/lib/win</ZstdBinaries>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(IsWindows)' == true ">
+  <ItemGroup>
     <Content Include="$(ZstdBinaries)/libzstd.dll">
       <Pack>true</Pack>
-      <PackagePath>$(CompressionRuntimesPath)</PackagePath>
+      <PackagePath>$(CompressionRuntimesPath64)</PackagePath>
     </Content>
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(IsWindows)' == true ">
+  <ItemGroup>
     <Content Include="$(ZstdBinaries)/libzstd.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libzstd.dll</Link>
+    </Content>
+  </ItemGroup>
+
+  <!--Compression-x32-->
+  <PropertyGroup>
+    <CompressionRuntimesPath32>runtimes/win-x32/native</CompressionRuntimesPath32>
+  </PropertyGroup>
+
+  <!--Snappy-->
+  <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy32.dll">
+      <Pack>true</Pack>
+      <PackagePath>$(CompressionRuntimesPath32)</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(SnappyBinaries)/snappy32.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>snappy32.dll</Link>
     </Content>
   </ItemGroup>
 
@@ -122,6 +129,8 @@
       <PackagePath>build</PackagePath>
     </Content>
   </ItemGroup>
+
+  <!--Compression is configured-->
 
   <ItemGroup>
     <PackageReference Include="DnsClient" Version="1.3.1" />

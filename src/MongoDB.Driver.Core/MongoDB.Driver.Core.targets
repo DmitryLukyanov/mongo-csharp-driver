@@ -2,16 +2,20 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <PropertyGroup>
-      <CompressionRuntimesPath>runtimes/win/native</CompressionRuntimesPath>
+      <CompressionRuntimesPath32>runtimes/win-x32/native</CompressionRuntimesPath32>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <CompressionRuntimesPath64>runtimes/win-x64/native</CompressionRuntimesPath64>
     </PropertyGroup>
 
     <!--snappy-->
     <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Windows'))">
-        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath)/snappy32.dll">
+        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath32)/snappy32.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>snappy32.dll</Link>
         </Content>
-        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath)/snappy64.dll">
+        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath64)/snappy64.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>snappy64.dll</Link>
         </Content>
@@ -19,7 +23,7 @@
 
     <!--zstd-->
     <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Windows'))">
-        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath)/libzstd.dll">
+        <Content Include="$(MSBuildThisFileDirectory)../$(CompressionRuntimesPath64)/libzstd.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>libzstd.dll</Link>
         </Content>

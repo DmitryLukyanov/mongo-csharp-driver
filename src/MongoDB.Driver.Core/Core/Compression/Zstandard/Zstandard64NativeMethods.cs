@@ -259,7 +259,7 @@ namespace MongoDB.Driver.Core.Compression.Zstandard
                 switch (currentPlatform)
                 {
                     case OperatingSystemPlatform.Windows:
-                        return @"runtimes\win\native\libzstd.dll";
+                        return @"runtimes\win-x64\native\libzstd.dll";
                     case OperatingSystemPlatform.Linux: // TODO: add support for Linux and MacOS later
                     case OperatingSystemPlatform.MacOS:
                     default:

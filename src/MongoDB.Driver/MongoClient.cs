@@ -85,7 +85,6 @@ namespace MongoDB.Driver
             {
                 _libMongoCryptController = new AutoEncryptionLibMongoCryptController(
                     this,
-                    _cluster.CryptClient,
                     settings.AutoEncryptionOptions);
             }
         }

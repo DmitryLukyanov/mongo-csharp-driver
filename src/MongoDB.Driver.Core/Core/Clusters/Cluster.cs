@@ -26,7 +26,6 @@ using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;
-using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver.Core.Clusters
 {
@@ -63,7 +62,6 @@ namespace MongoDB.Driver.Core.Clusters
         // fields
         private readonly IClusterClock _clusterClock = new ClusterClock();
         private readonly ClusterId _clusterId;
-        private CryptClient _cryptClient = null;
         private ClusterDescription _description;
         private TaskCompletionSource<bool> _descriptionChangedTaskCompletionSource;
         private readonly object _descriptionLock = new object();
@@ -121,11 +119,6 @@ namespace MongoDB.Driver.Core.Clusters
         public ClusterId ClusterId
         {
             get { return _clusterId; }
-        }
-
-        public CryptClient CryptClient
-        {
-            get { return _cryptClient; }
         }
 
         public ClusterDescription Description
@@ -220,7 +213,6 @@ namespace MongoDB.Driver.Core.Clusters
             {
                 if (_settings.KmsProviders != null || _settings.SchemaMap != null)
                 {
-                    _cryptClient = CryptClientCreator.CreateCryptClient(_settings.KmsProviders, _settings.SchemaMap);
                 }
             }
         }

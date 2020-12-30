@@ -16,7 +16,6 @@
 using System;
 using System.Runtime.InteropServices;
 using MongoDB.Driver.Core.Misc;
-using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver.Core.NativeLibraryLoader
 {
@@ -35,7 +34,7 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
 
                 // error code 193 indicates that a 64-bit OS has tried to load a 32-bit dll
                 // https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-                throw new LibraryLoadingException($"Error loading library: {path}. Windows Error code: {gle}.");
+                throw new Exception($"Error loading library: {path}. Windows Error code: {gle}.");
             }
         }
 

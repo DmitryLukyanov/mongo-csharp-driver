@@ -17,8 +17,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using MongoDB.Driver.Core.Clusters;
-using MongoDB.Libmongocrypt;
 
 namespace MongoDB.Driver.Encryption
 {
@@ -28,7 +26,6 @@ namespace MongoDB.Driver.Encryption
     public sealed class ClientEncryption : IDisposable
     {
         // private fields
-        private readonly CryptClient _cryptClient;
         private bool _disposed;
         private readonly ExplicitEncryptionLibMongoCryptController _libMongoCryptController;
 
@@ -39,11 +36,7 @@ namespace MongoDB.Driver.Encryption
         /// <param name="clientEncryptionOptions">The client encryption options.</param>
         public ClientEncryption(ClientEncryptionOptions clientEncryptionOptions)
         {
-            _cryptClient = CryptClientCreator.CreateCryptClient(
-                kmsProviders: clientEncryptionOptions.KmsProviders,
-                schemaMap: null);
             _libMongoCryptController = new ExplicitEncryptionLibMongoCryptController(
-                _cryptClient,
                 clientEncryptionOptions);
         }
 
@@ -107,7 +100,7 @@ namespace MongoDB.Driver.Encryption
         {
             if (!_disposed)
             {
-                _cryptClient.Dispose();
+              //  _cryptClient.Dispose();
                 _disposed = true;
             }
         }

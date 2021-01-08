@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver.Core.Configuration;
@@ -25,6 +26,7 @@ namespace MongoDB.Driver.TestConsoleApplication
 {
     class Program
     {
+        static volatile bool _break = false;
         static async Task Main(string[] args)
         {
             var test = new TransactionTest();
@@ -42,6 +44,9 @@ namespace MongoDB.Driver.TestConsoleApplication
                 clientSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(timeout);
                 clientSettings.AllowInsecureTls = true;
                 var mongoClient = new MongoClient(clientSettings);
+                mongoClient.GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName).InsertOne(new BsonDocument());
+                Thread.Sleep(5000);
+                Console.WriteLine("Initialized");
                 return mongoClient;
             }
 
@@ -63,7 +68,7 @@ namespace MongoDB.Driver.TestConsoleApplication
                 Console.WriteLine("Client hashcode: " + mongoClient.GetHashCode());
                 var collection = mongoClient.GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName);
 
-                while (true)
+                while (!_break)
                 {
                     var uuid1 = Guid.NewGuid().ToString("N").Substring(24);
                     var uuid2 = Guid.NewGuid().ToString("N").Substring(24);
@@ -82,6 +87,7 @@ namespace MongoDB.Driver.TestConsoleApplication
                     catch (Exception e)
                     {
                         Console.WriteLine("$$$ " + e.Message);
+                        _break = true;
                         break;
                     }
                 }

@@ -14,9 +14,15 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
+using MongoDB.Bson;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events.Diagnostics;
+using MongoDB.Driver.Linq.Translators;
 
 namespace MongoDB.Driver.TestConsoleApplication
 {
@@ -24,14 +30,67 @@ namespace MongoDB.Driver.TestConsoleApplication
     {
         static void Main(string[] args)
         {
-            //FilterMeasuring.TestAsync().GetAwaiter().GetResult();
-            int numConcurrentWorkers = 50;
-            //new CoreApi().Run(numConcurrentWorkers, ConfigureCluster);
-            new CoreApiSync().Run(numConcurrentWorkers, ConfigureCluster);
+                var result = Project(p => new { p.Id, p.A }, "{ _id: 1, A: \"Jack\" }");
+                var projection = result.Projection;
 
-            new Api().Run(numConcurrentWorkers, ConfigureCluster);
+                Console.WriteLine(projection);
+        }
 
-            //new LegacyApi().Run(numConcurrentWorkers, ConfigureCluster);
+        private static ProjectedResult<T> Project<T>(Expression<Func<Root, T>> projector, string json)
+        {
+            var serializer = BsonSerializer.SerializerRegistry.GetSerializer<Root>();
+            var projectionInfo = FindProjectionTranslator.Translate<Root, T>(projector, serializer, BsonSerializer.SerializerRegistry);
+
+            using (var reader = new JsonReader(json))
+            {
+                var context = BsonDeserializationContext.CreateRoot(reader);
+                return new ProjectedResult<T>
+                {
+                    Projection = projectionInfo.Document,
+                    Value = projectionInfo.ProjectionSerializer.Deserialize(context)
+                };
+            }
+        }
+
+        private class ProjectedResult<T>
+        {
+            public BsonDocument Projection;
+            public T Value;
+        }
+
+        private class Root
+        {
+            public int Id { get; set; }
+
+            public string A { get; set; }
+
+            public string A1 { get; set; }
+
+            public string B { get; set; }
+
+            public C C { get; set; }
+
+            public IEnumerable<C> G { get; set; }
+        }
+
+        public class C
+        {
+            public string D { get; set; }
+
+            public E E { get; set; }
+
+            public E E1 { get; set; }
+        }
+
+        public class E
+        {
+            public int F { get; set; }
+
+            public int H { get; set; }
+
+            public IEnumerable<string> I { get; set; }
+
+            public E E1 { get; set; }
         }
 
         private static void ConfigureCluster(ClusterBuilder cb)

@@ -210,9 +210,29 @@ namespace MongoDB.Driver.Linq.Translators
             // 2) order them by their element name in ascending order
             // 3) if any groups are prefixed by the current groups element, then skip it.
 
+            Console.WriteLine("1.GetUniqueFieldsByHierarchy.userFields(input argument)");
+            foreach (var userField in usedFields)
+            {
+                Console.WriteLine(userField.FieldName + " " + userField.Document);
+            }
+
             var uniqueFields = new List<IFieldExpression>();
             var skippedFields = new List<string>();
-            var referenceGroups = new Queue<IGrouping<string, IFieldExpression>>(usedFields.GroupBy(x => x.FieldName).OrderBy(x => x.Key));
+
+            var userFieldsGrouped = usedFields.GroupBy(x => x.FieldName);
+            Console.WriteLine("2.userFieldsGrouped");
+            foreach (var userFieldGrouped in userFieldsGrouped)
+            {
+                Console.WriteLine(userFieldGrouped.Key);
+            }
+            var userFieldsGroupedAndOrdered = userFieldsGrouped.OrderBy(x => x.Key);
+            Console.WriteLine("3.userFieldsGroupedAndOrdered");
+            foreach (var userFieldGroupedAndOrdered in userFieldsGroupedAndOrdered)
+            {
+                Console.WriteLine(userFieldGroupedAndOrdered.Key);
+            }
+
+            var referenceGroups = new Queue<IGrouping<string, IFieldExpression>>(userFieldsGroupedAndOrdered);
             while (referenceGroups.Count > 0)
             {
                 var referenceGroup = referenceGroups.Dequeue();

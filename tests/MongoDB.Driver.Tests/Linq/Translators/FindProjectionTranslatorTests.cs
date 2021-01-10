@@ -52,13 +52,13 @@ namespace MongoDB.Driver.Tests.Linq.Translators
         }
 
         [Fact]
+        [Trait("Category", "Test")]
         public void Should_include_id_if_specified()
         {
             var result = Project(p => new { p.Id, p.A }, "{ _id: 1, A: \"Jack\" }");
             var projection = result.Projection;
 
-            projection.GetValue("_id").Should().Be(1);
-            projection.GetValue("A").Should().Be(1);
+            projection.Should().Be("{ _id : 1, A : 1 }");
 
             result.Value.Id.Should().Be(1);
             result.Value.A.Should().Be("Jack");

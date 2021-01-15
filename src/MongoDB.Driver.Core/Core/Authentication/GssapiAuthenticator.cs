@@ -15,7 +15,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Security;
 using System.Text;
@@ -110,8 +109,23 @@ namespace MongoDB.Driver.Core.Authentication
         /// </summary>
         /// <param name="credential">The credential.</param>
         /// <param name="properties">The properties.</param>
+        [Obsolete("Use the newest overload instead.")]
         public GssapiAuthenticator(UsernamePasswordCredential credential, IEnumerable<KeyValuePair<string, string>> properties)
-            : base(CreateMechanism(credential, properties))
+            : this(credential, properties, serverApi: null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GssapiAuthenticator"/> class.
+        /// </summary>
+        /// <param name="credential">The credential.</param>
+        /// <param name="properties">The properties.</param>
+        /// <param name="serverApi">The server API.</param>
+        public GssapiAuthenticator(
+            UsernamePasswordCredential credential,
+            IEnumerable<KeyValuePair<string, string>> properties,
+            ServerApi serverApi)
+            : base(CreateMechanism(credential, properties), serverApi)
         {
         }
 
@@ -120,8 +134,23 @@ namespace MongoDB.Driver.Core.Authentication
         /// </summary>
         /// <param name="username">The username.</param>
         /// <param name="properties">The properties.</param>
+        [Obsolete("Use the newest overload instead.")]
         public GssapiAuthenticator(string username, IEnumerable<KeyValuePair<string, string>> properties)
-            : base(CreateMechanism(username, null, properties))
+            : this(username, properties, serverApi: null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GssapiAuthenticator"/> class.
+        /// </summary>
+        /// <param name="username">The username.</param>
+        /// <param name="properties">The properties.</param>
+        /// <param name="serverApi">The server API.</param>
+        public GssapiAuthenticator(
+            string username,
+            IEnumerable<KeyValuePair<string, string>> properties,
+            ServerApi serverApi)
+            : base(CreateMechanism(username, null, properties), serverApi)
         {
         }
 

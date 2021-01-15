@@ -32,6 +32,7 @@ namespace MongoDB.Driver.Core.Authentication
     {
         // fields
         private protected readonly ISaslMechanism _mechanism;
+        private protected readonly ServerApi _serverApi;
         private protected ISaslStep _speculativeFirstStep;
 
         // constructors
@@ -39,9 +40,21 @@ namespace MongoDB.Driver.Core.Authentication
         /// Initializes a new instance of the <see cref="SaslAuthenticator"/> class.
         /// </summary>
         /// <param name="mechanism">The mechanism.</param>
+        [Obsolete("Use the newest overload instead.")]
         protected SaslAuthenticator(ISaslMechanism mechanism)
+            : this(mechanism, serverApi: null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SaslAuthenticator"/> class.
+        /// </summary>
+        /// <param name="mechanism">The mechanism.</param>
+        /// <param name="serverApi">The server API.</param>
+        protected SaslAuthenticator(ISaslMechanism mechanism, ServerApi serverApi)
         {
             _mechanism = Ensure.IsNotNull(mechanism, nameof(mechanism));
+            _serverApi = serverApi; // can be null
         }
 
         // properties
@@ -159,11 +172,12 @@ namespace MongoDB.Driver.Core.Authentication
         private CommandWireProtocol<BsonDocument> CreateCommandProtocol(BsonDocument command)
         {
             return new CommandWireProtocol<BsonDocument>(
-                new DatabaseNamespace(DatabaseName),
-                command,
-                true,
-                BsonDocumentSerializer.Instance,
-                null);
+                databaseNamespace: new DatabaseNamespace(DatabaseName),
+                command: command,
+                slaveOk: true,
+                resultSerializer: BsonDocumentSerializer.Instance,
+                messageEncoderSettings: null,
+                serverApi: _serverApi);
         }
 
         private BsonDocument CreateContinueCommand(ISaslStep currentStep, BsonDocument result)
@@ -207,7 +221,6 @@ namespace MongoDB.Driver.Core.Authentication
             command = CreateContinueCommand(currentStep, result);
             return currentStep;
         }
-
 
         // nested classes
         /// <summary>

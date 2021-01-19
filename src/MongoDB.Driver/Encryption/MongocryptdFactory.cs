@@ -119,7 +119,7 @@ namespace MongoDB.Driver.Encryption
                     path = string.Empty; // look at the PATH env variable
                 }
 
-                if (Directory.Exists(path) || string.IsNullOrEmpty(path))
+                if (string.IsNullOrEmpty(path) || Directory.Exists(path))
                 {
                     string fileName = $"mongocryptd{GetMongocryptdExtension()}";
                     path = Path.Combine(path, fileName);

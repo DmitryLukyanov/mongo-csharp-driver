@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Encryption
                 if (string.IsNullOrEmpty(path) || Directory.Exists(path))
                 {
                     string fileName = $"mongocryptd{GetMongocryptdExtension()}";
-                    path = Path.Combine(path, fileName);
+                    path = Path.Combine(path ?? "", fileName);
                 }
 
                 args = string.Empty;

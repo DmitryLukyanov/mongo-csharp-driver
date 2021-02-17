@@ -110,6 +110,11 @@ namespace MongoDB.Driver.Core.Configuration
             get { return _waitQueueTimeout; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public int MaxConnecting { get; set; } = 2;
+
         // methods
         /// <summary>
         /// Returns a new ConnectionPoolSettings instance with some settings changed.

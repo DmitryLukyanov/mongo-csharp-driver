@@ -14,7 +14,9 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -509,14 +511,362 @@ namespace MongoDB.Driver.Core.ConnectionPools
             }
         }
 
+        [Theory]
+        [ParameterAttributeData]
+        public void CheckoutOut_maxConnecting_is_enforced(
+            [Values(true, false)]
+            bool isAsync,
+            [Values(1, 2, 4)]
+            int maxConnecting)
+        {
+            int threadsCount = maxConnecting + 2;
+            int maxConnectingCurrent = 0;
+
+            var connectionOpenInFlightEvent = new CountdownEvent(maxConnecting);
+            var unblockEvent = new ManualResetEventSlim(false);
+
+            var settings = _settings.With(
+                waitQueueSize: threadsCount,
+                //maxConnecting: maxConnecting,
+                maxConnections: threadsCount,
+                waitQueueTimeout: TimeSpan.FromSeconds(10),
+                minConnections: 0);
+
+            var mockConnectionFactory = new Mock<IConnectionFactory>();
+            mockConnectionFactory
+                .Setup(c => c.CreateConnection(It.IsAny<ServerId>(), It.IsAny<EndPoint>()))
+                .Returns(() =>
+                {
+                    var connectionMock = new Mock<IConnection>();
+                    connectionMock
+                        .Setup(c => c.Settings)
+                        .Returns(new ConnectionSettings());
+
+                    connectionMock
+                        .Setup(c => c.Open(It.IsAny<CancellationToken>()))
+                        .Callback(BlockConnectionOpen);
+
+                    connectionMock
+                        .Setup(c => c.OpenAsync(It.IsAny<CancellationToken>()))
+                        .Returns(() =>
+                        {
+                            BlockConnectionOpen();
+                            return Task.FromResult(0);
+                        });
+
+                    return connectionMock.Object;
+                });
+
+            using var subject = CreateSubject(settings, mockConnectionFactory.Object);
+            subject.Initialize();
+
+            ExecuteOnNewThread(threadsCount + 1, i =>
+            {
+                if (i == threadsCount)
+                {
+                    // wait until open-connection in flight achieved maxConnecting
+                    connectionOpenInFlightEvent.Wait();
+
+                    // wait until all threads try to acquire connections
+                    do
+                    {
+                        Thread.Sleep(100);
+                    } while (subject.AvailableCount > 0);
+
+                    // unblock all open-connection in flight
+                    unblockEvent.Set();
+                }
+                else
+                {
+                    AcquireConnectionGeneric(subject, isAsync).Should().NotBeNull();
+                }
+            });
+
+            void BlockConnectionOpen()
+            {
+                // validate maxConnecting is respected
+                Interlocked.Increment(ref maxConnectingCurrent);
+                maxConnectingCurrent.Should().BeLessOrEqualTo(maxConnecting);
+
+                // notify connection in flight
+                if (connectionOpenInFlightEvent.CurrentCount > 0)
+                    connectionOpenInFlightEvent.Signal();
+
+                unblockEvent.Wait();
+
+                Interlocked.Decrement(ref maxConnectingCurrent);
+            }
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void CheckoutOut_maxConnecting_timeout(
+            [Values(true, false)] bool isAsync,
+            [Values(1, 2)] int excessConnectingCount)
+        {
+            int maxConnecting = 2;
+            int threadsCount = maxConnecting + excessConnectingCount;
+
+            var settings = _settings.With(
+                waitQueueSize: threadsCount,
+                //maxConnecting: maxConnecting,
+                maxConnections: threadsCount,
+                waitQueueTimeout: TimeSpan.FromMilliseconds(50),
+                minConnections: 0);
+
+            var blockedCountEvent = new CountdownEvent(maxConnecting);
+            var unblockCountEvent = new CountdownEvent(excessConnectingCount);
+
+            var mockConnectionFactory = new Mock<IConnectionFactory>();
+            mockConnectionFactory
+                .Setup(c => c.CreateConnection(It.IsAny<ServerId>(), It.IsAny<EndPoint>()))
+                .Returns(() =>
+                {
+                    var connectionMock = new Mock<IConnection>();
+                    connectionMock
+                        .Setup(c => c.Settings)
+                        .Returns(new ConnectionSettings());
+
+                    connectionMock
+                        .Setup(c => c.Open(It.IsAny<CancellationToken>()))
+                        .Callback(() =>
+                        {
+                            if (blockedCountEvent.CurrentCount > 0)
+                            {
+                                blockedCountEvent.Signal();
+                            }
+
+                            unblockCountEvent.Wait();
+                        });
+
+                    connectionMock
+                        .Setup(c => c.OpenAsync(It.IsAny<CancellationToken>()))
+                        .Returns(() =>
+                        {
+                            if (blockedCountEvent.CurrentCount > 0)
+                            {
+                                blockedCountEvent.Signal();
+                            }
+
+                            unblockCountEvent.Wait();
+
+                            return Task.FromResult(0);
+                        });
+
+                    return connectionMock.Object;
+                });
+
+            using var subject = CreateSubject(settings, mockConnectionFactory.Object);
+            subject.Initialize();
+
+            ExecuteOnNewThread(threadsCount, i =>
+            {
+                if (i >= maxConnecting)
+                {
+                    blockedCountEvent.Wait();
+
+                    Record.Exception(() => AcquireConnectionGeneric(subject, isAsync))
+                        .Should()
+                        .BeOfType<TimeoutException>();
+
+                    unblockCountEvent.Signal();
+                }
+                else
+                {
+                    AcquireConnectionGeneric(subject, isAsync);
+                }
+            });
+        }
+
+        [Theory]
+        [ParameterAttributeData]
+        public void CheckoutOut_returned_connection_maxConnecting(
+            [Values(true, false)] bool isAsync,
+            [Values(1, 2)] int excessConnectingCount)
+        {
+            int maxConnecting = 2;
+            int initalAcquiredCount = excessConnectingCount;
+            int threadsCount = maxConnecting + excessConnectingCount;
+
+            var settings = _settings.With(
+                waitQueueSize: threadsCount,
+                //maxConnecting: maxConnecting,
+                maxConnections: maxConnecting + excessConnectingCount + initalAcquiredCount,
+                waitQueueTimeout: TimeSpan.FromSeconds(200),
+                minConnections: 0);
+
+            var allAcquiringCountEvent = new CountdownEvent(initalAcquiredCount + maxConnecting);
+            var unblockEvent = new ManualResetEventSlim(true);
+
+            var mockConnectionFactory = new Mock<IConnectionFactory>();
+            mockConnectionFactory
+                .Setup(c => c.CreateConnection(It.IsAny<ServerId>(), It.IsAny<EndPoint>()))
+                .Returns(() =>
+                {
+                    var connectionMock = new Mock<IConnection>();
+
+                    connectionMock
+                        .Setup(c => c.ConnectionId)
+                        .Returns(new ConnectionId(_serverId));
+
+                    connectionMock
+                        .Setup(c => c.Settings)
+                        .Returns(new ConnectionSettings());
+
+                    connectionMock
+                        .Setup(c => c.Open(It.IsAny<CancellationToken>()))
+                        .Callback(() =>
+                        {
+                            if (allAcquiringCountEvent.CurrentCount > 0)
+                            {
+                                allAcquiringCountEvent.Signal();
+                            }
+
+                            unblockEvent.Wait();
+                        });
+
+                    connectionMock
+                        .Setup(c => c.OpenAsync(It.IsAny<CancellationToken>()))
+                        .Returns(() =>
+                        {
+                            if (allAcquiringCountEvent.CurrentCount > 0)
+                            {
+                                allAcquiringCountEvent.Signal();
+                            }
+                            unblockEvent.Wait();
+
+                            return Task.FromResult(0);
+                        });
+
+                    return connectionMock.Object;
+                });
+
+            using var subject = CreateSubject(settings, mockConnectionFactory.Object);
+            subject.Initialize();
+
+            var connectionsAcquired = Enumerable.Range(0, initalAcquiredCount)
+                .Select(i => AcquireConnectionGeneric(subject, isAsync))
+                .ToArray();
+
+            var connectionsReused = new ConcurrentBag<ConnectionId>();
+
+            // block connections establishments
+            unblockEvent.Reset();
+
+            // schedule connections acquirement
+            ExecuteOnNewThread(threadsCount + 1, i =>
+            {
+                if (i == threadsCount)
+                {
+                    // orchestrator thread
+                    // wait until all trying to connect
+                    do
+                    {
+                        Thread.Sleep(100);
+                    }
+                    while (subject.AvailableCount > 0);
+
+                    // return connections and unblock acquirements waiting for establishment
+                    foreach (var connection in connectionsAcquired)
+                    {
+                        connection.Dispose();
+                    }
+                }
+                else if (i >= maxConnecting)
+                {
+                    // wait until all establishments are in-flight
+                    allAcquiringCountEvent.Wait();
+
+                    // acquire reused connection
+                    var connection = AcquireConnectionGeneric(subject, isAsync);
+                    connectionsReused.Add(connection.ConnectionId);
+
+                    if (connectionsReused.Count == excessConnectingCount)
+                    {
+                        // unblock maxConnecting for clean up
+                        unblockEvent.Set();
+                    }
+                }
+                else
+                {
+                    // maximize establishments in-flight up to maxConnecting
+                    AcquireConnectionGeneric(subject, isAsync);
+                }
+            });
+
+            connectionsAcquired.Length.Should().Be(connectionsReused.Count);
+            foreach (var connectionAcquired in connectionsAcquired)
+            {
+                connectionsReused.Contains(connectionAcquired.ConnectionId);
+            }
+        }
+
         // private methods
-        private ExclusiveConnectionPool CreateSubject(ConnectionPoolSettings connectionPoolSettings = null)
+        // TODO BD, use ThreadingUtilities from BsonTests.Helper
+        private static void ExecuteOnNewThread(int threadsCount, Action<int> action, int timeoutMilliseconds = 100000)
+        {
+            var actionsExecutedCount = 0;
+
+            var exceptions = new ConcurrentBag<Exception>();
+
+            var threads = Enumerable.Range(0, threadsCount).Select(i =>
+            {
+                var thread = new Thread(_ =>
+                {
+                    try
+                    {
+                        action(i);
+                        Interlocked.Increment(ref actionsExecutedCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
+                });
+
+                thread.Start();
+
+                return thread;
+            })
+            .ToArray();
+
+            foreach (var thread in threads)
+            {
+                if (!thread.Join(timeoutMilliseconds))
+                {
+                    throw new TimeoutException();
+                }
+            }
+
+            if (exceptions.Any())
+            {
+                throw exceptions.First();
+            }
+
+            actionsExecutedCount.Should().Be(threadsCount);
+        }
+
+        private static IConnection AcquireConnectionGeneric(ExclusiveConnectionPool subject, bool async)
+        {
+            if (async)
+            {
+                return subject.AcquireConnectionAsync(CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            }
+            else
+            {
+                return subject.AcquireConnection(CancellationToken.None);
+            }
+        }
+
+        private ExclusiveConnectionPool CreateSubject(ConnectionPoolSettings connectionPoolSettings = null, IConnectionFactory connectionFactory = null)
         {
             return new ExclusiveConnectionPool(
                 _serverId,
                 _endPoint,
                 connectionPoolSettings ?? _settings,
-                _mockConnectionFactory.Object,
+                connectionFactory ?? _mockConnectionFactory.Object,
                 _capturedEvents);
         }
 

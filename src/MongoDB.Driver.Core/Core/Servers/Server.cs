@@ -158,7 +158,6 @@ namespace MongoDB.Driver.Core.Servers
         {
             ThrowIfNotOpen();
 
-            var connection = _connectionPool.AcquireConnection(cancellationToken);
             try
             {
                 // ignoring the user's cancellation token here because we don't
@@ -167,14 +166,16 @@ namespace MongoDB.Driver.Core.Servers
                 // collective to complete opening the connection than the throw
                 // it away.
 
-                connection.Open(CancellationToken.None); // This results in the initial isMaster being sent
+                //connection.Open(CancellationToken.None); // This results in the initial isMaster being sent
+
+                var connection = _connectionPool.AcquireConnection(cancellationToken);
                 return new ServerChannel(this, connection);
             }
             catch (Exception ex)
             {
-                HandleBeforeHandshakeCompletesException(connection, ex);
+                HandleBeforeHandshakeCompletesException(null, ex); //TODO
 
-                connection.Dispose();
+                //connection.Dispose();
                 throw;
             }
         }
@@ -183,7 +184,6 @@ namespace MongoDB.Driver.Core.Servers
         {
             ThrowIfNotOpen();
 
-            var connection = await _connectionPool.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 // ignoring the user's cancellation token here because we don't
@@ -191,14 +191,15 @@ namespace MongoDB.Driver.Core.Servers
                 // wanted to cancel their operation. It will be better for the
                 // collective to complete opening the connection than the throw
                 // it away.
-                await connection.OpenAsync(CancellationToken.None).ConfigureAwait(false);
+                //await connection.OpenAsync(CancellationToken.None).ConfigureAwait(false);
+                var connection = await _connectionPool.AcquireConnectionAsync(cancellationToken).ConfigureAwait(false);
                 return new ServerChannel(this, connection);
             }
             catch (Exception ex)
             {
-                HandleBeforeHandshakeCompletesException(connection, ex);
+                HandleBeforeHandshakeCompletesException(null, ex); // TODO
 
-                connection.Dispose();
+                //connection.Dispose();
                 throw;
             }
         }

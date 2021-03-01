@@ -126,6 +126,12 @@ namespace MongoDB.Driver.Core.Misc
             get { return _preRelease; }
         }
 
+        // internal properties
+        /// <summary>
+        /// Gets the prerelease-free semantic version.
+        /// </summary>
+        internal SemanticVersion AsReleasedSemanticVersion => new SemanticVersion(_major, _minor, _patch);
+
         // methods
         /// <inheritdoc/>
         public int CompareTo(SemanticVersion other)

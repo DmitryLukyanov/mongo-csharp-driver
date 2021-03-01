@@ -226,7 +226,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
                         {
                             var actualVersion = CoreTestConfiguration.ServerVersion;
                             var minServerVersion = SemanticVersion.Parse(item.Value.AsString);
-                            if (actualVersion < minServerVersion)
+                            if (actualVersion.AsReleasedSemanticVersion < minServerVersion.AsReleasedSemanticVersion)
                             {
                                 return false;
                             }

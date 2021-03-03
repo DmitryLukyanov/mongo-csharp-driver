@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -118,7 +119,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         session = _entityMap.GetSession(argument.Value.AsString);
                         break;
                     case "update":
-                        update = argument.Value.AsBsonDocument;
+                        update = CreateUpdateDefinition(argument.Value);
                         break;
                     default:
                         throw new FormatException($"Invalid UpdateOneOperation argument name: '{argument.Name}'.");
@@ -126,6 +127,16 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             }
 
             return new UnifiedUpdateOneOperation(session, collection, filter, update, options);
+
+            UpdateDefinition<BsonDocument> CreateUpdateDefinition(BsonValue argument)
+            {
+                switch (argument)
+                {
+                    case BsonDocument document : return document;
+                    case BsonArray bsonArray: return PipelineDefinition<BsonDocument, BsonDocument>.Create(bsonArray.Values.Cast<BsonDocument>());
+                    default: throw new FormatException($"Unsupported UpdateDefinition type {argument.GetType().Name}.");
+                }
+            }
         }
     }
 

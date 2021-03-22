@@ -28,6 +28,9 @@ var srcDirectory = solutionDirectory.Combine("src");
 var testsDirectory = solutionDirectory.Combine("tests");
 var toolsDirectory = solutionDirectory.Combine("tools");
 var toolsHugoDirectory = toolsDirectory.Combine("Hugo");
+var artifactsPackagingTestsDirectory = artifactsDirectory.Combine("Packaging.Tests");
+var localNugetSourceName = "LocalPackages";
+var mongoDbDriverPackageName = "MongoDB.Driver";
 
 var solutionFile = solutionDirectory.CombineWithFilePath("CSharpDriver.sln");
 var solutionFullPath = solutionFile.FullPath;
@@ -308,7 +311,7 @@ Task("TestGssapi")
     .DoesForEach(
         GetFiles("./**/MongoDB.Driver.Tests.csproj"),
         testProject =>
-	{
+    {
         var settings = new DotNetCoreTestSettings
         {
             NoBuild = true,
@@ -324,11 +327,11 @@ Task("TestGssapi")
             case "testgssapinetstandard20": settings.Framework = "netcoreapp2.1"; break;
             case "testgssapinetstandard21": settings.Framework = "netcoreapp3.0"; break;
         }
-		DotNetCoreTest(
-			testProject.FullPath,
+        DotNetCoreTest(
+            testProject.FullPath,
             settings
-		);
-	});
+        );
+    });
 
 Task("TestGssapiNet452").IsDependentOn("TestGssapi");
 Task("TestGssapiNetStandard15").IsDependentOn("TestGssapi");
@@ -482,5 +485,136 @@ Task("DumpGitVersion")
     {
         Information(gitVersion.Dump());
     });
+
+Task("PreparePackagingTests")
+    .Does(() =>
+    {
+        var nugetConfigPath = artifactsDirectory.CombineWithFilePath("nuget.config");
+        if (FileExists(nugetConfigPath)) DeleteFile(nugetConfigPath);
+
+        CreateNugetConfig(nugetConfigPath);
+
+        void CreateNugetConfig(FilePath filePath)    
+        {
+            DotNetCoreTool(filePath, "new nugetconfig"); // create a default nuget.config            
+
+            // <packageSources>
+            //     <add key="{localNugetSourceName}" value="packages" />
+            // </packageSources>
+            XmlPoke(filePath, "/configuration/packageSources/add/@key", $"{localNugetSourceName}");
+            XmlPoke(filePath, $"/configuration/packageSources/add[@key = '{localNugetSourceName}']/@value", "packages");
+        }
+    });
+
+Task("PackagingTests")
+    .IsDependentOn("Package")
+    .IsDependentOn("PreparePackagingTests")
+    .DoesForEach(
+    () => 
+    {
+        var packagesList = NuGetList(
+            new NuGetListSettings {
+                AllVersions = true,
+                Prerelease = true,
+                Source = new [] { $"{localNugetSourceName}" }, // corresponds to artifacts Nuget.config
+                WorkingDirectory = artifactsDirectory
+            });
+
+        foreach(var package in packagesList)
+        {
+            Information("Found packages {0}, version {1}", package.Name, package.Version);
+        }
+        if (packagesList.Count(p => p.Name == mongoDbDriverPackageName) != 1)
+        {
+            throw new Exception($"Package {mongoDbDriverPackageName} must be presented and unique.");
+        }
+        var mongoDriverPackageVersion = packagesList.Single(p => p.Name == mongoDbDriverPackageName).Version;
+        Information($"Package version {mongoDriverPackageVersion}");
+        
+        var monikersDetails = new List<(string Moniker, string CsprojType, string Version, string Bitness)>
+        {
+            /* NonSDK will be added later
+            { ("v4.5.2", "NonSdk", mongoDriverPackageVersion) },
+            { ("v4.7.2", "NonSdk", mongoDriverPackageVersion) }, */
+
+            { ("net452", "SDK", mongoDriverPackageVersion, "x64") }, // TODO: add x32
+            { ("net472", "SDK", mongoDriverPackageVersion, "x64") },
+            { ("netcoreapp11", "SDK", mongoDriverPackageVersion, "x64") },
+            { ("netcoreapp21", "SDK", mongoDriverPackageVersion, "x64") },
+            { ("netcoreapp30", "SDK", mongoDriverPackageVersion, "x64") },
+            { ("net50", "SDK", mongoDriverPackageVersion, "x64") }
+        };
+        return monikersDetails;
+    },
+    (monikerInfo) => 
+    {
+        var moniker = monikerInfo.Moniker;
+        var csprojFormat = monikerInfo.CsprojType;
+        var mongoDriverPackageVersion = monikerInfo.Version;
+
+        Information($"Moniker: {moniker}, csproj style: {csprojFormat}");
+
+        var monikerTestFolder = artifactsPackagingTestsDirectory.Combine($"{moniker}_{csprojFormat}");
+        Information($"Moniker test folder: {monikerTestFolder}");
+        EnsureDirectoryExists(monikerTestFolder);
+        CleanDirectory(monikerTestFolder);
+
+        var csprojFileName = $"{monikerTestFolder.GetDirectoryName()}.csproj"; 
+        var csprojFullPath = monikerTestFolder.CombineWithFilePath(csprojFileName);
+
+        if (csprojFormat == "NonSdk")
+        {
+            // TODO: 
+        }
+        else
+        {
+            Information("Creating test project..");            
+            DotNetCoreTool(csprojFullPath, "new xunit", $"--target-framework-override {moniker} --language C# ");
+            Information("Created test project");
+
+            // needs for netcoreapp11
+            Information($"Adding Microsoft.NET.Test.Sdk..");
+            DotNetCoreTool(
+                csprojFullPath,
+                "add package Microsoft.NET.Test.Sdk",
+                $"--framework {moniker} --version 15.8.0"
+            );
+            Information($"Added Microsoft.NET.Test.Sdk");
+
+            // needs for netcoreapp11
+            Information($"Adding xunit.runner.visualstudio..");
+            DotNetCoreTool(
+                csprojFullPath,
+                "add package xunit.runner.visualstudio",
+                $"--framework {moniker} --version 2.4.0"
+            );
+            Information($"Added xunit.runner.visualstudio");
+
+            Information($"Adding test package..");
+            DotNetCoreTool(
+                csprojFullPath,
+                $"add package {mongoDbDriverPackageName}",
+                $"--framework {moniker} --version {mongoDriverPackageVersion} --source {localNugetSourceName}"
+            );
+            Information("Added test package...");
+
+            DeleteFile(monikerTestFolder.CombineWithFilePath("UnitTest1.cs")); // Remove a default unit test
+            var packagingTestsDirectory = testsDirectory.Combine("MongoDB.Driver.Core.Tests").Combine("Packaging");
+            var files = GetFiles($"{packagingTestsDirectory}/*.cs").ToList();
+            CopyFiles(files, monikerTestFolder); // copy tests content
+
+            Information("Running tests..");  
+            DotNetCoreTest(
+                csprojFullPath.ToString(),
+                new DotNetCoreTestSettings
+                {
+                    Framework = moniker,
+                    Configuration = configuration,
+                    ArgumentCustomization = args => args.Append($"-- RunConfiguration.TargetPlatform={monikerInfo.Bitness}")
+                }
+            );
+        }
+    })
+    .DeferOnError();
 
 RunTarget(target);

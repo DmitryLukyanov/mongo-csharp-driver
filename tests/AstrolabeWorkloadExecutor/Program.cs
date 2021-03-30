@@ -90,7 +90,7 @@ namespace WorkloadExecutor
                 events.AddRange(specEvents);
             }
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3");
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3. Events count: {eventCapturer.Count}");
             var eventsDocument = new BsonDocument
             {
                 { "events", events },

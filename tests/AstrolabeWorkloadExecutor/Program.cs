@@ -71,6 +71,7 @@ namespace WorkloadExecutor
 
         private static (string EventsJson, string ResultsJson) HandleWorkloadResult(UnifiedEntityMap entityMap)
         {
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_1");
             Ensure.IsNotNull(entityMap, nameof(entityMap));
 
             var iterationsCount = GetValueOrDefault(entityMap.IterationCounts, "iterations", @default: -1);
@@ -81,6 +82,7 @@ namespace WorkloadExecutor
             var failuresDocuments = GetValueOrDefault(entityMap.FailureDocumentsMap, "failures", @default: new BsonArray());
             var failuresCount = failuresDocuments.Count;
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_2");
             var events = new BsonArray();
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
@@ -88,6 +90,7 @@ namespace WorkloadExecutor
                 events.AddRange(specEvents);
             }
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3");
             var eventsDocument = new BsonDocument
             {
                 { "events", events },
@@ -95,6 +98,7 @@ namespace WorkloadExecutor
                 { "failures", failuresDocuments }
             };
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_4");
             var resultsDocument = new BsonDocument
             {
                 { "numErrors", errorCount },
@@ -102,12 +106,16 @@ namespace WorkloadExecutor
                 { "numSuccesses", successesCount },
                 { "numIterations", iterationsCount }
             };
-
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_5");
             var jsonWritterSettings = new JsonWriterSettings
             {
                 OutputMode = JsonOutputMode.RelaxedExtendedJson
             };
-            return (eventsDocument.ToJson(jsonWritterSettings), resultsDocument.ToJson(jsonWritterSettings));
+            var eventsDoc = eventsDocument.ToJson(jsonWritterSettings);
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_6");
+            var resultDoc = resultsDocument.ToJson(jsonWritterSettings);
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_7");
+            return (eventsDoc, resultDoc);
 
             T GetValueOrDefault<T>(Dictionary<string, T> dictionary, string key, T @default) => dictionary.TryGetValue(key, out var value) ? value : @default;
         }

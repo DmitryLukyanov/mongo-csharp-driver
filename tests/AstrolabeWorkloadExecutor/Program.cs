@@ -36,7 +36,7 @@ namespace WorkloadExecutor
 
             var connectionString = args[0];
             var driverWorkload = BsonDocument.Parse(args[1]);
-            Console.WriteLine($"Income document: {driverWorkload}");
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. Income document: {driverWorkload}");
 
             var cancellationTokenSource = new CancellationTokenSource();
             ConsoleCancelEventHandler cancelHandler = (o, e) => HandleCancel(e, cancellationTokenSource);
@@ -44,11 +44,11 @@ namespace WorkloadExecutor
             var resultsDir = Environment.GetEnvironmentVariable("RESULTS_DIR");
             var eventsPath = Path.Combine(resultsDir ?? "", "events.json");
             var resultsPath = Path.Combine(resultsDir ?? "", "results.json");
-            Console.WriteLine($"dotnet main> Results will be written to {resultsPath},\nEvents will be written to {eventsPath}...");
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> Results will be written to {resultsPath},\nEvents will be written to {eventsPath}...");
 
             Console.CancelKeyPress += cancelHandler;
 
-            Console.WriteLine("dotnet main> Starting workload executor...");
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> Starting workload executor...");
 
             if (!bool.TryParse(Environment.GetEnvironmentVariable("ASYNC"), out bool async))
             {
@@ -60,7 +60,7 @@ namespace WorkloadExecutor
 
             Console.CancelKeyPress -= cancelHandler;
 
-            Console.WriteLine("dotnet main finally> Writing final results and events files");
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main finally> Writing final results and events files");
             WriteToFile(resultsPath, resultDetails.ResultsJson);
             WriteToFile(eventsPath, resultDetails.EventsJson);
 
@@ -123,16 +123,16 @@ namespace WorkloadExecutor
                 terminationCancellationToken: cancellationToken))
             {
                 testsExecutor.Run(testCase);
-                Console.WriteLine("dotnet ExecuteWorkload> Returning...");
+                Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet ExecuteWorkload> Returning...");
                 return testsExecutor.EntityMap;
             }
         }
 
         private static void CancelWorkloadTask(CancellationTokenSource cancellationTokenSource)
         {
-            Console.Write($"\ndotnet cancel workload> Canceling the workload task...");
+            Console.Write($"\nTime:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet cancel workload> Canceling the workload task...");
             cancellationTokenSource.Cancel();
-            Console.WriteLine($"Done.");
+            Console.WriteLine($"\nTime:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. Done.");
         }
 
         private static void HandleCancel(

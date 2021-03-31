@@ -109,6 +109,6 @@ namespace AstrolabeWorkloadExecutor
             return $"{endpoint.Host}:{endpoint.Port}";
         }
 
-        private static double GetCurrentTimeSeconds(DateTime timestamp) => ((DateTimeOffset)timestamp).ToUnixTimeSeconds();
+        private static double GetCurrentTimeSeconds(DateTime timestamp) => (double)(timestamp - BsonConstants.UnixEpoch).TotalMilliseconds / 1000;
     }
 }

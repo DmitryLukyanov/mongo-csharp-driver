@@ -20,7 +20,6 @@ using System.Linq;
 using System.Threading;
 using AstrolabeWorkloadExecutor;
 using MongoDB.Bson;
-using MongoDB.Bson.IO;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Misc;

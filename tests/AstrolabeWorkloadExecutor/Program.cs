@@ -40,9 +40,9 @@ namespace WorkloadExecutor
             var cancellationTokenSource = new CancellationTokenSource();
             ConsoleCancelEventHandler cancelHandler = (o, e) => HandleCancel(e, cancellationTokenSource);
 
-            var resultsDir = Environment.GetEnvironmentVariable("RESULTS_DIR");
-            var eventsPath = Path.Combine(resultsDir ?? "", "events.json");
-            var resultsPath = Path.Combine(resultsDir ?? "", "results.json");
+            var resultsDir = Environment.GetEnvironmentVariable("RESULTS_DIR") ?? "";
+            var eventsPath = Path.Combine(resultsDir, "events.json");
+            var resultsPath = Path.Combine(resultsDir, "results.json");
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> Results will be written to {resultsPath},\nEvents will be written to {eventsPath}...");
 
             Console.CancelKeyPress += cancelHandler;

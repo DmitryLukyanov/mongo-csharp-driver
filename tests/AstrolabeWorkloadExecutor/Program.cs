@@ -30,8 +30,97 @@ namespace WorkloadExecutor
 {
     public static class Program
     {
+        private static string _doc = @"{
+    ""description"": ""Find"",
+    ""schemaVersion"": ""1.2"",
+    ""createEntities"": [{
+            ""client"": {
+                ""id"": ""client0"",
+                ""uriOptions"": {
+                    ""retryReads"": true
+                },
+                ""storeEventsAsEntities"": [{
+                        ""id"": ""events"",
+                        ""events"": [""PoolCreatedEvent"", ""PoolReadyEvent"", ""PoolClearedEvent"", ""PoolClosedEvent"", ""ConnectionCreatedEvent"", ""ConnectionReadyEvent"", ""ConnectionClosedEvent"", ""ConnectionCheckOutStartedEvent"", ""ConnectionCheckOutFailedEvent"", ""ConnectionCheckedOutEvent"", ""ConnectionCheckedInEvent"", ""CommandStartedEvent"", ""CommandSucceededEvent"", ""CommandFailedEvent""]
+}
+                ]
+            }
+        }, {
+    ""database"": {
+        ""id"": ""database0"",
+                ""client"": ""client0"",
+                ""databaseName"": ""dat""
+            }
+}, {
+    ""collection"": {
+        ""id"": ""collection0"",
+                ""database"": ""database0"",
+                ""collectionName"": ""dat""
+            }
+}
+    ],
+    ""initialData"": [{
+            ""collectionName"": ""dat"",
+             ""databaseName"": ""dat"",
+             ""documents"": [{
+                    ""_id"": 1,
+                     ""x"": 11
+                }, {
+    ""_id"": 2,
+                    ""x"": 22
+                }, {
+    ""_id"": 3,
+                    ""x"": 33
+                }
+            ]
+        }
+    ],
+    ""tests"": [{
+            ""description"": ""Find one"",
+             ""operations"": [{
+                    ""name"": ""loop"",
+                     ""object"": ""testRunner"",
+                     ""arguments"": {
+                        ""storeErrorsAsEntity"": ""errors"",
+                         ""storeIterationsAsEntity"": ""iterations"",
+                         ""storeSuccessesAsEntity"": ""successes"",
+                         ""operations"": [{
+                                ""name"": ""find"",
+                                 ""object"": ""collection0"",
+                                 ""arguments"": {
+                                    ""filter"": {
+                                        ""_id"": {
+                                            ""$gt"": 1
+                                        }
+                                    },
+                                    ""sort"": {
+    ""_id"": 1
+                                     }
+                                },
+                                ""expectResult"": [{
+                                        ""_id"": 2,
+                                         ""x"": 22
+                                    }, {
+    ""_id"": 3,
+                                        ""x"": 33
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+";
         public static void Main(string[] args)
         {
+            args = new[]
+            {
+                "mongodb://localhost",
+                _doc
+            };
             Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
 
             var connectionString = args[0];
@@ -83,39 +172,31 @@ namespace WorkloadExecutor
             var failuresCount = failuresDocuments.Count;
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_2");
-            var events = new BsonArray();
+            string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
-                var specEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument);
-                events.AddRange(specEvents);
+                var formattedEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument);
+                eventsJson = $"[{string.Join(",", formattedEvents)}]";
             }
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3. Events count: {eventCapturer.Count}");
-            var eventsDocument = new BsonDocument
-            {
-                { "events", events },
-                { "errors", errorDocuments },
-                { "failures", failuresDocuments }
-            };
+            var eventsDocument = @$"
+            {{ ""events"", {eventsJson} }},
+            {{ ""errors"", {errorDocuments} }},
+            {{ ""failures"", {failuresDocuments} }}";
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_4");
-            var resultsDocument = new BsonDocument
-            {
-                { "numErrors", errorCount },
-                { "numFailures", failuresCount },
-                { "numSuccesses", successesCount },
-                { "numIterations", iterationsCount }
-            };
+            var resultsDocument = $@"
+            {{
+                {{ ""numErrors"", {errorCount} }},
+                {{ ""numFailures"", {failuresCount} }},
+                {{ ""numSuccesses"", {successesCount} }},
+                {{ ""numIterations"", {iterationsCount} }}
+            }}";
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_5");
-            var jsonWritterSettings = new JsonWriterSettings
-            {
-                OutputMode = JsonOutputMode.RelaxedExtendedJson
-            };
-            var eventsDoc = eventsDocument.ToJson(jsonWritterSettings);
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_6");
-            var resultDoc = resultsDocument.ToJson(jsonWritterSettings);
+
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_7");
-            return (eventsDoc, resultDoc);
+            return (eventsDocument, resultsDocument);
 
             T GetValueOrDefault<T>(Dictionary<string, T> dictionary, string key, T @default) => dictionary.TryGetValue(key, out var value) ? value : @default;
         }

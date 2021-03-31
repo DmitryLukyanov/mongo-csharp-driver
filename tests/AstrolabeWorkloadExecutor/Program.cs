@@ -31,7 +31,7 @@ namespace WorkloadExecutor
     {
         public static void Main(string[] args)
         {
-            Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
+            Ensure.IsEqualTo(args.Length, 1, nameof(args.Length));
 
             var connectionString = args[0];
             var driverWorkload = BsonDocument.Parse(args[1]);

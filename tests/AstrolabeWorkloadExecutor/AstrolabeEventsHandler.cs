@@ -34,7 +34,7 @@ public static string CreateEventDocument(object @event) =>
                         typedEvent.ObservedAt,
                         typedEvent.CommandName,
                         typedEvent.RequestId,
-                        $", databaseName : {typedEvent.DatabaseNamespace}"),
+                        $", databaseName : '{typedEvent.DatabaseNamespace}'"),
 
                 CommandSucceededEvent typedEvent =>
                     CreateCommandEventDocument(
@@ -42,7 +42,7 @@ public static string CreateEventDocument(object @event) =>
                         typedEvent.ObservedAt,
                         typedEvent.CommandName,
                         typedEvent.RequestId,
-                        $", duration : typedEvent.Duration.TotalMilliseconds"),
+                        $", duration : '{typedEvent.Duration.TotalMilliseconds}'"),
 
                 CommandFailedEvent typedEvent =>
                     CreateCommandEventDocument(
@@ -50,7 +50,7 @@ public static string CreateEventDocument(object @event) =>
                         typedEvent.ObservedAt,
                         typedEvent.CommandName,
                         typedEvent.RequestId,
-                        $", duration : {typedEvent.Duration.TotalMilliseconds}, failure : {typedEvent.Failure}"),
+                        $", duration : '{typedEvent.Duration.TotalMilliseconds}', failure : '{typedEvent.Failure}'"),
 
                 ConnectionPoolOpenedEvent typedEvent =>
                     CreateCmapEventDocument("PoolCreatedEvent", typedEvent.ObservedAt, typedEvent.ServerId),
@@ -69,7 +69,7 @@ public static string CreateEventDocument(object @event) =>
                         "ConnectionClosedEvent",
                         typedEvent.ObservedAt,
                         typedEvent.ConnectionId),
-                        // $", reason : {typedEvent.Reason}"); // TODO: should be implemented in the scope of CSHARP-3219
+                        // $", reason : '{typedEvent.Reason}'"); // TODO: should be implemented in the scope of CSHARP-3219
 
                 ConnectionPoolCheckingOutConnectionEvent typedEvent =>
                     CreateCmapEventDocument("ConnectionCheckOutStartedEvent", typedEvent.ObservedAt, typedEvent.ServerId),
@@ -79,7 +79,7 @@ public static string CreateEventDocument(object @event) =>
                         "ConnectionCheckOutFailedEvent",
                         typedEvent.ObservedAt,
                         typedEvent.ServerId,
-                        $", reason : {typedEvent.Reason}"),
+                        $", reason : '{typedEvent.Reason}'"),
 
                 ConnectionPoolCheckedOutConnectionEvent typedEvent =>
                     CreateCmapEventDocument("ConnectionCheckedOutEvent", typedEvent.ObservedAt, typedEvent.ConnectionId),
@@ -95,13 +95,13 @@ public static string CreateEventDocument(object @event) =>
 
         // private methods
         private static string CreateCmapEventDocument(string eventName, DateTime observedAt, ServerId serverId, string customJsonNodeWithComma = "") =>
-            $"{{ name : {eventName},  observedAt : {GetCurrentTimeSeconds(observedAt)}, address : {GetAddress(serverId)}{customJsonNodeWithComma} }}";
+            $"{{ name : '{eventName}',  observedAt : '{GetCurrentTimeSeconds(observedAt)}', address : '{GetAddress(serverId)}'{customJsonNodeWithComma} }}";
 
         public static string CreateCmapEventDocument(string eventName, DateTime observedAt, ConnectionId connectionId) =>
             CreateCmapEventDocument(eventName, observedAt, connectionId.ServerId, $", connectionId : {connectionId.LocalValue}");
 
         public static string CreateCommandEventDocument(string eventName, DateTime observedAt, string commandName, int requestId, string customJsonNodeWithComma = "") =>
-            $"{{ name : {eventName},  observedAt : {GetCurrentTimeSeconds(observedAt)}, commandName : {commandName}, requestId : {requestId}{customJsonNodeWithComma} }}";
+            $"{{ name : '{eventName}',  observedAt : '{GetCurrentTimeSeconds(observedAt)}', commandName : '{commandName}', requestId : '{requestId}'{customJsonNodeWithComma} }}";
 
         private static string GetAddress(ServerId serverId)
         {

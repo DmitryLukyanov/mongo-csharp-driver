@@ -175,24 +175,20 @@ namespace WorkloadExecutor
             string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
-                var formattedEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument);
+                var formattedEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument).Take(1);
                 eventsJson = $"[{string.Join(",", formattedEvents)}]";
             }
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3. Events count: {eventCapturer.Count}");
-            var eventsDocument = @$"
-            {{ ""events"", {eventsJson} }},
-            {{ ""errors"", {errorDocuments} }},
-            {{ ""failures"", {failuresDocuments} }}";
+            var eventsDocument = @$"{{ ""events"" : {eventsJson} }},
+            {{ ""errors"" : {errorDocuments} }},
+            {{ ""failures"" : {failuresDocuments} }}";
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_4");
-            var resultsDocument = $@"
-            {{
-                {{ ""numErrors"", {errorCount} }},
-                {{ ""numFailures"", {failuresCount} }},
-                {{ ""numSuccesses"", {successesCount} }},
-                {{ ""numIterations"", {iterationsCount} }}
-            }}";
+            var resultsDocument = $@"{{ ""numErrors"" : {errorCount} }},
+            {{ ""numFailures"" : {failuresCount} }},
+            {{ ""numSuccesses"" : {successesCount} }},
+            {{ ""numIterations"" : {iterationsCount} }}";
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_5");
 
             Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_7");

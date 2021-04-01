@@ -71,6 +71,7 @@ namespace WorkloadExecutor
         {
             Ensure.IsNotNull(entityMap, nameof(entityMap));
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}_#_1");
             var iterationsCount = GetValueOrDefault(entityMap.IterationCounts, "iterations", @default: -1);
             var successesCount = GetValueOrDefault(entityMap.SuccessCounts, "successes", @default: -1);
 
@@ -79,6 +80,7 @@ namespace WorkloadExecutor
             var failuresDocuments = GetValueOrDefault(entityMap.FailureDocumentsMap, "failures", @default: new BsonArray());
             var failuresCount = failuresDocuments.Count;
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}_#_2");
             string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
@@ -90,6 +92,7 @@ namespace WorkloadExecutor
                 eventsJson = eventsJsonBuilder.ToString();
             }
 
+            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}_#_3");
             var eventsDocument = @$"{{ ""events"" : {eventsJson}, ""errors"" : {errorDocuments}, ""failures"" : {failuresDocuments} }}";
             var resultsDocument = $@"{{ ""numErrors"" : {errorCount}, ""numFailures"" : {failuresCount}, ""numSuccesses"" : {successesCount},  ""numIterations"" : {iterationsCount} }}";
 

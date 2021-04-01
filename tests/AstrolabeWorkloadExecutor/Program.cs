@@ -84,6 +84,7 @@ namespace WorkloadExecutor
             string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
+                Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}_#_2_5_Count:{eventCapturer.Count}");
                 var eventsJsonBuilder = new AstrolabeEventsJsonBuilder();
                 foreach (var @event in eventCapturer.Events)
                 {

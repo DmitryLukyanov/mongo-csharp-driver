@@ -31,11 +31,10 @@ namespace WorkloadExecutor
     {
         public static void Main(string[] args)
         {
-            Ensure.IsEqualTo(args.Length, 1, nameof(args.Length));
+            Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
 
             var connectionString = args[0];
             var driverWorkload = BsonDocument.Parse(args[1]);
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. Income document: {driverWorkload}");
 
             var cancellationTokenSource = new CancellationTokenSource();
             ConsoleCancelEventHandler cancelHandler = (o, e) => HandleCancel(e, cancellationTokenSource);
@@ -43,25 +42,25 @@ namespace WorkloadExecutor
             var resultsDir = Environment.GetEnvironmentVariable("RESULTS_DIR") ?? "";
             var eventsPath = Path.Combine(resultsDir, "events.json");
             var resultsPath = Path.Combine(resultsDir, "results.json");
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> Results will be written to {resultsPath},\nEvents will be written to {eventsPath}...");
+            Console.WriteLine($"dotnet main> Results will be written to {resultsPath}");
+            Console.WriteLine($"dotnet main> Events will be written to {eventsPath}");
 
             Console.CancelKeyPress += cancelHandler;
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> Starting workload executor...");
+            Console.WriteLine($"dotnet main> Starting workload executor...");
 
             if (!bool.TryParse(Environment.GetEnvironmentVariable("ASYNC"), out bool async))
             {
                 async = true;
             }
 
-            var entityMap = ExecuteWorkload(connectionString, driverWorkload, async, cancellationTokenSource.Token);
-            var resultDetails = HandleWorkloadResult(entityMap: entityMap);
+            var resultDetails = ExecuteWorkload(connectionString, driverWorkload, async, cancellationTokenSource.Token);
 
             Console.CancelKeyPress -= cancelHandler;
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main finally> Writing final results and events files");
-            WriteToFile(resultsPath, resultDetails.ResultsJson);
-            WriteToFile(eventsPath, resultDetails.EventsJson);
+            Console.WriteLine($"dotnet main finally> Writing final results and events files");
+            File.WriteAllText(resultsPath, resultDetails.ResultsJson);
+            File.WriteAllText(eventsPath, resultDetails.EventsJson);
 
             // ensure all messages are propagated to the astrolabe time immediately
             Console.Error.Flush();
@@ -70,7 +69,6 @@ namespace WorkloadExecutor
 
         private static (string EventsJson, string ResultsJson) HandleWorkloadResult(UnifiedEntityMap entityMap)
         {
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_1");
             Ensure.IsNotNull(entityMap, nameof(entityMap));
 
             var iterationsCount = GetValueOrDefault(entityMap.IterationCounts, "iterations", @default: -1);
@@ -81,28 +79,22 @@ namespace WorkloadExecutor
             var failuresDocuments = GetValueOrDefault(entityMap.FailureDocumentsMap, "failures", @default: new BsonArray());
             var failuresCount = failuresDocuments.Count;
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_2");
             string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
-                var formattedEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument).Take(1);
+                var formattedEvents = eventCapturer.Events.Select(AstrolabeEventsHandler.CreateEventDocument);
                 eventsJson = $"[{string.Join(",", formattedEvents)}]";
             }
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_3. Events count: {eventCapturer.Count}");
             var eventsDocument = @$"{{ ""events"" : {eventsJson}, ""errors"" : {errorDocuments}, ""failures"" : {failuresDocuments} }}";
-
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_4");
             var resultsDocument = $@"{{ ""numErrors"" : {errorCount}, ""numFailures"" : {failuresCount}, ""numSuccesses"" : {successesCount},  ""numIterations"" : {iterationsCount} }}";
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_5");
 
-            Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet main> HandleWorkloadResult_7");
             return (eventsDocument, resultsDocument);
 
             T GetValueOrDefault<T>(Dictionary<string, T> dictionary, string key, T @default) => dictionary.TryGetValue(key, out var value) ? value : @default;
         }
 
-        private static UnifiedEntityMap ExecuteWorkload(string connectionString, BsonDocument driverWorkload, bool async, CancellationToken cancellationToken)
+        private static (string EventsJson, string ResultsJson) ExecuteWorkload(string connectionString, BsonDocument driverWorkload, bool async, CancellationToken cancellationToken)
         {
             Environment.SetEnvironmentVariable("MONGODB_URI", connectionString); // force using atlas connection string in our internal test connection strings
 
@@ -113,16 +105,16 @@ namespace WorkloadExecutor
                 terminationCancellationToken: cancellationToken))
             {
                 testsExecutor.Run(testCase);
-                Console.WriteLine($"Time:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet ExecuteWorkload> Returning...");
-                return testsExecutor.EntityMap;
+                Console.WriteLine($"dotnet ExecuteWorkload> Returning...");
+                return HandleWorkloadResult(entityMap: testsExecutor.EntityMap);
             }
         }
 
         private static void CancelWorkloadTask(CancellationTokenSource cancellationTokenSource)
         {
-            Console.Write($"\nTime:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. dotnet cancel workload> Canceling the workload task...");
+            Console.Write($"dotnet cancel workload> Canceling the workload task...");
             cancellationTokenSource.Cancel();
-            Console.WriteLine($"\nTime:{DateTime.UtcNow:MM/dd/yyyy hh:mm:ss.fff tt}. Done.");
+            Console.WriteLine($"Done.");
         }
 
         private static void HandleCancel(
@@ -132,11 +124,6 @@ namespace WorkloadExecutor
             // We set the Cancel property to true to prevent the process from terminating
             args.Cancel = true;
             CancelWorkloadTask(cancellationTokenSource);
-        }
-
-        private static void WriteToFile(string path, string json)
-        {
-            File.WriteAllText(path, json);
         }
 
         internal class TestCaseFactory : JsonDrivenTestCaseFactory
@@ -149,7 +136,8 @@ namespace WorkloadExecutor
                 return testCase;
             }
 
-            protected override string GetTestCaseName(BsonDocument shared, BsonDocument test, int index) => $"Astrolabe command line arguments:{base.GetTestName(test, index)}";
+            protected override string GetTestCaseName(BsonDocument shared, BsonDocument test, int index) =>
+                $"Astrolabe command line arguments:{base.GetTestName(test, index)}";
         }
     }
 }

@@ -56,17 +56,17 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             EventCapturer eventCapturer = null;
 
-            foreach (var argument in arguments)
-            {
-                switch (argument.Name)
-                {
-                    case "client":
-                        eventCapturer = _entityMap.EventCapturers[argument.Value.AsString];
-                        break;
-                    default:
-                        throw new FormatException($"Invalid AssertSameLsidOnLastTwoCommandsOperation argument name: '{argument.Name}'.");
-                }
-            }
+            //foreach (var argument in arguments)
+            //{
+            //    switch (argument.Name)
+            //    {
+            //        case "client":
+            //            eventCapturer = _entityMap.EventCapturers[argument.Value.AsString];
+            //            break;
+            //        default:
+            //            throw new FormatException($"Invalid AssertSameLsidOnLastTwoCommandsOperation argument name: '{argument.Name}'.");
+            //    }
+            //}
 
             return new UnifiedAssertSameLsidOnLastTwoCommandsOperation(eventCapturer);
         }

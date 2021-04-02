@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,6 +24,7 @@ using AstrolabeWorkloadExecutor;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Tests.Specifications.unified_test_format;
 using MongoDB.Driver.Tests.UnifiedTestOperations;
@@ -33,6 +35,12 @@ namespace WorkloadExecutor
     {
         public static void Main(string[] args)
         {
+            //args = new[]
+            //{
+            //    "mongodb://localhost",
+            //    "{'description': 'Find', 'schemaVersion': '1.2', 'createEntities': [{'client': {'id': 'client0', 'uriOptions': {'retryReads': true}, 'storeEventsAsEntities': [{'id': 'events', 'events': ['PoolCreatedEvent', 'PoolReadyEvent', 'PoolClearedEvent', 'PoolClosedEvent', 'ConnectionCreatedEvent', 'ConnectionReadyEvent', 'ConnectionClosedEvent', 'ConnectionCheckOutStartedEvent', 'ConnectionCheckOutFailedEvent', 'ConnectionCheckedOutEvent', 'ConnectionCheckedInEvent', 'CommandStartedEvent', 'CommandSucceededEvent', 'CommandFailedEvent']}]}}, {'database': {'id': 'database0', 'client': 'client0', 'databaseName': 'dat'}}, {'collection': {'id': 'collection0', 'database': 'database0', 'collectionName': 'dat'}}], 'initialData': [{'collectionName': 'dat', 'databaseName': 'dat', 'documents': [{'_id': 1, 'x': 11}, {'_id': 2, 'x': 22}, {'_id': 3, 'x': 33}]}], 'tests': [{'description': 'Find one', 'operations': [{'name': 'loop', 'object': 'testRunner', 'arguments': {'storeErrorsAsEntity': 'errors', 'storeIterationsAsEntity': 'iterations', 'storeSuccessesAsEntity': 'successes', 'operations': [{'name': 'find', 'object': 'collection0', 'arguments': {'filter': {'_id': {'$gt': 1}}, 'sort': {'_id': 1}}, 'expectResult': [{'_id': 2, 'x': 22}, {'_id': 3, 'x': 33}]}]}}]}]}"
+            //};
+
             Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
 
             var connectionString = args[0];
@@ -66,7 +74,7 @@ namespace WorkloadExecutor
             Console.Out.Flush();
         }
 
-        private static (string EventsJson, string ResultsJson) CreateWorkloadResult(UnifiedEntityMap entityMap)
+        private static (string EventsJson, string ResultsJson) CreateWorkloadResult(UnifiedEntityMap entityMap, AstrolabeEventSubscriber eventSubscriber)
         {
             Ensure.IsNotNull(entityMap, nameof(entityMap));
 
@@ -74,26 +82,27 @@ namespace WorkloadExecutor
             var successesCount = GetValueOrDefault(entityMap.SuccessCounts, "successes", @default: -1);
 
             var errorDocuments = GetValueOrDefault(entityMap.ErrorDocumentsMap, "errors", @default: new BsonArray());
-            var errorCount  = errorDocuments.Count;
+            var errorCount = errorDocuments.Count;
             var failuresDocuments = GetValueOrDefault(entityMap.FailureDocumentsMap, "failures", @default: new BsonArray());
             var failuresCount = failuresDocuments.Count;
 
             string eventsJson = "[]";
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
-                Console.WriteLine($"dotnet events> Number of generated events {eventCapturer.Count}");
-                var stringBuilder = new StringBuilder();
-                stringBuilder.Append("[");
-                for (int i = 0; i < eventCapturer.Events.Count; i++)
-                {
-                    stringBuilder.Append(AstrolabeEventsHandler.CreateEventDocument(eventCapturer.Events[i]));
-                    if (i < eventCapturer.Events.Count - 1)
-                    {
-                        stringBuilder.Append(",");
-                    }
-                }
-                stringBuilder.Append("]");
-                eventsJson = stringBuilder.ToString();
+                //Console.WriteLine($"dotnet events> Number of generated events {eventCapturer.Count}");
+                //var stringBuilder = new StringBuilder();
+                //stringBuilder.Append("[");
+                //for (int i = 0; i < eventCapturer.Events.Count; i++)
+                //{
+                //    stringBuilder.Append(AstrolabeEventsHandler.CreateEventDocument(eventCapturer.Events[i]));
+                //    if (i < eventCapturer.Events.Count - 1)
+                //    {
+                //        stringBuilder.Append(",");
+                //    }
+                //}
+                //stringBuilder.Append("]");
+                //eventsJson = stringBuilder.ToString();
+                eventsJson = $"[{string.Join(",", eventSubscriber.Queue.ToList())}]";
             }
 
             var eventsDocument = @$"{{ ""events"" : {eventsJson}, ""errors"" : {errorDocuments}, ""failures"" : {failuresDocuments} }}";
@@ -110,13 +119,15 @@ namespace WorkloadExecutor
 
             var factory = new TestCaseFactory();
             var testCase = factory.CreateTestCase(driverWorkload, async);
+            var eventsCapturer = new AstrolabeEventSubscriber();
             using (var testRunner = new UnifiedTestFormatTestRunner(
                 allowKillSessions: false,
+                eventsCapturer,
                 terminationCancellationToken: cancellationToken))
             {
                 testRunner.Run(testCase);
                 Console.WriteLine($"dotnet ExecuteWorkload> Returning...");
-                return CreateWorkloadResult(entityMap: testRunner.EntityMap);
+                return CreateWorkloadResult(entityMap: testRunner.EntityMap, eventsCapturer);
             }
         }
 
@@ -134,6 +145,30 @@ namespace WorkloadExecutor
             // We set the Cancel property to true to prevent the process from terminating
             args.Cancel = true;
             CancelWorkloadTask(cancellationTokenSource);
+        }
+
+        internal class AstrolabeEventSubscriber : IEventSubscriber
+        {
+            public readonly ConcurrentQueue<string> Queue = new ConcurrentQueue<string>();
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <typeparam name="TEvent"></typeparam>
+            /// <param name="handler"></param>
+            /// <returns></returns>
+            public bool TryGetEventHandler<TEvent>(out Action<TEvent> handler)
+            {
+                handler = (@event) =>
+                {
+                    var @eventString = AstrolabeEventsHandler.CreateEventDocument(@event);
+                    if (@eventString != null)
+                    {
+                        Queue.Enqueue(@eventString);
+                    }
+                };
+                return true;
+            }
         }
 
         internal class TestCaseFactory : JsonDrivenTestCaseFactory

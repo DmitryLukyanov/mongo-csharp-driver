@@ -90,7 +90,7 @@ namespace AstrolabeWorkloadExecutor
                 ConnectionOpenedEvent typedEvent =>
                     CreateCmapEventDocument("ConnectionReadyEvent", typedEvent.Timestamp, typedEvent.ConnectionId),
 
-                _ => throw new FormatException($"Unrecognized event type: '{@event.GetType()}'."),
+                _ => null,
             };
 
         private static string CreateCmapEventDocument(string eventName, DateTime timestamp, ServerId serverId, string customJsonNodeWithComma = "") =>

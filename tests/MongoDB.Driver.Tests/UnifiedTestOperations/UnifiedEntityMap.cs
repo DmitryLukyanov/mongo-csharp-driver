@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         // private variables
         private readonly Dictionary<string, IGridFSBucket> _buckets;
         private readonly Dictionary<string, IEnumerator<ChangeStreamDocument<BsonDocument>>> _changeStreams;
-        private readonly Dictionary<string, EventCapturer> _clientEventCapturers;
+        private readonly Dictionary<string, IEventSubscriber> _clientEventCapturers;
         private readonly Dictionary<string, DisposableMongoClient> _clients;
         private readonly Dictionary<string, IMongoCollection<BsonDocument>> _collections;
         private readonly Dictionary<string, IMongoDatabase> _databases;
@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         public UnifiedEntityMap(
             Dictionary<string, IGridFSBucket> buckets,
             Dictionary<string, IEnumerator<ChangeStreamDocument<BsonDocument>>> changeStreams,
-            Dictionary<string, EventCapturer> clientEventCapturers,
+            Dictionary<string, IEventSubscriber> clientEventCapturers,
             Dictionary<string, DisposableMongoClient> clients,
             Dictionary<string, IMongoCollection<BsonDocument>> collections,
             Dictionary<string, IMongoDatabase> databases,
@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 return _errorDocumentsMap;
             }
         }
-        public Dictionary<string, EventCapturer> EventCapturers
+        public Dictionary<string, IEventSubscriber> EventCapturers
         {
             get
             {
@@ -257,11 +257,11 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
     public class UnifiedEntityMapBuilder
     {
-        public UnifiedEntityMap Build(BsonArray entitiesArray)
+        public UnifiedEntityMap Build(BsonArray entitiesArray, IEventSubscriber eventSubscriber)
         {
             var buckets = new Dictionary<string, IGridFSBucket>();
             var changeStreams = new Dictionary<string, IEnumerator<ChangeStreamDocument<BsonDocument>>>();
-            var clientEventCapturers = new Dictionary<string, EventCapturer>();
+            var clientEventCapturers = new Dictionary<string, IEventSubscriber>();
             var clients = new Dictionary<string, DisposableMongoClient>();
             var collections = new Dictionary<string, IMongoCollection<BsonDocument>>();
             var databases = new Dictionary<string, IMongoDatabase>();
@@ -300,7 +300,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             {
                                 throw new Exception($"Client entity with id '{id}' already exists.");
                             }
-                            var clientDetails = CreateClient(entity);
+                            var clientDetails = CreateClient(entity, eventSubscriber);
                             clients.Add(id, clientDetails.Client);
                             foreach (var createdEventCapturer in clientDetails.ClientEventCapturers)
                             {
@@ -379,9 +379,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             return new GridFSBucket(database);
         }
 
-        private (DisposableMongoClient Client, Dictionary<string, EventCapturer> ClientEventCapturers) CreateClient(BsonDocument entity)
+        private (DisposableMongoClient Client, Dictionary<string, IEventSubscriber> ClientEventCapturers) CreateClient(BsonDocument entity, IEventSubscriber eventSubscriber)
         {
-            var clientEventCapturers = new Dictionary<string, EventCapturer>();
+            var clientEventCapturers = new Dictionary<string, IEventSubscriber>();
             string clientId = null;
             var commandNamesToSkipInEvents = new List<string>();
             List<(string Key, IEnumerable<string> Events, List<string> CommandNotToCapture)> eventTypesToCapture = new ();
@@ -498,8 +498,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 foreach (var eventsDetails in eventTypesToCapture)
                 {
                     var commandNamesNotToCapture = Enumerable.Concat(eventsDetails.CommandNotToCapture ?? Enumerable.Empty<string>(), defaultCommandNamesToSkip);
-                    var eventCapturer = CreateEventCapturer(eventsDetails.Events, commandNamesNotToCapture);
-                    clientEventCapturers.Add(eventsDetails.Key, eventCapturer);
+                    //var eventCapturer = CreateEventCapturer(eventsDetails.Events, commandNamesNotToCapture);
+                    clientEventCapturers.Add(eventsDetails.Key, eventSubscriber);
                 }
             }
 

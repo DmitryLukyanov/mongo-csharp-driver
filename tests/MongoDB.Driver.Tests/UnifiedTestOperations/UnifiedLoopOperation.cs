@@ -96,6 +96,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         break;
                     }
                 }
+                Thread.Sleep(5);
                 iterationsCount++;
             }
 

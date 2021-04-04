@@ -21,7 +21,7 @@ using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.JsonDrivenTests;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
-using MongoDB.Driver.Core.Events;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.TestHelpers;
 using MongoDB.Driver.Core.TestHelpers.XunitExtensions;
@@ -34,18 +34,18 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
     {
         private readonly bool _allowKillSessions;
         private UnifiedEntityMap _entityMap;
-        private readonly IEventSubscriber _eventsSubscriber;
         private readonly List<FailPoint> _failPoints = new List<FailPoint>();
-        private readonly CancellationToken _terminationCancellationToken;
+        private readonly Dictionary<string, object> _additionalArgs;
+        private readonly Dictionary<string, IEventsFormatter> _eventsFormatter;
 
         public UnifiedTestFormatTestRunner(
-            bool allowKillSessions = true, // TODO: should be removed after SERVER-54216
-            IEventSubscriber eventsSubscriber = null,
-            CancellationToken terminationCancellationToken = default)
+            bool allowKillSessions = true, // TODO: should be removed after SERVER-54216 
+            Dictionary<string, object> additionalArgs = null,
+            Dictionary<string, IEventsFormatter> eventFormatter = null)
         {
             _allowKillSessions = allowKillSessions;
-            _eventsSubscriber = eventsSubscriber;
-            _terminationCancellationToken = terminationCancellationToken;
+            _additionalArgs = additionalArgs; // can be null
+            _eventsFormatter = eventFormatter;
         }
 
         // public properties
@@ -109,7 +109,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
                 KillOpenTransactions(DriverTestConfiguration.Client);
             }
 
-            _entityMap = new UnifiedEntityMapBuilder().Build(entities, _eventsSubscriber);
+            _entityMap = new UnifiedEntityMapBuilder(_eventsFormatter).Build(entities);
 
             if (initialData != null)
             {
@@ -186,11 +186,11 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
             var unifiedEventMatcher = new UnifiedEventMatcher(new UnifiedValueMatcher(entityMap));
             foreach (var eventItem in eventItems)
             {
-                //var clientId = eventItem["client"].AsString;
-                //var eventCapturer = entityMap.EventCapturers[clientId];
-                //var actualEvents = eventCapturer.Events;
+                var clientId = eventItem["client"].AsString;
+                var eventCapturer = entityMap.EventCapturers[clientId];
+                var actualEvents = eventCapturer.Events;
 
-                //unifiedEventMatcher.AssertEventsMatch(actualEvents, eventItem["events"].AsBsonArray);
+                unifiedEventMatcher.AssertEventsMatch(actualEvents, eventItem["events"].AsBsonArray);
             }
         }
 
@@ -291,7 +291,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
 
         private IUnifiedTestOperation CreateOperation(BsonDocument operation, UnifiedEntityMap entityMap)
         {
-            var factory = new UnifiedTestOperationFactory(entityMap, _terminationCancellationToken);
+            var factory = new UnifiedTestOperationFactory(entityMap, _additionalArgs);
 
             var operationName = operation["name"].AsString;
             var operationTarget = operation["object"].AsString;

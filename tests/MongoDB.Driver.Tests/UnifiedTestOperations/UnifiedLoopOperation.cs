@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,7 +97,6 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         break;
                     }
                 }
-                Thread.Sleep(5);
                 iterationsCount++;
             }
 
@@ -152,10 +152,10 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private readonly UnifiedEntityMap _entityMap;
         private readonly CancellationToken _terminationCancellationToken;
 
-        public UnifiedLoopOperationBuilder(UnifiedEntityMap entityMap, CancellationToken terminationCancellationToken)
+        public UnifiedLoopOperationBuilder(UnifiedEntityMap entityMap, Dictionary<string, object> additionalArgs)
         {
             _entityMap = entityMap;
-            _terminationCancellationToken = terminationCancellationToken;
+            _terminationCancellationToken = (CancellationToken)Ensure.IsNotNull(additionalArgs, nameof(additionalArgs))["AstrolabeCancellationToken"];
         }
 
         public UnifiedLoopOperation Build(BsonDocument arguments)

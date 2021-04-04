@@ -34,6 +34,12 @@ namespace WorkloadExecutor
     {
         public static void Main(string[] args)
         {
+            //args = new[]
+            //{
+            //    "mongodb://localhost",
+            //    "{'description': 'Insert', 'schemaVersion': '1.2', 'createEntities': [{'client': {'id': 'client0', 'uriOptions': {'retryWrites': true}, 'storeEventsAsEntities': [{'id': 'events', 'events': ['PoolCreatedEvent', 'PoolReadyEvent', 'PoolClearedEvent', 'PoolClosedEvent', 'ConnectionCreatedEvent', 'ConnectionReadyEvent', 'ConnectionClosedEvent', 'ConnectionCheckOutStartedEvent', 'ConnectionCheckOutFailedEvent', 'ConnectionCheckedOutEvent', 'ConnectionCheckedInEvent', 'CommandStartedEvent', 'CommandSucceededEvent', 'CommandFailedEvent']}]}}, {'database': {'id': 'database0', 'client': 'client0', 'databaseName': 'dat'}}, {'collection': {'id': 'collection0', 'database': 'database0', 'collectionName': 'dat'}}], 'tests': [{'description': 'Insert one', 'operations': [{'name': 'loop', 'object': 'testRunner', 'arguments': {'storeErrorsAsEntity': 'errors', 'storeIterationsAsEntity': 'iterations', 'storeSuccessesAsEntity': 'successes', 'operations': [{'name': 'insertOne', 'object': 'collection0', 'arguments': {'document': {'data': 100}}}]}}]}]}"
+            //};
+
             Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
 
             var connectionString = args[0];
@@ -54,7 +60,7 @@ namespace WorkloadExecutor
 
             var async = bool.Parse(Environment.GetEnvironmentVariable("ASYNC") ?? throw new Exception($"ASYNC environment variable must be configured."));
 
-            var (resultsJson, eventsJson) = ExecuteWorkload(connectionString, driverWorkload, async, cancellationTokenSource.Token);
+            var (eventsJson, resultsJson) = ExecuteWorkload(connectionString, driverWorkload, async, cancellationTokenSource.Token);
 
             Console.CancelKeyPress -= cancelHandler;
 

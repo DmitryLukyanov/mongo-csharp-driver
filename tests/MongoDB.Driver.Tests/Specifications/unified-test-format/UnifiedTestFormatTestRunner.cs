@@ -41,11 +41,11 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         public UnifiedTestFormatTestRunner(
             bool allowKillSessions = true, // TODO: should be removed after SERVER-54216 
             Dictionary<string, object> additionalArgs = null,
-            Dictionary<string, IEventsFormatter> eventFormatter = null)
+            Dictionary<string, IEventsFormatter> eventsFormatter = null)
         {
             _allowKillSessions = allowKillSessions;
             _additionalArgs = additionalArgs; // can be null
-            _eventsFormatter = eventFormatter;
+            _eventsFormatter = eventsFormatter;
         }
 
         // public properties

@@ -115,7 +115,7 @@ namespace WorkloadExecutor
             using (var testRunner = new UnifiedTestFormatTestRunner(
                 allowKillSessions: false,
                 additionalArgs: additionalArgs,
-                eventFormatter: eventsFormatter))
+                eventsFormatter: eventsFormatter))
             {
                 var factory = new TestCaseFactory();
                 var testCase = factory.CreateTestCase(driverWorkload, async);

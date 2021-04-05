@@ -101,11 +101,11 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         string message;
                         if (ex is MongoCommandException cmd)
                         {
-                            message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command.ToString()},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException().ToString()}, \nThe whole ex:{ex.ToString()}";
+                            message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException()?.ToString()}, \nThe whole ex:{ex.ToString()}";
                         }
                         else if (ex is MongoConnectionException conn)
                         {
-                            message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException.ToString()},\nBase:{conn.GetBaseException().ToString()}. \nThe whole ex:{ex.ToString()}";
+                            message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException},\nBase:{conn.GetBaseException()?.ToString()}. \nThe whole ex:{ex.ToString()}";
                         }
                         else
                         {

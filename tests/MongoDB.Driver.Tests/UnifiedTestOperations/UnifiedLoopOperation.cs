@@ -90,6 +90,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine("dotnet>>triggered exception:" + ex);
                         if (!TryHandleException(ex))
                         {
                             throw;

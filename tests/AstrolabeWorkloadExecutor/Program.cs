@@ -37,7 +37,7 @@ namespace WorkloadExecutor
             //args = new[]
             //{
             //    "mongodb://localhost",
-            //    "{'description': 'Insert', 'schemaVersion': '1.2', 'createEntities': [{'client': {'id': 'client0', 'uriOptions': {'retryWrites': true}, 'storeEventsAsEntities': [{'id': 'events', 'events': ['PoolCreatedEvent', 'PoolReadyEvent', 'PoolClearedEvent', 'PoolClosedEvent', 'ConnectionCreatedEvent', 'ConnectionReadyEvent', 'ConnectionClosedEvent', 'ConnectionCheckOutStartedEvent', 'ConnectionCheckOutFailedEvent', 'ConnectionCheckedOutEvent', 'ConnectionCheckedInEvent', 'CommandStartedEvent', 'CommandSucceededEvent', 'CommandFailedEvent']}]}}, {'database': {'id': 'database0', 'client': 'client0', 'databaseName': 'dat'}}, {'collection': {'id': 'collection0', 'database': 'database0', 'collectionName': 'dat'}}], 'tests': [{'description': 'Insert one', 'operations': [{'name': 'loop', 'object': 'testRunner', 'arguments': {'storeErrorsAsEntity': 'errors', 'storeIterationsAsEntity': 'iterations', 'storeSuccessesAsEntity': 'successes', 'operations': [{'name': 'insertOne', 'object': 'collection0', 'arguments': {'document': {'data': 100}}}]}}]}]}"
+            //    "{'description': 'Find', 'schemaVersion': '1.2', 'createEntities': [{'client': {'id': 'client0', 'uriOptions': {'retryReads': true}, 'storeEventsAsEntities': [{'id': 'events', 'events': ['PoolCreatedEvent', 'PoolReadyEvent', 'PoolClearedEvent', 'PoolClosedEvent', 'ConnectionCreatedEvent', 'ConnectionReadyEvent', 'ConnectionClosedEvent', 'ConnectionCheckOutStartedEvent', 'ConnectionCheckOutFailedEvent', 'ConnectionCheckedOutEvent', 'ConnectionCheckedInEvent', 'CommandStartedEvent', 'CommandSucceededEvent', 'CommandFailedEvent']}]}}, {'database': {'id': 'database0', 'client': 'client0', 'databaseName': 'dat'}}, {'collection': {'id': 'collection0', 'database': 'database0', 'collectionName': 'dat'}}], 'initialData': [{'collectionName': 'dat', 'databaseName': 'dat', 'documents': [{'_id': 1, 'x': 11}, {'_id': 2, 'x': 22}, {'_id': 3, 'x': 33}]}], 'tests': [{'description': 'Find one', 'operations': [{'name': 'loop', 'object': 'testRunner', 'arguments': {'storeErrorsAsEntity': 'errors', 'storeIterationsAsEntity': 'iterations', 'storeSuccessesAsEntity': 'successes', 'operations': [{'name': 'find', 'object': 'collection0', 'arguments': {'filter': {'_id': {'$gt': 1}}, 'sort': {'_id': 1}}, 'expectResult': [{'_id': 2, 'x': 22}, {'_id': 3, 'x': 33}]}]}}]}]}"
             //};
 
             Ensure.IsEqualTo(args.Length, 2, nameof(args.Length));
@@ -89,7 +89,7 @@ namespace WorkloadExecutor
             if (entityMap.EventCapturers.TryGetValue("events", out var eventCapturer))
             {
                 Console.WriteLine($"dotnet events> Number of generated events {eventCapturer.Count}");
-                eventsJson = $"[{string.Join(",", eventCapturer.Events.Cast<string>().ToArray())}]"; // events should already be formatted
+                eventsJson = $"[{string.Join(",", eventCapturer.Events.Select(c=>AstrolabeEventsHandler.CreateEventDocument(c)).ToArray())}]"; // events should already be formatted
             }
 
             var eventsDocument = @$"{{ ""events"" : {eventsJson}, ""errors"" : {errorDocuments}, ""failures"" : {failuresDocuments} }}";
@@ -110,7 +110,7 @@ namespace WorkloadExecutor
             };
             var eventsFormatter = new Dictionary<string, IEventsFormatter>()
             {
-                { "events", new AstrolabeEventsFormatter() }
+               // { "events", new AstrolabeEventsFormatter() }
             };
             using (var testRunner = new UnifiedTestFormatTestRunner(
                 allowKillSessions: false,

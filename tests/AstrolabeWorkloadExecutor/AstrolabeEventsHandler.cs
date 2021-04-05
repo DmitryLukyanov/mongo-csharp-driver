@@ -25,7 +25,7 @@ namespace AstrolabeWorkloadExecutor
     public static class AstrolabeEventsHandler
     {
         // public methods
-        public static BsonDocument CreateEventDocument(object @event) =>
+        public static string CreateEventDocument(object @event) =>
             @event switch
             {
                 CommandStartedEvent typedEvent =>
@@ -33,25 +33,24 @@ namespace AstrolabeWorkloadExecutor
                         "CommandStartedEvent",
                         typedEvent.Timestamp,
                         typedEvent.CommandName,
-                        typedEvent.RequestId)
-                    .Add("databaseName", typedEvent.DatabaseNamespace.DatabaseName),
+                        typedEvent.RequestId,
+                        $", databaseName : '{typedEvent.DatabaseNamespace}'"),
 
                 CommandSucceededEvent typedEvent =>
                     CreateCommandEventDocument(
                         "CommandSucceededEvent",
                         typedEvent.Timestamp,
                         typedEvent.CommandName,
-                        typedEvent.RequestId)
-                    .Add("duration", typedEvent.Duration.TotalMilliseconds),
+                        typedEvent.RequestId,
+                        $", duration : '{typedEvent.Duration.TotalMilliseconds}'"),
 
                 CommandFailedEvent typedEvent =>
                     CreateCommandEventDocument(
                         "CommandFailedEvent",
                         typedEvent.Timestamp,
                         typedEvent.CommandName,
-                        typedEvent.RequestId)
-                    .Add("duration", typedEvent.Duration.TotalMilliseconds)
-                    .Add("failure", typedEvent.Failure.ToString()),
+                        typedEvent.RequestId,
+                        $", duration : '{typedEvent.Duration.TotalMilliseconds}', failure : '{typedEvent.Failure}'"),
 
                 ConnectionPoolOpenedEvent typedEvent =>
                     CreateCmapEventDocument("PoolCreatedEvent", typedEvent.Timestamp, typedEvent.ServerId),
@@ -70,7 +69,7 @@ namespace AstrolabeWorkloadExecutor
                         "ConnectionClosedEvent",
                         typedEvent.Timestamp,
                         typedEvent.ConnectionId),
-                    //.Add("reason", typedEvent.Reason), // TODO: should be implemented in the scope of CSHARP-3219
+                        // $", reason : '{typedEvent.Reason}'"); // TODO: should be implemented in the scope of CSHARP-3219
 
                 ConnectionPoolCheckingOutConnectionEvent typedEvent =>
                     CreateCmapEventDocument("ConnectionCheckOutStartedEvent", typedEvent.Timestamp, typedEvent.ServerId),
@@ -79,8 +78,8 @@ namespace AstrolabeWorkloadExecutor
                     CreateCmapEventDocument(
                         "ConnectionCheckOutFailedEvent",
                         typedEvent.Timestamp,
-                        typedEvent.ServerId)
-                    .Add("reason", typedEvent.Reason),
+                        typedEvent.ServerId,
+                        $", reason : '{typedEvent.Reason}'"),
 
                 ConnectionPoolCheckedOutConnectionEvent typedEvent =>
                     CreateCmapEventDocument("ConnectionCheckedOutEvent", typedEvent.Timestamp, typedEvent.ConnectionId),
@@ -94,26 +93,14 @@ namespace AstrolabeWorkloadExecutor
                 _ => throw new FormatException($"Unrecognized event type: '{@event.GetType()}'."),
             };
 
-        private static BsonDocument CreateCmapEventDocument(string eventName, DateTime timestamp, ServerId serverId) =>
-            new BsonDocument
-            {
-                { "name", eventName },
-                { "observedAt", BsonUtils.ToSecondsSinceEpoch(timestamp) },
-                { "address", GetAddress(serverId) }
-            };
+        private static string CreateCmapEventDocument(string eventName, DateTime timestamp, ServerId serverId, string customJsonNodeWithComma = "") =>
+            $"{{ name : '{eventName}',  observedAt : '{BsonUtils.ToSecondsSinceEpoch(timestamp)}', address : '{GetAddress(serverId)}'{customJsonNodeWithComma} }}";
 
-        private static BsonDocument CreateCmapEventDocument(string eventName, DateTime timestamp, ConnectionId connectionId) =>
-            CreateCmapEventDocument(eventName, timestamp, connectionId.ServerId)
-            .Add("connectionId", connectionId.LocalValue);
+        private static string CreateCmapEventDocument(string eventName, DateTime timestamp, ConnectionId connectionId) =>
+            CreateCmapEventDocument(eventName, timestamp, connectionId.ServerId, $", connectionId : {connectionId.LocalValue}");
 
-        private static BsonDocument CreateCommandEventDocument(string eventName, DateTime timestamp, string commandName, int requestId, string customJsonNodeWithComma = "") =>
-            new BsonDocument
-            {
-                { "name", eventName },
-                { "observedAt", BsonUtils.ToSecondsSinceEpoch(timestamp) },
-                { "commandName", commandName },
-                { "requestId", requestId }
-            };
+        private static string CreateCommandEventDocument(string eventName, DateTime timestamp, string commandName, int requestId, string customJsonNodeWithComma = "") =>
+            $"{{ name : '{eventName}',  observedAt : '{BsonUtils.ToSecondsSinceEpoch(timestamp)}', commandName : '{commandName}', requestId : '{requestId}'{customJsonNodeWithComma} }}";
 
         private static string GetAddress(ServerId serverId)
         {

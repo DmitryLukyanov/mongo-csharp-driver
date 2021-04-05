@@ -90,7 +90,20 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("dotnet>>triggered exception:" + ex);
+                        string message;
+                        if (ex is MongoCommandException cmd)
+                        {
+                            message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command.ToString()},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException().ToString()}, \nThe whole ex:{ex.ToString()}";
+                        }
+                        else if (ex is MongoConnectionException conn)
+                        {
+                            message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException.ToString()},\nBase:{conn.GetBaseException().ToString()}. \nThe whole ex:{ex.ToString()}";
+                        }
+                        else
+                        {
+                            message = ex.ToString();
+                        }
+                        Console.WriteLine("dotnet>>triggered exception:" +message);
                         if (!TryHandleException(ex))
                         {
                             throw;

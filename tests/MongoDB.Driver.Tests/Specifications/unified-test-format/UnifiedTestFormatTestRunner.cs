@@ -257,7 +257,25 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         {
             if (operation.TryGetValue("expectResult", out var expectedResult))
             {
-                actualResult.Exception.Should().BeNull();
+                if (actualResult.Exception != null)
+                {
+                    var ex = actualResult.Exception;
+                    string message;
+                    if (ex is MongoCommandException cmd)
+                    {
+                        message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException()?.ToString()}, \nThe whole ex:{ex.ToString()}";
+                    }
+                    else if (ex is MongoConnectionException conn)
+                    {
+                        message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException},\nBase:{conn.GetBaseException()?.ToString()}. \nThe whole ex:{ex.ToString()}";
+                    }
+                    else
+                    {
+                        message = ex.ToString();
+                    }
+                    throw new AssertionException("Triggered from AssertResult:" + message, ex);
+                }
+                //actualResult.Exception.Should().BeNull();
 
                 new UnifiedValueMatcher(entityMap).AssertValuesMatch(actualResult.Result, expectedResult);
             }

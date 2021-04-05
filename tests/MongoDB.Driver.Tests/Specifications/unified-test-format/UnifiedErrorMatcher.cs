@@ -120,7 +120,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
             if (actualIsClientError != expectedIsClientError)
             {
                 var message = $"Expected exception to {(expectedIsClientError ? "" : "not ")}be a client exception, but found {actualException}.";
-                throw new AssertionException(message);
+                throw new AssertionException(message, actualException);
             }
         }
 

@@ -80,7 +80,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             int iterationsCount = 0;
             int successfulOperationsCount = 0;
-            Console.WriteLine("Lop_started");
+            Console.WriteLine("Loop_started");
             while (!_terminatorCancellationToken.IsCancellationRequested)
             {
                 foreach (var operation in _loopOperations.Select(o => o.DeepClone().AsBsonDocument))  // the further operations can mutate the passed input documents

@@ -19,7 +19,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
+using Xunit.Sdk;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
@@ -90,6 +92,11 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine("Type_0:" + ex.GetType().Name);
+                        if (ex is XunitException or AssertionException)
+                        {
+                            ex = ex.InnerException;
+                        }
                         string message;
                         if (ex is MongoCommandException cmd)
                         {
@@ -104,6 +111,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             message = ex.ToString();
                         }
                         Console.WriteLine("dotnet>>triggered exception:" +message);
+                        Console.WriteLine("Type:" + ex.GetType().Name);
                         if (!TryHandleException(ex))
                         {
                             throw;

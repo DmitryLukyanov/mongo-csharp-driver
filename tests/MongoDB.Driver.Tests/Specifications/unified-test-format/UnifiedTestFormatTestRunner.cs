@@ -36,16 +36,16 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         private UnifiedEntityMap _entityMap;
         private readonly List<FailPoint> _failPoints = new List<FailPoint>();
         private readonly Dictionary<string, object> _additionalArgs;
-        private readonly Dictionary<string, IEventsFormatter> _eventsFormatter;
+        private readonly Dictionary<string, IEventsFormatter> _eventsFormatters;
 
         public UnifiedTestFormatTestRunner(
             bool allowKillSessions = true, // TODO: should be removed after SERVER-54216 
             Dictionary<string, object> additionalArgs = null,
-            Dictionary<string, IEventsFormatter> eventsFormatter = null)
+            Dictionary<string, IEventsFormatter> eventsFormatters = null)
         {
             _allowKillSessions = allowKillSessions;
             _additionalArgs = additionalArgs; // can be null
-            _eventsFormatter = eventsFormatter;
+            _eventsFormatters = eventsFormatters;
         }
 
         // public properties
@@ -109,7 +109,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
                 KillOpenTransactions(DriverTestConfiguration.Client);
             }
 
-            _entityMap = new UnifiedEntityMapBuilder(_eventsFormatter).Build(entities);
+            _entityMap = new UnifiedEntityMapBuilder(_eventsFormatters).Build(entities);
 
             if (initialData != null)
             {
@@ -257,25 +257,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         {
             if (operation.TryGetValue("expectResult", out var expectedResult))
             {
-                if (actualResult.Exception != null)
-                {
-                    var ex = actualResult.Exception;
-                    string message;
-                    if (ex is MongoCommandException cmd)
-                    {
-                        message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException()?.ToString()}, \nThe whole ex:{ex.ToString()}";
-                    }
-                    else if (ex is MongoConnectionException conn)
-                    {
-                        message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException},\nBase:{conn.GetBaseException()?.ToString()}. \nThe whole ex:{ex.ToString()}";
-                    }
-                    else
-                    {
-                        message = ex.ToString();
-                    }
-                    throw new AssertionException("Triggered from AssertResult:" + message, ex);
-                }
-                //actualResult.Exception.Should().BeNull();
+                actualResult.Exception.Should().BeNull();
 
                 new UnifiedValueMatcher(entityMap).AssertValuesMatch(actualResult.Result, expectedResult);
             }

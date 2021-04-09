@@ -257,11 +257,11 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
     public class UnifiedEntityMapBuilder
     {
-        private readonly Dictionary<string, IEventsFormatter> _eventsFormatter;
+        private readonly Dictionary<string, IEventsFormatter> _eventsFormatters;
 
-        public UnifiedEntityMapBuilder(Dictionary<string, IEventsFormatter> eventsFormatter)
+        public UnifiedEntityMapBuilder(Dictionary<string, IEventsFormatter> eventsFormatters)
         {
-            _eventsFormatter = eventsFormatter ?? new ();
+            _eventsFormatters = eventsFormatters ?? new ();
         }
 
         public UnifiedEntityMap Build(BsonArray entitiesArray)
@@ -505,7 +505,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 foreach (var eventsDetails in eventTypesToCapture)
                 {
                     var commandNamesNotToCapture = Enumerable.Concat(eventsDetails.CommandNotToCapture ?? Enumerable.Empty<string>(), defaultCommandNamesToSkip);
-                    var eventsFormatter = _eventsFormatter.TryGetValue(eventsDetails.Key, out var formatter);
+                    var eventsFormatter = _eventsFormatters.TryGetValue(eventsDetails.Key, out var formatter);
                     var eventCapturer = CreateEventCapturer(eventsDetails.Events, commandNamesNotToCapture, formatter);
                     clientEventCapturers.Add(eventsDetails.Key, eventCapturer);
                 }

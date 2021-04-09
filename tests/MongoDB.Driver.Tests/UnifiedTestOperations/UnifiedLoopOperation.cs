@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.TestHelpers.XunitExtensions;
 using MongoDB.Driver.Core.Misc;
-using Xunit.Sdk;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
@@ -80,7 +79,6 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             int iterationsCount = 0;
             int successfulOperationsCount = 0;
-            Console.WriteLine("Loop_started");
             while (!_terminatorCancellationToken.IsCancellationRequested)
             {
                 foreach (var operation in _loopOperations.Select(o => o.DeepClone().AsBsonDocument))  // the further operations can mutate the passed input documents
@@ -93,26 +91,6 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("Type_0:" + ex.GetType().Name);
-                        //if (ex is XunitException or AssertionException)
-                        //{
-                        //    ex = ex.InnerException;
-                        //}
-                        //string message;
-                        //if (ex is MongoCommandException cmd)
-                        //{
-                        //    message = $"(MongoCommandException):Message:{cmd.Message},Code:{cmd.Code},CodeName:{cmd.CodeName},Command:{cmd.Command},ErrorMessage:{cmd.ErrorMessage},Inner:{cmd.InnerException},\nBase:{cmd.GetBaseException()?.ToString()}, \nThe whole ex:{ex.ToString()}";
-                        //}
-                        //else if (ex is MongoConnectionException conn)
-                        //{
-                        //    message = $"(MongoConnectionException):Message:{conn.Message},isnetworkex:{conn.IsNetworkException},Inner:{conn.InnerException},\nBase:{conn.GetBaseException()?.ToString()}. \nThe whole ex:{ex.ToString()}";
-                        //}
-                        //else
-                        //{
-                        //    message = ex.ToString();
-                        //}
-                        Console.WriteLine("dotnet>>triggered exception:" +ex.Message);
-                        Console.WriteLine("Type:" + ex.GetType().Name);
                         if (!TryHandleException(ex))
                         {
                             throw;
@@ -151,19 +129,35 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
         private bool TryHandleException(Exception ex)
         {
-            // If the driver's unified test format does not distinguish between errors and failures, and reports one but not the other,
-            // the workload executor MUST set the non-reported entry to the empty array.
-            if (_storeFailuresAsEntity != null)
+            if (ex is AssertionException)
             {
-                _failureDescriptionDocuments.Add(CreateDocumentFromException(ex));
-            }
-            else if (_storeErrorsAsEntity != null)
-            {
-                _errorDescriptionDocuments.Add(CreateDocumentFromException(ex));
+                if (_storeFailuresAsEntity != null)
+                {
+                    _failureDescriptionDocuments.Add(CreateDocumentFromException(ex));
+                }
+                else if (_storeErrorsAsEntity != null)
+                {
+                    _errorDescriptionDocuments.Add(CreateDocumentFromException(ex));
+                }
+                else
+                {
+                    return false;
+                }
             }
             else
-            {
-                return false;
+            { 
+                if (_storeErrorsAsEntity != null)
+                {
+                    _errorDescriptionDocuments.Add(CreateDocumentFromException(ex));
+                }
+                else if (_storeFailuresAsEntity != null)
+                {
+                    _failureDescriptionDocuments.Add(CreateDocumentFromException(ex));
+                }
+                else
+                {
+                    return false;
+                }
             }
 
             return true;

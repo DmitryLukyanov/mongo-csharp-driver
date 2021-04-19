@@ -91,6 +91,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(ex.ToString());
                         if (!TryHandleException(ex))
                         {
                             throw;

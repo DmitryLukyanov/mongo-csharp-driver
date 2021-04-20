@@ -262,7 +262,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         {
             if (operation.TryGetValue("expectResult", out var expectedResult))
             {
-                actualResult.Exception.Should().BeNull();
+                actualResult.Exception.Should().BeNull($"#the thrown error is {actualResult.Exception?.ToString()}#");
 
                 new UnifiedValueMatcher(entityMap).AssertValuesMatch(actualResult.Result, expectedResult);
             }
@@ -275,7 +275,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
             }
             else
             {
-                actualResult.Exception.Should().BeNull();
+                actualResult.Exception.Should().BeNull($"#the thrown error is {actualResult.Exception?.ToString()}#");
             }
             if (operation.TryGetValue("saveResultAsEntity", out var saveResultAsEntity))
             {

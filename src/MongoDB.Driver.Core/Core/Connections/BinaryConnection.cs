@@ -273,14 +273,11 @@ namespace MongoDB.Driver.Core.Connections
 
             lock (_openLock)
             {
-                Console.WriteLine($"Open_lock_started:{this.GetHashCode()}");
                 if (_state.TryChange(State.Initial, State.Connecting))
                 {
                     _openedAtUtc = DateTime.UtcNow;
                     _openTask = OpenHelperAsync(cancellationToken);
-                    Console.WriteLine($"Open_lock_in_if:{this.GetHashCode()}");
                 }
-                Console.WriteLine($"Open_lock_ended:{this.GetHashCode()}");
                 return _openTask;
             }
         }

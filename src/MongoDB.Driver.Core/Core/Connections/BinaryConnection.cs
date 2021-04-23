@@ -236,7 +236,6 @@ namespace MongoDB.Driver.Core.Connections
             var connecting = false;
             lock (_openLock)
             {
-                Console.WriteLine($"Open_lock_started:{this.GetHashCode()}");
                 if (_state.TryChange(State.Initial, State.Connecting))
                 {
                     _openedAtUtc = DateTime.UtcNow;
@@ -244,9 +243,7 @@ namespace MongoDB.Driver.Core.Connections
                     _openTask = taskCompletionSource.Task;
                     _openTask.IgnoreExceptions();
                     connecting = true;
-                    Console.WriteLine($"Open_lock_in_if:{this.GetHashCode()}");
                 }
-                Console.WriteLine($"Open_lock_ended:{this.GetHashCode()}");
             }
 
             if (connecting)
@@ -293,7 +290,6 @@ namespace MongoDB.Driver.Core.Connections
             var helper = new OpenConnectionHelper(this);
             try
             {
-                Console.WriteLine($"OpenHelper:{this.GetHashCode()}");
                 helper.OpeningConnection();
                 _stream = _streamFactory.CreateStream(_endPoint, cancellationToken);
                 helper.InitializingConnection();
@@ -316,7 +312,6 @@ namespace MongoDB.Driver.Core.Connections
             var helper = new OpenConnectionHelper(this);
             try
             {
-                Console.WriteLine($"OpenHelper:{this.GetHashCode()}");
                 helper.OpeningConnection();
                 _stream = await _streamFactory.CreateStreamAsync(_endPoint, cancellationToken).ConfigureAwait(false);
                 helper.InitializingConnection();

@@ -398,11 +398,11 @@ namespace MongoDB.Driver.Core.Servers
                     newDescription = newDescription.With(heartbeatException: heartbeatException, topologyVersion: topologyVersion);
                     if (newDescription.SdamEquals(_currentDescription))
                     {
-                        Console.Write("ex_");
+                        Console.WriteLine("ex_endpoint:" + newDescription.EndPoint);
                     }
                     else
                     {
-                        Console.WriteLine($"HeartbeatDescription:{heartbeatException}, OldDescription:{_currentDescription}");
+                        Console.WriteLine($"NewDescription:{newDescription}, OldDescription:{_currentDescription}");
                     }
                 }
 

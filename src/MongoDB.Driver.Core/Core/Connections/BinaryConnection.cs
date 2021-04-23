@@ -248,7 +248,6 @@ namespace MongoDB.Driver.Core.Connections
 
             if (connecting)
             {
-                Console.WriteLine($"Open_connecting:{this.GetHashCode()}");
                 try
                 {
                     OpenHelper(cancellationToken);
@@ -262,7 +261,6 @@ namespace MongoDB.Driver.Core.Connections
             }
             else
             {
-                Console.WriteLine($"Open_else:{this.GetHashCode()}");
                 _openTask.GetAwaiter().GetResult();
             }
         }

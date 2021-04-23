@@ -281,6 +281,7 @@ namespace MongoDB.Driver.Core.Clusters
                         var server = helper.SelectServer();
                         if (server != null)
                         {
+                            Console.WriteLine($"Selected_server(main):{this.GetHashCode()}.serverId:{server.ServerId}.Endpoint:{server.EndPoint}");
                             return server;
                         }
 
@@ -310,6 +311,7 @@ namespace MongoDB.Driver.Core.Clusters
                         var server = helper.SelectServer();
                         if (server != null)
                         {
+                            Console.WriteLine($"Selected_server(main):{this.GetHashCode()}.serverId:{server.ServerId}.Endpoint:{server.EndPoint}");
                             return server;
                         }
 
@@ -512,6 +514,7 @@ namespace MongoDB.Driver.Core.Clusters
                                 _stopwatch.Elapsed,
                                 EventContext.OperationId));
                         }
+                        Console.WriteLine($"Selected_server:{this.GetHashCode()}.Endpoint:{selectedServer.EndPoint}");
                         return selectedServer;
                     }
 

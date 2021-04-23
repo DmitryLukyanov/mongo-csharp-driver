@@ -81,6 +81,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             int successfulOperationsCount = 0;
             while (!_loopCancellationToken.IsCancellationRequested)
             {
+                int j = 0;
                 foreach (var operation in _loopOperations.Select(o => o.DeepClone().AsBsonDocument))  // the further operations can mutate the passed input documents
                                                                                                       // due to auto adding _id from the server response
                 {
@@ -91,13 +92,14 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.ToString());
+                        Console.WriteLine($"Iterations count:{iterationsCount}. J:{j}.Ex:{ex.ToString()}");
                         if (!TryHandleException(ex))
                         {
                             throw;
                         }
                         break;
                     }
+                    j++;
                 }
                 iterationsCount++;
             }

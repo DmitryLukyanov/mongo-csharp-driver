@@ -380,6 +380,8 @@ namespace MongoDB.Driver.Core.Servers
                     lastUpdateTimestamp: DateTime.UtcNow,
                     topologyVersion: responseTopologyVersion);
             SetDescription(newDescription);
+            Console.WriteLine($"Invalidate:{this.GetHashCode()}. InvalidatedDescription:{newDescription.ToString()}");
+
             // TODO: make the heartbeat request conditional so we adhere to this part of the spec
             // > Network error when reading or writing: ... Clients MUST NOT request an immediate check of the server;
             // > since application sockets are used frequently, a network error likely means the server has just become

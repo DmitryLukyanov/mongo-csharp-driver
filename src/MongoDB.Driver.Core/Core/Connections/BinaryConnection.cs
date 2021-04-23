@@ -236,6 +236,7 @@ namespace MongoDB.Driver.Core.Connections
             var connecting = false;
             lock (_openLock)
             {
+                Console.WriteLine($"Open_lock_started:{this.GetHashCode()}");
                 if (_state.TryChange(State.Initial, State.Connecting))
                 {
                     _openedAtUtc = DateTime.UtcNow;
@@ -243,11 +244,14 @@ namespace MongoDB.Driver.Core.Connections
                     _openTask = taskCompletionSource.Task;
                     _openTask.IgnoreExceptions();
                     connecting = true;
+                    Console.WriteLine($"Open_lock_in_if:{this.GetHashCode()}");
                 }
+                Console.WriteLine($"Open_lock_ended:{this.GetHashCode()}");
             }
 
             if (connecting)
             {
+                Console.WriteLine($"Open_connecting:{this.GetHashCode()}");
                 try
                 {
                     OpenHelper(cancellationToken);
@@ -261,6 +265,7 @@ namespace MongoDB.Driver.Core.Connections
             }
             else
             {
+                Console.WriteLine($"Open_else:{this.GetHashCode()}");
                 _openTask.GetAwaiter().GetResult();
             }
         }
@@ -271,11 +276,14 @@ namespace MongoDB.Driver.Core.Connections
 
             lock (_openLock)
             {
+                Console.WriteLine($"Open_lock_started:{this.GetHashCode()}");
                 if (_state.TryChange(State.Initial, State.Connecting))
                 {
                     _openedAtUtc = DateTime.UtcNow;
                     _openTask = OpenHelperAsync(cancellationToken);
+                    Console.WriteLine($"Open_lock_in_if:{this.GetHashCode()}");
                 }
+                Console.WriteLine($"Open_lock_ended:{this.GetHashCode()}");
                 return _openTask;
             }
         }
@@ -285,6 +293,7 @@ namespace MongoDB.Driver.Core.Connections
             var helper = new OpenConnectionHelper(this);
             try
             {
+                Console.WriteLine($"OpenHelper:{this.GetHashCode()}");
                 helper.OpeningConnection();
                 _stream = _streamFactory.CreateStream(_endPoint, cancellationToken);
                 helper.InitializingConnection();
@@ -295,6 +304,7 @@ namespace MongoDB.Driver.Core.Connections
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"OpenHelper_ex:{this.GetHashCode()}.Ex:{ex}");
                 var wrappedException = WrapException(ex, "opening a connection to the server");
                 helper.FailedOpeningConnection(wrappedException);
                 throw wrappedException;
@@ -306,6 +316,7 @@ namespace MongoDB.Driver.Core.Connections
             var helper = new OpenConnectionHelper(this);
             try
             {
+                Console.WriteLine($"OpenHelper:{this.GetHashCode()}");
                 helper.OpeningConnection();
                 _stream = await _streamFactory.CreateStreamAsync(_endPoint, cancellationToken).ConfigureAwait(false);
                 helper.InitializingConnection();
@@ -316,6 +327,7 @@ namespace MongoDB.Driver.Core.Connections
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"OpenHelper_ex:{this.GetHashCode()}.Ex:{ex}");
                 var wrappedException = WrapException(ex, "opening a connection to the server");
                 helper.FailedOpeningConnection(wrappedException);
                 throw wrappedException;

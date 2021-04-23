@@ -396,6 +396,14 @@ namespace MongoDB.Driver.Core.Servers
                         topologyVersion = TopologyVersion.FromMongoCommandException(heartbeatCommandException);
                     }
                     newDescription = newDescription.With(heartbeatException: heartbeatException, topologyVersion: topologyVersion);
+                    if (newDescription.SdamEquals(_currentDescription))
+                    {
+                        Console.Write("ex_");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"HeartbeatDescription:{heartbeatException}, OldDescription:{_currentDescription}");
+                    }
                 }
 
                 newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);

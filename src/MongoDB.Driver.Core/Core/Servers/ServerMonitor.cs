@@ -236,6 +236,7 @@ namespace MongoDB.Driver.Core.Servers
                     }
                     catch (Exception unexpectedException)
                     {
+                        Console.WriteLine($"unexpectedException:{unexpectedException}");
                         // if we catch an exception here it's because of a bug in the driver (but we need to defend ourselves against that)
 
                         var handler = _sdamInformationEventHandler;

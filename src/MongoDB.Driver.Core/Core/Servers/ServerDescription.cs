@@ -146,7 +146,7 @@ namespace MongoDB.Driver.Core.Servers
             _maxDocumentSize = maxDocumentSize.WithDefault(4 * 1024 * 1024);
             _maxMessageSize = maxMessageSize.WithDefault(Math.Max(_maxDocumentSize + 1024, 16000000));
             _maxWireDocumentSize = maxWireDocumentSize.WithDefault(_maxDocumentSize + 16 * 1024);
-            _reasonChanged = reasonChanged.WithDefault($"NotSpecified{Environment.StackTrace}");
+            _reasonChanged = reasonChanged.WithDefault($"NotSpecified:{Environment.StackTrace}");
             _replicaSetConfig = replicaSetConfig.WithDefault(null);
             _serverId = serverId;
             _state = state.WithDefault(ServerState.Disconnected);

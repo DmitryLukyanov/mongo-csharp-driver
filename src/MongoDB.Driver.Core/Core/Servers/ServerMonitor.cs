@@ -397,6 +397,11 @@ namespace MongoDB.Driver.Core.Servers
                         topologyVersion = TopologyVersion.FromMongoCommandException(heartbeatCommandException);
                     }
                     newDescription = newDescription.With(heartbeatException: heartbeatException, topologyVersion: topologyVersion);
+                }
+
+                newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);
+                if (heartbeatException != null)
+                {
                     if (newDescription.SdamEquals(_currentDescription))
                     {
                         Console.WriteLine("ex_endpoint:" + newDescription.EndPoint);
@@ -406,8 +411,6 @@ namespace MongoDB.Driver.Core.Servers
                         Console.WriteLine($"NewDescription:{newDescription}, OldDescription:{_currentDescription}");
                     }
                 }
-
-                newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);
 
                 lock (_lock)
                 {

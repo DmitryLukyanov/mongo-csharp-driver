@@ -400,15 +400,11 @@ namespace MongoDB.Driver.Core.Servers
                 }
 
                 newDescription = newDescription.With(reasonChanged: "Heartbeat", lastHeartbeatTimestamp: DateTime.UtcNow);
-                if (heartbeatException != null)
+                //if (heartbeatException != null)
                 {
-                    if (newDescription.SdamEquals(_currentDescription))
+                    if (!newDescription.SdamEquals(_currentDescription))
                     {
-                        Console.WriteLine("ex_endpoint:" + newDescription.EndPoint);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"NewDescription:{newDescription}, OldDescription:{_currentDescription}");
+                        Console.WriteLine($"OldDescription:{_currentDescription}, NewDescription:{newDescription}");
                     }
                 }
 

@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Core.Bindings
         public IChannelSourceHandle GetReadChannelSource(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            var server = _cluster.SelectServerAndPinIfNeeded(_session, _serverSelector, cancellationToken);
+            var server = _cluster.SelectServerAndPinIfNeeded(_session, _serverSelector, null, cancellationToken);
             return GetChannelSourceHelper(server);
         }
 

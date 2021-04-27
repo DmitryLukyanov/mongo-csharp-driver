@@ -17,23 +17,26 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
     public class UnifiedListDatabasesOperation : IUnifiedEntityTestOperation
     {
         private readonly IMongoClient _client;
+        private readonly ListDatabasesOptions _options;
 
-        public UnifiedListDatabasesOperation(IMongoClient client)
+        public UnifiedListDatabasesOperation(IMongoClient client, ListDatabasesOptions options)
         {
-            _client = client;
+            _client = Ensure.IsNotNull(client, nameof(client));
+            _options = options;
         }
 
         public OperationResult Execute(CancellationToken cancellationToken)
         {
             try
             {
-                var cursor = _client.ListDatabases(cancellationToken);
+                var cursor = _client.ListDatabases(_options, cancellationToken);
                 var result = cursor.ToList();
 
                 return OperationResult.FromResult(new BsonArray(result));
@@ -48,7 +51,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                var cursor = await _client.ListDatabasesAsync(cancellationToken);
+                var cursor = await _client.ListDatabasesAsync(_options, cancellationToken);
                 var result = await cursor.ToListAsync();
 
                 return OperationResult.FromResult(new BsonArray(result));
@@ -72,13 +75,24 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         public UnifiedListDatabasesOperation Build(string targetClientId, BsonDocument arguments)
         {
             var client = _entityMap.GetClient(targetClientId);
+            var options = new ListDatabasesOptions();
 
-            if (arguments != null)
+            foreach (var argument in arguments)
             {
-                throw new FormatException("ListDatabasesOperation is not expected to contain arguments.");
+                switch (argument.Name)
+                {
+                    case "filter":
+                        options.Filter = argument.Value.AsBsonDocument;
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
+                    default:
+                        throw new FormatException($"Invalid {nameof(UnifiedListDatabasesOperation)} argument name: '{argument.Name}'.");
+                }
             }
 
-            return new UnifiedListDatabasesOperation(client);
+            return new UnifiedListDatabasesOperation(client, options);
         }
     }
 }

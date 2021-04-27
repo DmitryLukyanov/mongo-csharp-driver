@@ -61,6 +61,11 @@ namespace MongoDB.Driver.Core.Bindings
             get { return _reference.Instance.Session; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public ClientSideTimeout ClientSideTimeout => _reference.Instance.ClientSideTimeout;
+
         // methods
         /// <inheritdoc/>
         public IChannelSourceHandle GetReadChannelSource(CancellationToken cancellationToken)

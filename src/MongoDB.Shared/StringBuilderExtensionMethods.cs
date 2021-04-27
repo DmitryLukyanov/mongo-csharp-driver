@@ -13,10 +13,9 @@
 * limitations under the License.
 */
 
-using System;
 using System.Text;
 
-namespace MongoDB.Driver.Core.Misc
+namespace MongoDB.Shared
 {
     internal static class StringBuilderExtensionMethods
     {

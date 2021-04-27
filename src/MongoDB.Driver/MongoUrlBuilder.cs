@@ -71,6 +71,7 @@ namespace MongoDB.Driver
         private IEnumerable<MongoServerAddress> _servers;
         private TimeSpan _serverSelectionTimeout;
         private TimeSpan _socketTimeout;
+        private TimeSpan? _timeout; 
         private bool? _tlsDisableCertificateRevocationCheck;
         private string _username;
         private bool _useTls;
@@ -125,6 +126,7 @@ namespace MongoDB.Driver
             _servers = new[] { new MongoServerAddress("localhost", 27017) };
             _serverSelectionTimeout = MongoDefaults.ServerSelectionTimeout;
             _socketTimeout = MongoDefaults.SocketTimeout;
+            _timeout = null;
             _username = null;
             _useTls = false;
             _w = null;
@@ -375,7 +377,7 @@ namespace MongoDB.Driver
             get { return _heartbeatTimeout; }
             set
             {
-                if (value < TimeSpan.Zero && value != Timeout.InfiniteTimeSpan)
+                if (value < TimeSpan.Zero && value != System.Threading.Timeout.InfiniteTimeSpan)
                 {
                     throw new ArgumentOutOfRangeException("value", "HeartbeatTimeout must be greater than or equal to zero.");
                 }
@@ -604,6 +606,22 @@ namespace MongoDB.Driver
                     throw new ArgumentOutOfRangeException("value", "SocketTimeout must be greater than or equal to zero.");
                 }
                 _socketTimeout = value;
+            }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set
+            {
+                if (value < TimeSpan.Zero && value != System.Threading.Timeout.InfiniteTimeSpan) // TODO: more validation?
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), $"{nameof(Timeout)} must be greater than or equal to zero.");
+                }
+                _timeout = value;
             }
         }
 
@@ -858,6 +876,7 @@ namespace MongoDB.Driver
             });
             _serverSelectionTimeout = connectionString.ServerSelectionTimeout.GetValueOrDefault(MongoDefaults.ServerSelectionTimeout);
             _socketTimeout = connectionString.SocketTimeout.GetValueOrDefault(MongoDefaults.SocketTimeout);
+            _timeout = connectionString.Timeout;
             _tlsDisableCertificateRevocationCheck = connectionString.TlsDisableCertificateRevocationCheck;
             _username = connectionString.Username;
             _useTls = connectionString.Tls.GetValueOrDefault(false);
@@ -1044,6 +1063,10 @@ namespace MongoDB.Driver
             if (_w != null)
             {
                 query.AppendFormat("w={0};", _w);
+            }
+            if (_timeout.HasValue)
+            {
+                query.AppendFormat("timeout={0};", FormatTimeSpan(_timeout.Value));
             }
             if (_wTimeout != null)
             {

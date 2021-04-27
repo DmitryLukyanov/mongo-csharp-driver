@@ -23,6 +23,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Options for inserting one document.
     /// </summary>
+    /// //TODO?
     public sealed class InsertOneOptions
     {
         // private fields
@@ -37,5 +38,11 @@ namespace MongoDB.Driver
             get { return _bypassDocumentValidation; }
             set { _bypassDocumentValidation = value; }
         }
+
+        //TODO
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan? Timeout { get; set; }
     }
 }

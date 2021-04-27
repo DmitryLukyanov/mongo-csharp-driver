@@ -81,7 +81,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             var collection = _entityMap.GetCollection(targetCollectionId);
 
-            AggregateOptions options = null;
+            var options = new AggregateOptions();
             PipelineDefinition<BsonDocument, BsonDocument> pipeline = null;
 
             foreach (var argument in arguments)
@@ -91,6 +91,10 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "pipeline":
                         var stages = argument.Value.AsBsonArray.Cast<BsonDocument>();
                         pipeline = new BsonDocumentStagePipelineDefinition<BsonDocument, BsonDocument>(stages);
+                        break;
+                    case "timeoutMode":
+                        // TODO
+                        options.TimeoutMode = argument.Value;
                         break;
                     default:
                         throw new FormatException($"Invalid AggregateOperation argument name: '{argument.Name}'.");

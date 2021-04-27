@@ -79,7 +79,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             FilterDefinition<BsonDocument> filter = null;
-            DeleteOptions options = null;
+            var options = new DeleteOptions();
 
             foreach (var argument in arguments)
             {
@@ -88,6 +88,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "filter":
                         filter = new BsonDocumentFilterDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;  
                     default:
                         throw new FormatException($"Invalid DeleteOneOperation argument name: '{argument.Name}'.");
                 }

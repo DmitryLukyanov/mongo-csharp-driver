@@ -73,6 +73,18 @@ namespace MongoDB.Driver.Core.Bindings
             return _reference.Instance.GetChannel(cancellationToken);
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="timeout">TODO</param>
+        /// <param name="cancellationToken">TODO</param>
+        /// <returns>TODO</returns>
+        public IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken)
+        {
+            ThrowIfDisposed();
+            return _reference.Instance.GetChannel(timeout, cancellationToken);
+        }
+
         /// <inheritdoc/>
         public Task<IChannelHandle> GetChannelAsync(CancellationToken cancellationToken)
         {

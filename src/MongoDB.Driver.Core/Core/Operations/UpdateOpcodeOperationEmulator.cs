@@ -135,8 +135,8 @@ namespace MongoDB.Driver.Core.Operations
         // private methods
         private BulkUpdateOperation CreateOperation()
         {
-            var requests = new[] { _request };
-            return new BulkUpdateOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            var requests = new[] { _request };                                   //TODO:
+            return new BulkUpdateOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 BypassDocumentValidation = _bypassDocumentValidation,
                 IsOrdered = true,

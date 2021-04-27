@@ -81,26 +81,29 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             FilterDefinition<BsonDocument> filter = null;
-            FindOptions<BsonDocument> options = null;
+            var options = new FindOptions<BsonDocument>();
 
             foreach (var argument in arguments)
             {
                 switch (argument.Name)
                 {
                     case "batchSize":
-                        options = options ?? new FindOptions<BsonDocument>();
                         options.BatchSize = argument.Value.AsInt32;
+                        break;
+                    case "cursorType":
+                        options.CursorType = (CursorType)Enum.Parse(typeof(CursorType), argument.Value.AsString);
                         break;
                     case "filter":
                         filter = new BsonDocumentFilterDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
                     case "limit":
-                        options = options ?? new FindOptions<BsonDocument>();
                         options.Limit = argument.Value.AsInt32;
                         break;
                     case "sort":
-                        options = options ?? new FindOptions<BsonDocument>();
                         options.Sort = new BsonDocumentSortDefinition<BsonDocument>(argument.Value.AsBsonDocument);
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid FindOperation argument name: '{argument.Name}'.");

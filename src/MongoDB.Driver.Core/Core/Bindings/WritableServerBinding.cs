@@ -32,6 +32,7 @@ namespace MongoDB.Driver.Core.Bindings
         private readonly ICluster _cluster;
         private bool _disposed;
         private readonly ICoreSessionHandle _session;
+        private ClientSideTimeout _clientSideTimeout;
 
         // constructors
         /// <summary>
@@ -58,12 +59,21 @@ namespace MongoDB.Driver.Core.Bindings
             get { return _session; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public ClientSideTimeout ClientSideTimeout
+        {
+            get => _clientSideTimeout;
+            set => _clientSideTimeout = value;
+        }
+
         // methods
         /// <inheritdoc/>
         public IChannelSourceHandle GetReadChannelSource(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            var server = _cluster.SelectServerAndPinIfNeeded(_session, WritableServerSelector.Instance, cancellationToken);
+            var server = _cluster.SelectServerAndPinIfNeeded(_session, WritableServerSelector.Instance, _clientSideTimeout, cancellationToken);
 
             return GetChannelSourceHelper(server);
         }
@@ -80,7 +90,7 @@ namespace MongoDB.Driver.Core.Bindings
         public IChannelSourceHandle GetWriteChannelSource(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            var server = _cluster.SelectServerAndPinIfNeeded(_session, WritableServerSelector.Instance, cancellationToken);
+            var server = _cluster.SelectServerAndPinIfNeeded(_session, WritableServerSelector.Instance, _clientSideTimeout, cancellationToken);
             return GetChannelSourceHelper(server);
         }
 

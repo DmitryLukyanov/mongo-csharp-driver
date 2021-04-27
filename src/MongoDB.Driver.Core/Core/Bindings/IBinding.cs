@@ -81,6 +81,11 @@ namespace MongoDB.Driver.Core.Bindings
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A channel source.</returns>
         Task<IChannelSourceHandle> GetWriteChannelSourceAsync(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        ClientSideTimeout ClientSideTimeout { get; }
     }
 
     /// <summary>

@@ -1218,6 +1218,7 @@ namespace MongoDB.Driver
                 _serverSelectionTimeout,
                 _socketTimeout,
                 _sslSettings,
+                timeout: null, // not supported for legacy
                 _useTls,
                 _waitQueueSize,
                 _waitQueueTimeout);

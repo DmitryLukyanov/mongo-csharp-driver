@@ -98,6 +98,7 @@ namespace MongoDB.Driver.Core.Configuration
         private ConnectionStringScheme _scheme;
         private TimeSpan? _serverSelectionTimeout;
         private TimeSpan? _socketTimeout;
+        private TimeSpan? _timeout;
         private bool? _tls;
         private bool? _tlsDisableCertificateRevocationCheck;
         private bool? _tlsInsecure;
@@ -465,6 +466,11 @@ namespace MongoDB.Driver.Core.Configuration
         /// </summary>
         [Obsolete("Use TlsInsecure instead.")]
         public bool? SslVerifyCertificate => !_tlsInsecure;
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout => _timeout;
 
         /// <summary>
         /// Gets whether to use TLS.
@@ -1063,6 +1069,10 @@ namespace MongoDB.Driver.Core.Configuration
                 case "sslverifycertificate": // Obsolete
                     var sslVerifyCertificateValue = ParseBoolean(name, value);
                     _tlsInsecure = EnsureTlsInsecureIsValid(!sslVerifyCertificateValue);
+                    break;
+                case "timeoutMS":
+                    // TODO: validate 0 vs inifinity
+                    _timeout = ParseTimeSpan(name, value);
                     break;
                 case "tlsdisablecertificaterevocationcheck":
                     var tlsDisableCertificateRevocationCheckValue = ParseBoolean(name, value);

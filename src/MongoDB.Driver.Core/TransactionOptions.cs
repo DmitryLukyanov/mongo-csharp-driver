@@ -27,6 +27,7 @@ namespace MongoDB.Driver
         private readonly ReadConcern _readConcern;
         private readonly ReadPreference _readPreference;
         private readonly WriteConcern _writeConcern;
+        private readonly TimeSpan? _timeout;
 
         // public constructors
         /// <summary>
@@ -36,16 +37,19 @@ namespace MongoDB.Driver
         /// <param name="readPreference">The read preference.</param>
         /// <param name="writeConcern">The write concern.</param>
         /// <param name="maxCommitTime">The max commit time.</param>
+        /// <param name="timeout">TODO</param>
         public TransactionOptions(
             Optional<ReadConcern> readConcern = default(Optional<ReadConcern>),
             Optional<ReadPreference> readPreference = default(Optional<ReadPreference>),
             Optional<WriteConcern> writeConcern = default(Optional<WriteConcern>),
-            Optional<TimeSpan?> maxCommitTime = default(Optional<TimeSpan?>))
+            Optional<TimeSpan?> maxCommitTime = default(Optional<TimeSpan?>),
+            Optional<TimeSpan?> timeout = default)
         {
             _readConcern = readConcern.WithDefault(null);
             _readPreference = readPreference.WithDefault(null);
             _writeConcern = writeConcern.WithDefault(null);
             _maxCommitTime = maxCommitTime.WithDefault(null);
+            _timeout = timeout.WithDefault(null);
         }
 
         // public properties
@@ -74,6 +78,11 @@ namespace MongoDB.Driver
         public ReadPreference ReadPreference => _readPreference;
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout => _timeout;
+
+        /// <summary>
         /// Gets the write concern.
         /// </summary>
         /// <value>
@@ -89,6 +98,7 @@ namespace MongoDB.Driver
         /// <param name="readPreference">The read preference.</param>
         /// <param name="writeConcern">The new write concern.</param>
         /// <param name="maxCommitTime">The max commit time.</param>
+        /// <param name="timeout">TODO</param>
         /// <returns>
         /// The new TransactionOptions.
         /// </returns>
@@ -96,13 +106,15 @@ namespace MongoDB.Driver
             Optional<ReadConcern> readConcern = default(Optional<ReadConcern>),
             Optional<ReadPreference> readPreference = default(Optional<ReadPreference>),
             Optional<WriteConcern> writeConcern = default(Optional<WriteConcern>),
-            Optional<TimeSpan?> maxCommitTime = default(Optional<TimeSpan?>))
+            Optional<TimeSpan?> maxCommitTime = default(Optional<TimeSpan?>),
+            Optional<TimeSpan?> timeout = default)
         {
             return new TransactionOptions(
                 readConcern: readConcern.WithDefault(_readConcern),
                 readPreference: readPreference.WithDefault(_readPreference),
                 writeConcern: writeConcern.WithDefault(_writeConcern),
-                maxCommitTime: maxCommitTime.WithDefault(_maxCommitTime));
+                maxCommitTime: maxCommitTime.WithDefault(_maxCommitTime),
+                timeout: timeout.WithDefault(_timeout));
         }
     }
 }

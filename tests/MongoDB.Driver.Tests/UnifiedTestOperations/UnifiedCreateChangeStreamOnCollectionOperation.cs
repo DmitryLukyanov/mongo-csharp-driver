@@ -81,7 +81,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             var collection = _entityMap.GetCollection(targetCollectionId);
 
-            ChangeStreamOptions options = null;
+            var options = new ChangeStreamOptions();
             BsonDocumentStagePipelineDefinition<ChangeStreamDocument<BsonDocument>, ChangeStreamDocument<BsonDocument>> pipeline = null;
 
             foreach (var argument in arguments)
@@ -89,12 +89,17 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 switch (argument.Name)
                 {
                     case "batchSize":
-                        options = options ?? new ChangeStreamOptions();
                         options.BatchSize = argument.Value.AsInt32;
                         break;
                     case "pipeline":
                         var stages = argument.Value.AsBsonArray.Cast<BsonDocument>();
                         pipeline = new BsonDocumentStagePipelineDefinition<ChangeStreamDocument<BsonDocument>, ChangeStreamDocument<BsonDocument>>(stages);
+                        break;
+                    case "maxAwaitTimeMS":
+                        options.MaxAwaitTime = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid CreateChangeStreamOperation argument name: '{argument.Name}'.");

@@ -33,6 +33,7 @@ namespace MongoDB.Driver
         private BsonValue _hint;
         private TimeSpan? _maxAwaitTime;
         private TimeSpan? _maxTime;
+        //TODO: timeoutMode
         private ExpressionTranslationOptions _translationOptions;
         private bool? _useCursor;
 
@@ -107,6 +108,15 @@ namespace MongoDB.Driver
         {
             get { return _maxTime; }
             set { _maxTime = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public object TimeoutMode
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
         }
 
         /// <summary>

@@ -22,6 +22,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Clusters.ServerSelectors;
@@ -355,7 +356,7 @@ namespace MongoDB.Driver
         /// <returns>A session.</returns>
         internal IClientSessionHandle StartImplicitSession(CancellationToken cancellationToken)
         {
-            var areSessionsSupported = AreSessionsSupported(cancellationToken);
+            var areSessionsSupported = AreSessionsSupported(null, cancellationToken);
             return StartImplicitSession(areSessionsSupported);
         }
 
@@ -372,7 +373,7 @@ namespace MongoDB.Driver
         /// <inheritdoc/>
         public sealed override IClientSessionHandle StartSession(ClientSessionOptions options = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var areSessionsSupported = AreSessionsSupported(cancellationToken);
+            var areSessionsSupported = AreSessionsSupported(null, cancellationToken);
             return StartSession(options, areSessionsSupported);
         }
 
@@ -455,9 +456,9 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private bool AreSessionsSupported(CancellationToken cancellationToken)
+        private bool AreSessionsSupported(ClientSideTimeout timeout, CancellationToken cancellationToken)
         {
-            return AreSessionsSupported(_cluster.Description) ?? AreSessionsSupportedAfterServerSelection(cancellationToken);
+            return AreSessionsSupported(_cluster.Description) ?? AreSessionsSupportedAfterServerSelection(timeout, cancellationToken);
         }
 
         private async Task<bool> AreSessionsSupportedAsync(CancellationToken cancellationToken)
@@ -485,10 +486,10 @@ namespace MongoDB.Driver
             }
         }
 
-        private bool AreSessionsSupportedAfterServerSelection(CancellationToken cancellationToken)
+        private bool AreSessionsSupportedAfterServerSelection(ClientSideTimeout timeout, CancellationToken cancellationToken)
         {
             var selector = new AreSessionsSupportedServerSelector();
-            var selectedServer = _cluster.SelectServer(selector, cancellationToken);
+            var selectedServer = _cluster.WithClientSideTimeout(timeout, inputCancellationToken: cancellationToken, (cluster, tct) => cluster.SelectServer(selector, cancellationToken));
             return AreSessionsSupported(selector.ClusterDescription) ?? false;
         }
 

@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using MongoDB.Bson;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
@@ -23,11 +24,13 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
     {
         private readonly UnifiedEntityMap _entityMap;
         private readonly Dictionary<string, object> _additionalArgs;
+        private readonly UnifiedEntityMapBuilder _unifiedEntityMapBuilder;
 
-        public UnifiedTestOperationFactory(UnifiedEntityMap entityMap, Dictionary<string, object> additionalArgs)
+        public UnifiedTestOperationFactory(UnifiedEntityMap entityMap, Dictionary<string, object> additionalArgs, UnifiedEntityMapBuilder unifiedEntityMapBuilder)
         {
             _entityMap = entityMap;
             _additionalArgs = additionalArgs; // can be null
+            _unifiedEntityMapBuilder = unifiedEntityMapBuilder;
         }
 
         public IUnifiedTestOperation CreateOperation(string operationName, string targetEntityId, BsonDocument operationArguments)
@@ -59,6 +62,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedAssertSessionTransactionStateOperationBuilder(_entityMap).Build(operationArguments);
                         case "assertSessionUnpinned":
                             return new UnifiedAssertSessionUnpinnedOperationBuilder(_entityMap).Build(operationArguments);
+                        case "createEntities":
+                            return new UnifiedCreateEntitiesOperationBuilder(_entityMap, _unifiedEntityMapBuilder).Build(operationArguments);
                         case "failPoint":
                             return new UnifiedFailPointOperationBuilder(_entityMap).Build(operationArguments);
                         case "loop":
@@ -78,6 +83,10 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedGridFsDownloadOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "upload":
                             return new UnifiedGridFsUploadOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "drop":
+                            throw new NotImplementedException();
+                        case "rename":
+                            throw new NotImplementedException();
                         default:
                             throw new FormatException($"Invalid method name: '{operationName}'.");
                     }
@@ -87,6 +96,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     {
                         case "iterateUntilDocumentOrError":
                             return new UnifiedIterateUntilDocumentOrErrorOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "iterateOnce":
+                            return new UnifiedIterateOnceOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         default:
                             throw new FormatException($"Invalid method name: '{operationName}'.");
                     }
@@ -98,6 +109,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedCreateChangeStreamOnClientOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "listDatabases":
                             return new UnifiedListDatabasesOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "listDatabaseNames":
+                            throw new NotImplementedException();
                         default:
                             throw new FormatException($"Invalid method name: '{operationName}'.");
                     }
@@ -109,6 +122,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedAggregateOnCollectionOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "bulkWrite":
                             return new UnifiedBulkWriteOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "count":
+                            throw new NotImplementedException();
                         case "countDocuments":
                             return new UnifiedCountDocumentsOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "createChangeStream":
@@ -121,10 +136,16 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedDeleteOneOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "distinct":
                             return new UnifiedDistinctOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "dropIndex":
+                            throw new NotImplementedException();
+                        case "dropIndexes":
+                            throw new NotImplementedException();
                         case "estimatedDocumentCount":
                             return new UnifiedEstimatedDocumentCountOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "find":
                             return new UnifiedFindOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "findOne":
+                            throw new NotImplementedException();
                         case "findOneAndDelete":
                             return new UnifiedFindOneAndDeleteOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "findOneAndReplace":
@@ -135,6 +156,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedInsertManyOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "insertOne":
                             return new UnifiedInsertOneOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "listIndexNames":
+                            throw new NotImplementedException();
                         case "replaceOne":
                             return new UnifiedReplaceOneOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "updateMany":
@@ -156,6 +179,12 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             return new UnifiedDropCollectionOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
                         case "runCommand":
                             return new UnifiedRunCommandOperationBuilder(_entityMap).Build(targetEntityId, operationArguments);
+                        case "listCollections":
+                            throw new NotImplementedException();
+                        case "listCollectionNames":
+                            throw new NotImplementedException();
+                        case "listIndexes":
+                            throw new NotImplementedException();
                         default:
                             throw new FormatException($"Invalid method name: '{operationName}'.");
                     }

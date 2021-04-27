@@ -56,6 +56,11 @@ namespace MongoDB.Driver.Core.Bindings
             get { return _session; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public ClientSideTimeout ClientSideTimeout => throw new NotImplementedException();
+
         // methods
         /// <inheritdoc/>
         public void Dispose()

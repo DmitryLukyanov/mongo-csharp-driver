@@ -65,6 +65,15 @@ namespace MongoDB.Driver.Core.Servers
         /// <returns>A channel.</returns>
         IChannelHandle GetChannel(CancellationToken cancellationToken);
 
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="timeout">TODO</param>
+        /// <param name="cancellationToken">TODO</param>
+        /// <returns></returns>
+        IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken);
+
         // methods
         /// <summary>
         /// Gets a channel to the server.

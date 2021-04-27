@@ -33,6 +33,7 @@ namespace MongoDB.Driver
         private Setting<ReadConcern> _readConcern;
         private Setting<UTF8Encoding> _readEncoding;
         private Setting<ReadPreference> _readPreference;
+        private Setting<TimeSpan?> _timeout;
         private Setting<WriteConcern> _writeConcern;
         private Setting<UTF8Encoding> _writeEncoding;
 
@@ -148,6 +149,24 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Get the timeout.
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout.Value; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoCollectionSettings is frozen."); }
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+                _timeout.Value = value;
+            }
+
+        }
+
+        /// <summary>
         /// Gets or sets the WriteConcern to use.
         /// </summary>
         public WriteConcern WriteConcern
@@ -190,6 +209,7 @@ namespace MongoDB.Driver
             clone._readConcern = _readConcern.Clone();
             clone._readEncoding = _readEncoding.Clone();
             clone._readPreference = _readPreference.Clone();
+            clone._timeout = _timeout.Clone();
             clone._writeConcern = _writeConcern.Clone();
             clone._writeEncoding = _writeEncoding.Clone();
             return clone;
@@ -341,6 +361,10 @@ namespace MongoDB.Driver
             if (!_writeEncoding.HasBeenSet)
             {
                 WriteEncoding = databaseSettings.WriteEncoding;
+            }
+            if (!_timeout.HasBeenSet)
+            {
+                Timeout = databaseSettings.Timeout;
             }
         }
     }

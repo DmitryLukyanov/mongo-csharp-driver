@@ -169,7 +169,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             var requests = _documentSource.GetBatchItems().Select(d => new InsertRequest(new BsonDocumentWrapper(d, _serializer)));
 
-            return new BulkInsertOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            return new BulkInsertOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 BypassDocumentValidation = _bypassDocumentValidation,
                 IsOrdered = !_continueOnError,

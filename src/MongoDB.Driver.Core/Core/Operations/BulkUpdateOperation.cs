@@ -26,8 +26,9 @@ namespace MongoDB.Driver.Core.Operations
         public BulkUpdateOperation(
             CollectionNamespace collectionNamespace,
             IEnumerable<UpdateRequest> requests,
+            ClientSideTimeout clientSideTimeout,
             MessageEncoderSettings messageEncoderSettings)
-            : base(collectionNamespace, requests, messageEncoderSettings)
+            : base(collectionNamespace, requests, clientSideTimeout, messageEncoderSettings)
         {
         }
 

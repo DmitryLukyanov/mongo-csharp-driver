@@ -181,6 +181,25 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
+        public IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken)
+        {
+            ThrowIfNotOpen();
+
+            try
+            {
+                Interlocked.Increment(ref _outstandingOperationsCount);
+                var connection = _connectionPool.AcquireConnection(cancellationToken);
+                return new ServerChannel(this, connection);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Decrement(ref _outstandingOperationsCount);
+
+                HandleBeforeHandshakeCompletesException(ex);
+                throw;
+            }
+        }
+
         public async Task<IChannelHandle> GetChannelAsync(CancellationToken cancellationToken)
         {
             ThrowIfNotOpen();

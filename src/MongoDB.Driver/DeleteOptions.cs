@@ -13,7 +13,9 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
 {
@@ -25,6 +27,7 @@ namespace MongoDB.Driver
         // fields
         private Collation _collation;
         private BsonValue _hint;
+        private TimeSpan? _timeout;
 
         // properties
         /// <summary>
@@ -43,6 +46,15 @@ namespace MongoDB.Driver
         {
             get { return _hint; }
             set { _hint = value; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
     }
 }

@@ -80,7 +80,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                var server = __cluster.Value.SelectServer(WritableServerSelector.Instance, CancellationToken.None);
+                var server = __cluster.Value.SelectServer(WritableServerSelector.Instance, null, CancellationToken.None);
                 var version = server.Description.Version;
                 if (version == null)
                 {
@@ -351,7 +351,7 @@ namespace MongoDB.Driver
                 cluster.Initialize();
 
                 var serverSelector = new ReadPreferenceServerSelector(ReadPreference.PrimaryPreferred);
-                var server = cluster.SelectServer(serverSelector, CancellationToken.None);
+                var server = cluster.SelectServer(serverSelector, null, CancellationToken.None);
                 return server.Description.Type.IsReplicaSetMember();
             }
         }

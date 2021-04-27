@@ -147,6 +147,7 @@ namespace MongoDB.Driver
                 ShowRecordId = _options.ShowRecordId,
                 Skip = _options.Skip,
                 Sort = _options.Sort,
+                Timeout = _options.Timeout
             };
             return new FindFluent<TDocument, TNewProjection>(_session, _collection, _filter, newOptions);
         }

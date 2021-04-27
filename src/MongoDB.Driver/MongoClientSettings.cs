@@ -67,6 +67,7 @@ namespace MongoDB.Driver
         private TimeSpan _serverSelectionTimeout;
         private TimeSpan _socketTimeout;
         private SslSettings _sslSettings;
+        private TimeSpan? _timeout;
         private bool _useTls;
         private int _waitQueueSize;
         private TimeSpan _waitQueueTimeout;
@@ -663,6 +664,19 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoClientSettings is frozen."); }
+                _timeout = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to use SSL.
         /// </summary>
         [Obsolete("Use UseTls instead.")]
@@ -889,6 +903,7 @@ namespace MongoDB.Driver
             {
                 clientSettings.SslSettings = new SslSettings { CheckCertificateRevocation = false };
             }
+            clientSettings.Timeout = url.Timeout;
             clientSettings.UseTls = url.UseTls;
 #pragma warning disable 618
             clientSettings.WaitQueueSize = url.ComputedWaitQueueSize;
@@ -939,6 +954,7 @@ namespace MongoDB.Driver
             clone._serverSelectionTimeout = _serverSelectionTimeout;
             clone._socketTimeout = _socketTimeout;
             clone._sslSettings = (_sslSettings == null) ? null : _sslSettings.Clone();
+            clone._timeout = _timeout;
             clone._useTls = _useTls;
             clone._waitQueueSize = _waitQueueSize;
             clone._waitQueueTimeout = _waitQueueTimeout;
@@ -1003,6 +1019,7 @@ namespace MongoDB.Driver
                 _serverSelectionTimeout == rhs._serverSelectionTimeout &&
                 _socketTimeout == rhs._socketTimeout &&
                 _sslSettings == rhs._sslSettings &&
+                object.Equals(_timeout, rhs._timeout) &&
                 _useTls == rhs._useTls &&
                 _waitQueueSize == rhs._waitQueueSize &&
                 _waitQueueTimeout == rhs._waitQueueTimeout &&
@@ -1085,6 +1102,7 @@ namespace MongoDB.Driver
                 .Hash(_serverSelectionTimeout)
                 .Hash(_socketTimeout)
                 .Hash(_sslSettings)
+                .Hash(_timeout)
                 .Hash(_useTls)
                 .Hash(_waitQueueSize)
                 .Hash(_waitQueueTimeout)
@@ -1164,6 +1182,10 @@ namespace MongoDB.Driver
             {
                 sb.AppendFormat("SslSettings={0};", _sslSettings);
             }
+            if (_timeout.HasValue)
+            {
+                sb.AppendFormat("Timeout={0};", _timeout.Value);
+            }
             sb.AppendFormat("Tls={0};", _useTls);
             sb.AppendFormat("TlsInsecure={0};", _allowInsecureTls);
             sb.AppendFormat("WaitQueueSize={0};", _waitQueueSize);
@@ -1209,6 +1231,7 @@ namespace MongoDB.Driver
                 _serverSelectionTimeout,
                 _socketTimeout,
                 _sslSettings,
+                _timeout,
                 _useTls,
                 _waitQueueSize,
                 _waitQueueTimeout);

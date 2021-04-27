@@ -183,7 +183,10 @@ namespace MongoDB.Driver.Core.Operations
         private void Initialize(CancellationToken cancellationToken)
         {
             _channelSource = _binding.GetWriteChannelSource(cancellationToken);
-            _channel = _channelSource.GetChannel(cancellationToken);
+            _channel = _channelSource.WithClientSideTimeout(
+                _binding.ClientSideTimeout,
+                inputCancellationToken: cancellationToken,
+                (binding, tct) => binding.GetChannel(tct));
         }
 
         private async Task InitializeAsync(CancellationToken cancellationToken)

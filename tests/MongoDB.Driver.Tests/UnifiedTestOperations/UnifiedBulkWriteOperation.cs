@@ -104,12 +104,12 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             List<WriteModel<BsonDocument>> requests = null;
             IClientSessionHandle session = null;
 
+            options = new BulkWriteOptions();
             foreach (var argument in arguments)
             {
                 switch (argument.Name)
                 {
                     case "ordered":
-                        options = options ?? new BulkWriteOptions();
                         options.IsOrdered = argument.Value.AsBoolean;
                         break;
                     case "requests":
@@ -117,6 +117,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         break;
                     case "session":
                         session = _entityMap.GetSession(argument.Value.AsString);
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid BulkWriteOperation argument name: '{argument.Name}'.");

@@ -26,11 +26,15 @@ using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 
 namespace MongoDB.Driver.Core.Operations
 {
-    internal abstract class BulkUnmixedWriteOperationBase<TWriteRequest> : IWriteOperation<BulkWriteOperationResult>, IExecutableInRetryableWriteContext<BulkWriteOperationResult>
-        where TWriteRequest : WriteRequest
+    internal abstract class BulkUnmixedWriteOperationBase<TWriteRequest> :
+        IWriteOperation<BulkWriteOperationResult>,
+        IExecutableInRetryableWriteContext<BulkWriteOperationResult>,
+        IWithClientSideTimeout
+            where TWriteRequest : WriteRequest
     {
         // fields
         private bool? _bypassDocumentValidation;
+        private ClientSideTimeout _clientSideTimeout;
         private CollectionNamespace _collectionNamespace;
         private bool _isOrdered = true;
         private int? _maxBatchCount;
@@ -44,18 +48,25 @@ namespace MongoDB.Driver.Core.Operations
         protected BulkUnmixedWriteOperationBase(
             CollectionNamespace collectionNamespace,
             IEnumerable<TWriteRequest> requests,
+            ClientSideTimeout clientSideTimeout,
             MessageEncoderSettings messageEncoderSettings)
-            : this(collectionNamespace, Ensure.IsNotNull(requests, nameof(requests)).ToList(), messageEncoderSettings)
+            : this(
+                  collectionNamespace,
+                  Ensure.IsNotNull(requests, nameof(requests)).ToList(),
+                  clientSideTimeout,
+                  messageEncoderSettings)
         {
         }
 
         protected BulkUnmixedWriteOperationBase(
             CollectionNamespace collectionNamespace,
             List<TWriteRequest> requests,
+            ClientSideTimeout clientSideTimeout, // can be null?
             MessageEncoderSettings messageEncoderSettings)
         {
             _collectionNamespace = Ensure.IsNotNull(collectionNamespace, nameof(collectionNamespace));
             _requests = Ensure.IsNotNull(requests, nameof(requests));
+            _clientSideTimeout = clientSideTimeout;
             _messageEncoderSettings = messageEncoderSettings;
         }
 
@@ -110,6 +121,12 @@ namespace MongoDB.Driver.Core.Operations
         {
             get { return _writeConcern; }
             set { _writeConcern = Ensure.IsNotNull(value, nameof(value)); }
+        }
+
+        public ClientSideTimeout ClientSideTimeout
+        {
+            get => _clientSideTimeout;
+            set => _clientSideTimeout = value;
         }
 
         // public methods

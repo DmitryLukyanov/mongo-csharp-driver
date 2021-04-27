@@ -72,6 +72,11 @@ namespace MongoDB.Driver.Core.Bindings
             get { return _readBinding.Session; } // both bindings have the same session
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public ClientSideTimeout ClientSideTimeout => throw new NotImplementedException();
+
         // methods
         /// <inheritdoc/>
         public IChannelSourceHandle GetReadChannelSource(CancellationToken cancellationToken)

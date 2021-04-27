@@ -74,7 +74,7 @@ namespace MongoDB.Driver.Core.Operations
         protected void Delete(BsonDocument filter)
         {
             var requests = new[] { new DeleteRequest(filter) };
-            var operation = new BulkDeleteOperation(_collectionNamespace, requests, _messageEncoderSettings);
+            var operation = new BulkDeleteOperation(_collectionNamespace, requests, null, _messageEncoderSettings);
             ExecuteOperation(operation);
         }
 
@@ -273,7 +273,7 @@ namespace MongoDB.Driver.Core.Operations
         protected void Insert(IEnumerable<BsonDocument> documents)
         {
             var requests = documents.Select(d => new InsertRequest(d));
-            var insertOperation = new BulkInsertOperation(_collectionNamespace, requests, _messageEncoderSettings);
+            var insertOperation = new BulkInsertOperation(_collectionNamespace, requests, null, _messageEncoderSettings);
             ExecuteOperation(insertOperation);
         }
 
@@ -285,7 +285,7 @@ namespace MongoDB.Driver.Core.Operations
         protected async Task InsertAsync(IEnumerable<BsonDocument> documents)
         {
             var requests = documents.Select(d => new InsertRequest(d));
-            var insertOperation = new BulkInsertOperation(_collectionNamespace, requests, _messageEncoderSettings);
+            var insertOperation = new BulkInsertOperation(_collectionNamespace, requests, null, _messageEncoderSettings);
             await ExecuteOperationAsync(insertOperation);
         }
 
@@ -397,7 +397,7 @@ namespace MongoDB.Driver.Core.Operations
         protected void Update(BsonDocument filter, BsonDocument update)
         {
             var requests = new[] { new UpdateRequest(UpdateType.Update, filter, update) };
-            var operation = new BulkUpdateOperation(_collectionNamespace, requests, _messageEncoderSettings);
+            var operation = new BulkUpdateOperation(_collectionNamespace, requests, null, _messageEncoderSettings);
             ExecuteOperation(operation);
         }
 

@@ -26,8 +26,9 @@ namespace MongoDB.Driver.Core.Operations
         public BulkDeleteOperation(
             CollectionNamespace collectionNamespace,
             IEnumerable<DeleteRequest> requests,
+            ClientSideTimeout clientSideTimeout,  // move to the particular request?
             MessageEncoderSettings messageEncoderSettings)
-            : base(collectionNamespace, requests, messageEncoderSettings)
+            : base(collectionNamespace, requests, clientSideTimeout, messageEncoderSettings)
         {
         }
 

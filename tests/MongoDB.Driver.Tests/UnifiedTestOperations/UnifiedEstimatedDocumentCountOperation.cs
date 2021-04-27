@@ -84,6 +84,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "maxTimeMS":
                         options.MaxTime = TimeSpan.FromMilliseconds(argument.Value.AsInt32);
                         break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
                     default:
                         throw new FormatException($"Invalid {nameof(UnifiedEstimatedDocumentCountOperation)} argument name: '{argument.Name}'.");
                 }

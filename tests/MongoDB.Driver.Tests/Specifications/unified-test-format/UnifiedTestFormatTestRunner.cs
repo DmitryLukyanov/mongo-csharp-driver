@@ -36,8 +36,8 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         private UnifiedEntityMap _entityMap;
         private readonly List<FailPoint> _failPoints = new List<FailPoint>();
         private readonly Dictionary<string, object> _additionalArgs;
-        private readonly Dictionary<string, IEventFormatter> _eventFormatters;
         private bool _runHasBeenCalled;
+        private readonly UnifiedEntityMapBuilder _unifiedEntityMapBuilder;
 
         public UnifiedTestFormatTestRunner(
             bool allowKillSessions = true, // TODO: should be removed after SERVER-54216 
@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         {
             _allowKillSessions = allowKillSessions;
             _additionalArgs = additionalArgs; // can be null
-            _eventFormatters = eventFormatters; // can be null
+            _unifiedEntityMapBuilder = new UnifiedEntityMapBuilder(eventFormatters);
         }
 
         // public properties
@@ -92,7 +92,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
 
             var schemaSemanticVersion = SemanticVersion.Parse(schemaVersion);
             if (schemaSemanticVersion < new SemanticVersion(1, 0, 0) ||
-                schemaSemanticVersion > new SemanticVersion(1, 2, 0))
+                schemaSemanticVersion > new SemanticVersion(1, 5, 0))
             {
                 throw new FormatException($"Schema version '{schemaVersion}' is not supported.");
             }
@@ -114,7 +114,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
                 KillOpenTransactions(DriverTestConfiguration.Client);
             }
 
-            _entityMap = new UnifiedEntityMapBuilder(_eventFormatters).Build(entities);
+            _entityMap = _unifiedEntityMapBuilder.Build(entities);
 
             if (initialData != null)
             {
@@ -163,25 +163,35 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
         // private methods
         private void AddInitialData(IMongoClient client, BsonArray initialData)
         {
-            foreach (var dataItem in initialData)
+            foreach (var dataItem in initialData.Cast<BsonDocument>())
             {
                 var collectionName = dataItem["collectionName"].AsString;
                 var databaseName = dataItem["databaseName"].AsString;
                 var documents = dataItem["documents"].AsBsonArray.Cast<BsonDocument>().ToList();
 
-                var database = client.GetDatabase(databaseName);
-                var collection = database
-                    .GetCollection<BsonDocument>(collectionName)
-                    .WithWriteConcern(WriteConcern.WMajority);
+                CreateCollectionOptions createCollectionOptions = null;
+                if (dataItem.TryGetValue("collectionOptions", out var collectionOptionsDocument))
+                {
+                    createCollectionOptions = new CreateCollectionOptions();
+                    foreach (var option in collectionOptionsDocument.AsBsonDocument)
+                    {
+                        switch (option.Name)
+                        {
+                            case "capped": createCollectionOptions.Capped = option.Value.ToBoolean(); break;
+                            case "size": createCollectionOptions.MaxSize = option.Value.ToInt64(); break;
+                            default: throw new FormatException($"Unrecognized {nameof(CreateCollectionOptions)} value: '{option.Name}'.");
+                        }
+                    }
+                }
 
+                var database = client.GetDatabase(databaseName).WithWriteConcern(WriteConcern.WMajority);
                 database.DropCollection(collectionName);
+                database.CreateCollection(collectionName, createCollectionOptions);
+
                 if (documents.Any())
                 {
+                    var collection = database.GetCollection<BsonDocument>(collectionName);
                     collection.InsertMany(documents);
-                }
-                else
-                {
-                    database.WithWriteConcern(WriteConcern.WMajority).CreateCollection(collectionName);
                 }
             }
         }
@@ -296,7 +306,7 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
 
         private IUnifiedTestOperation CreateOperation(BsonDocument operation, UnifiedEntityMap entityMap)
         {
-            var factory = new UnifiedTestOperationFactory(entityMap, _additionalArgs);
+            var factory = new UnifiedTestOperationFactory(entityMap, _additionalArgs, _unifiedEntityMapBuilder);
 
             var operationName = operation["name"].AsString;
             var operationTarget = operation["object"].AsString;

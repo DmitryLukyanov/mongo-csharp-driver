@@ -58,6 +58,14 @@ namespace MongoDB.Driver.Core.Bindings
         IChannelHandle GetChannel(CancellationToken cancellationToken);
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        /// <param name="timeout">TODO</param>
+        /// <param name="cancellationToken">TODO</param>
+        /// <returns>TODO</returns>
+        IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken);
+
+        /// <summary>
         /// Gets a channel.
         /// </summary>
         /// <param name="cancellationToken">The cancellation token.</param>

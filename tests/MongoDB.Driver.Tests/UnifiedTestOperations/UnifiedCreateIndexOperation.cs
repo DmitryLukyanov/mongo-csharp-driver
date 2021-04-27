@@ -97,7 +97,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             BsonDocument keys = null;
-            CreateIndexOptions options = null;
+            CreateIndexOptions options = new CreateIndexOptions();
             IClientSessionHandle session = null;
 
             foreach (var argument in arguments)
@@ -108,12 +108,14 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         keys = argument.Value.AsBsonDocument;
                         break;
                     case "name":
-                        options = options ?? new CreateIndexOptions();
                         options.Name = argument.Value.AsString;
                         break;
                     case "session":
                         var sessionId = argument.Value.AsString;
                         session = _entityMap.GetSession(sessionId);
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid CreateIndexOperation argument name: '{argument.Name}'.");

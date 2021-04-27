@@ -26,6 +26,7 @@ namespace MongoDB.Driver.Core.Servers
     internal interface IRoundTripTimeMonitor : IDisposable
     {
         TimeSpan Average { get; }
+        int NinetiethPercentile { get; }
         void AddSample(TimeSpan roundTripTime);
         void Reset();
         Task RunAsync();
@@ -59,6 +60,7 @@ namespace MongoDB.Driver.Core.Servers
             _serverApi = serverApi;
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
+            // _rttDigest
         }
 
         public TimeSpan Average
@@ -72,7 +74,28 @@ namespace MongoDB.Driver.Core.Servers
             }
         }
 
+        public int NinetiethPercentile
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    //                    throw new NotImplementedException();
+                    return 1;
+                }
+            }
+        }
+
         // public methods
+        public void AddSample(TimeSpan roundTripTime)
+        {
+            lock (_lock)
+            {
+                //_rttDigest.Update()
+                _averageRoundTripTimeCalculator.AddSample(roundTripTime);
+            }
+        }
+
         public void Dispose()
         {
             if (!_disposed)
@@ -82,6 +105,14 @@ namespace MongoDB.Driver.Core.Servers
                 _cancellationTokenSource.Dispose();
 
                 try { _roundTripTimeConnection?.Dispose(); } catch { }
+            }
+        }
+
+        public void Reset()
+        {
+            lock (_lock)
+            {
+                _averageRoundTripTimeCalculator.Reset();
             }
         }
 
@@ -149,22 +180,6 @@ namespace MongoDB.Driver.Core.Servers
                 _roundTripTimeConnection = roundTripTimeConnection;
             }
             AddSample(stopwatch.Elapsed);
-        }
-
-        public void AddSample(TimeSpan roundTripTime)
-        {
-            lock (_lock)
-            {
-                _averageRoundTripTimeCalculator.AddSample(roundTripTime);
-            }
-        }
-
-        public void Reset()
-        {
-            lock (_lock)
-            {
-                _averageRoundTripTimeCalculator.Reset();
-            }
         }
     }
 }

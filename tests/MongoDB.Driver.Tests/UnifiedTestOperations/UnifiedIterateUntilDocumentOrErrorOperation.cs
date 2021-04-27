@@ -34,8 +34,18 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                _changeStream.MoveNext();
-                var result = _changeStream.Current;
+                ChangeStreamDocument<BsonDocument> result;
+                using (var timeoutHelper = new TimeoutHelper(TimeSpan.FromSeconds(30))) // just in case
+                {
+                    do
+                    {
+                        timeoutHelper.ThrowIfStopTimeout();
+
+                        _changeStream.MoveNext();
+                        result = _changeStream.Current;
+                    }
+                    while (result == null);
+                }
 
                 return new UnifiedIterateUntilDocumentOrErrorOperationResultConverter().Convert(result);
             }
@@ -49,8 +59,18 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                _changeStream.MoveNext(); // TODO: Change to async counterpart when async enumeration is implemented
-                var result = _changeStream.Current;
+                ChangeStreamDocument<BsonDocument> result;
+                using (var timeoutHelper = new TimeoutHelper(TimeSpan.FromSeconds(30))) // just in case
+                {
+                    do
+                    {
+                        timeoutHelper.ThrowIfStopTimeout();
+
+                        _changeStream.MoveNext(); // TODO: Change to async counterpart when async enumeration is implemented
+                        result = _changeStream.Current;
+                    }
+                    while (result == null);
+                }
 
                 return Task.FromResult(new UnifiedIterateUntilDocumentOrErrorOperationResultConverter().Convert(result));
             }
@@ -58,6 +78,27 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             {
                 return Task.FromResult(OperationResult.FromException(exception));
             }
+        }
+
+        private class TimeoutHelper : IDisposable
+        {
+            private readonly CancellationTokenSource _cancellationTokenSource;
+            private readonly TimeSpan _timeSpan;
+            public TimeoutHelper(TimeSpan timeSpan)
+            {
+                _cancellationTokenSource = new CancellationTokenSource(timeSpan);
+                _timeSpan = timeSpan;
+            }
+
+            public void ThrowIfStopTimeout()
+            {
+                if (_cancellationTokenSource.IsCancellationRequested)
+                {
+                    throw new Exception($"A changeStream document or error has not been receive during timeout: {_timeSpan}.");
+                }
+            }
+
+            public void Dispose() => _cancellationTokenSource.Dispose();
         }
     }
 

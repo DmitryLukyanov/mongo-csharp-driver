@@ -54,6 +54,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly EndPoint _endPoint;
         private readonly Exception _heartbeatException;
         private readonly TimeSpan _heartbeatInterval;
+        private readonly bool? _isCryptd; // isMongocryptd?
         private readonly DateTime? _lastHeartbeatTimestamp;
         private readonly DateTime _lastUpdateTimestamp;
         private readonly DateTime? _lastWriteTimestamp;
@@ -62,6 +63,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly int _maxDocumentSize;
         private readonly int _maxMessageSize;
         private readonly int _maxWireDocumentSize;
+        private readonly int? _ninetiethPercentileRoundTripTime;
         private readonly string _reasonChanged;
         private readonly ReplicaSetConfig _replicaSetConfig;
         private readonly ServerId _serverId;
@@ -84,6 +86,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <param name="electionId">The election identifier.</param>
         /// <param name="heartbeatException">The heartbeat exception.</param>
         /// <param name="heartbeatInterval">The heartbeat interval.</param>
+        /// <param name="isCryptd">TODO</param>
         /// <param name="lastHeartbeatTimestamp">The last heartbeat timestamp.</param>
         /// <param name="lastUpdateTimestamp">The last update timestamp.</param>
         /// <param name="lastWriteTimestamp">The last write timestamp.</param>
@@ -92,6 +95,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <param name="maxDocumentSize">The maximum size of a document.</param>
         /// <param name="maxMessageSize">The maximum size of a message.</param>
         /// <param name="maxWireDocumentSize">The maximum size of a wire document.</param>
+        /// <param name="ninetiethPercentileRoundTripTime">TODO</param>
         /// <param name="replicaSetConfig">The replica set configuration.</param>
         /// <param name="state">The server state.</param>
         /// <param name="tags">The replica set tags.</param>
@@ -109,6 +113,7 @@ namespace MongoDB.Driver.Core.Servers
             Optional<ElectionId> electionId = default(Optional<ElectionId>),
             Optional<Exception> heartbeatException = default(Optional<Exception>),
             Optional<TimeSpan> heartbeatInterval = default(Optional<TimeSpan>),
+            Optional<bool?> isCryptd = default,
             Optional<DateTime?> lastHeartbeatTimestamp = default(Optional<DateTime?>),
             Optional<DateTime> lastUpdateTimestamp = default(Optional<DateTime>),
             Optional<DateTime?> lastWriteTimestamp = default(Optional<DateTime?>),
@@ -117,6 +122,7 @@ namespace MongoDB.Driver.Core.Servers
             Optional<int> maxDocumentSize = default(Optional<int>),
             Optional<int> maxMessageSize = default(Optional<int>),
             Optional<int> maxWireDocumentSize = default(Optional<int>),
+            Optional<int?> ninetiethPercentileRoundTripTime = default,
             Optional<ReplicaSetConfig> replicaSetConfig = default(Optional<ReplicaSetConfig>),
             Optional<ServerState> state = default(Optional<ServerState>),
             Optional<TagSet> tags = default(Optional<TagSet>),
@@ -142,10 +148,12 @@ namespace MongoDB.Driver.Core.Servers
             _lastUpdateTimestamp = lastUpdateTimestamp.WithDefault(DateTime.UtcNow);
             _lastWriteTimestamp = lastWriteTimestamp.WithDefault(null);
             _logicalSessionTimeout = logicalSessionTimeout.WithDefault(null);
+            _isCryptd = isCryptd.WithDefault(null);
             _maxBatchCount = maxBatchCount.WithDefault(1000);
             _maxDocumentSize = maxDocumentSize.WithDefault(4 * 1024 * 1024);
             _maxMessageSize = maxMessageSize.WithDefault(Math.Max(_maxDocumentSize + 1024, 16000000));
             _maxWireDocumentSize = maxWireDocumentSize.WithDefault(_maxDocumentSize + 16 * 1024);
+            _ninetiethPercentileRoundTripTime = ninetiethPercentileRoundTripTime.WithDefault(null);
             _reasonChanged = reasonChanged.WithDefault("NotSpecified");
             _replicaSetConfig = replicaSetConfig.WithDefault(null);
             _serverId = serverId;
@@ -230,6 +238,11 @@ namespace MongoDB.Driver.Core.Servers
             _type == ServerType.Unknown ||
             _wireVersionRange == null ||
             _wireVersionRange.Overlaps(Cluster.SupportedWireVersionRange);
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public bool? IsCryptd => _isCryptd;
 
         /// <summary>
         /// Gets a value indicating whether this instance is a data bearing server.
@@ -341,6 +354,14 @@ namespace MongoDB.Driver.Core.Servers
         public int MaxWireDocumentSize
         {
             get { return _maxWireDocumentSize; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public int? NinetiethPercentileRoundTripTime
+        {
+            get { return _ninetiethPercentileRoundTripTime; }
         }
 
         /// <summary>
@@ -458,6 +479,7 @@ namespace MongoDB.Driver.Core.Servers
                 object.Equals(_electionId, other._electionId) &&
                 EndPointHelper.Equals(_endPoint, other._endPoint) &&
                 Equals(_heartbeatException, other._heartbeatException) &&
+                object.Equals(_isCryptd, other._isCryptd) &&
                 _heartbeatInterval == other._heartbeatInterval &&
                 _lastHeartbeatTimestamp == other.LastHeartbeatTimestamp &&
                 _lastUpdateTimestamp == other._lastUpdateTimestamp &&
@@ -467,6 +489,7 @@ namespace MongoDB.Driver.Core.Servers
                 _maxDocumentSize == other._maxDocumentSize &&
                 _maxMessageSize == other._maxMessageSize &&
                 _maxWireDocumentSize == other._maxWireDocumentSize &&
+                object.Equals(_ninetiethPercentileRoundTripTime, other._ninetiethPercentileRoundTripTime) &&
                 _reasonChanged.Equals(other._reasonChanged, StringComparison.Ordinal) &&
                 object.Equals(_replicaSetConfig, other._replicaSetConfig) &&
                 _serverId.Equals(other._serverId) &&
@@ -488,6 +511,7 @@ namespace MongoDB.Driver.Core.Servers
                 .Hash(_endPoint)
                 .Hash(_heartbeatException)
                 .Hash(_heartbeatInterval)
+                .Hash(_isCryptd)
                 .Hash(_lastHeartbeatTimestamp)
                 .Hash(_lastUpdateTimestamp)
                 .Hash(_lastWriteTimestamp)
@@ -496,6 +520,7 @@ namespace MongoDB.Driver.Core.Servers
                 .Hash(_maxDocumentSize)
                 .Hash(_maxMessageSize)
                 .Hash(_maxWireDocumentSize)
+                .Hash(_ninetiethPercentileRoundTripTime)
                 .Hash(_reasonChanged)
                 .Hash(_replicaSetConfig)
                 .Hash(_serverId)
@@ -520,6 +545,7 @@ namespace MongoDB.Driver.Core.Servers
                 _type == other.Type &&
                 object.Equals(_wireVersionRange, other._wireVersionRange) &&
                 EndPointHelper.Equals(_canonicalEndPoint, other._canonicalEndPoint) && // me
+                object.Equals(_isCryptd, other._isCryptd) &&
                 EndPointHelper.SequenceEquals(_replicaSetConfig?.Members, other._replicaSetConfig?.Members) && // hosts, passives, arbiters
                 object.Equals(_tags, other._tags) &&
                 _replicaSetConfig?.Name == other._replicaSetConfig?.Name && // setName
@@ -548,6 +574,8 @@ namespace MongoDB.Driver.Core.Servers
                 .AppendFormatIf(_heartbeatException != null, ", HeartbeatException: \"{0}\"", _heartbeatException)
                 .AppendFormat(", LastHeartbeatTimestamp: {0}", _lastHeartbeatTimestamp.HasValue ? "\"" + LastHeartbeatTimestamp.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffffffK") + "\"" : "null")
                 .AppendFormat(", LastUpdateTimestamp: \"{0:yyyy-MM-ddTHH:mm:ss.fffffffK}\"", _lastUpdateTimestamp)
+                .AppendFormatIf(_ninetiethPercentileRoundTripTime.HasValue, $", {nameof(NinetiethPercentileRoundTripTime)}: \"{_ninetiethPercentileRoundTripTime.GetValueOrDefault()}\"")
+                .AppendFormatIf(_isCryptd.HasValue, $", {nameof(IsCryptd)}:, \"{_isCryptd.GetValueOrDefault()}\"")
                 .Append(" }")
                 .ToString();
         }
@@ -561,6 +589,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <param name="electionId">The election identifier.</param>
         /// <param name="heartbeatException">The heartbeat exception.</param>
         /// <param name="heartbeatInterval">The heartbeat interval.</param>
+        /// <param name="isCryptd">TODO</param>
         /// <param name="lastHeartbeatTimestamp">The last heartbeat timestamp.</param>
         /// <param name="lastUpdateTimestamp">The last update timestamp.</param>
         /// <param name="lastWriteTimestamp">The last write timestamp.</param>
@@ -569,6 +598,7 @@ namespace MongoDB.Driver.Core.Servers
         /// <param name="maxDocumentSize">The maximum size of a document.</param>
         /// <param name="maxMessageSize">The maximum size of a message.</param>
         /// <param name="maxWireDocumentSize">The maximum size of a wire document.</param>
+        /// <param name="ninetiethPercentileRoundTripTime">TODO</param>
         /// <param name="replicaSetConfig">The replica set configuration.</param>
         /// <param name="state">The server state.</param>
         /// <param name="tags">The replica set tags.</param>
@@ -586,6 +616,7 @@ namespace MongoDB.Driver.Core.Servers
             Optional<ElectionId> electionId = default(Optional<ElectionId>),
             Optional<Exception> heartbeatException = default(Optional<Exception>),
             Optional<TimeSpan> heartbeatInterval = default(Optional<TimeSpan>),
+            Optional<bool?> isCryptd = default,
             Optional<DateTime?> lastHeartbeatTimestamp = default(Optional<DateTime?>),
             Optional<DateTime> lastUpdateTimestamp = default(Optional<DateTime>),
             Optional<DateTime?> lastWriteTimestamp = default(Optional<DateTime?>),
@@ -594,6 +625,7 @@ namespace MongoDB.Driver.Core.Servers
             Optional<int> maxDocumentSize = default(Optional<int>),
             Optional<int> maxMessageSize = default(Optional<int>),
             Optional<int> maxWireDocumentSize = default(Optional<int>),
+            Optional<int?> ninetiethPercentileRoundTripTime = default,
             Optional<ReplicaSetConfig> replicaSetConfig = default(Optional<ReplicaSetConfig>),
             Optional<ServerState> state = default(Optional<ServerState>),
             Optional<TagSet> tags = default(Optional<TagSet>),
@@ -611,6 +643,7 @@ namespace MongoDB.Driver.Core.Servers
                 electionId: electionId.WithDefault(_electionId),
                 heartbeatException: heartbeatException.WithDefault(_heartbeatException),
                 heartbeatInterval: heartbeatInterval.WithDefault(_heartbeatInterval),
+                isCryptd: isCryptd.WithDefault(_isCryptd),
                 lastHeartbeatTimestamp: lastHeartbeatTimestamp.WithDefault(_lastHeartbeatTimestamp),
                 lastUpdateTimestamp: lastUpdateTimestamp.WithDefault(DateTime.UtcNow),
                 lastWriteTimestamp: lastWriteTimestamp.WithDefault(_lastWriteTimestamp),
@@ -619,6 +652,7 @@ namespace MongoDB.Driver.Core.Servers
                 maxDocumentSize: maxDocumentSize.WithDefault(_maxDocumentSize),
                 maxMessageSize: maxMessageSize.WithDefault(_maxMessageSize),
                 maxWireDocumentSize: maxWireDocumentSize.WithDefault(_maxWireDocumentSize),
+                ninetiethPercentileRoundTripTime: ninetiethPercentileRoundTripTime.WithDefault(_ninetiethPercentileRoundTripTime),
                 replicaSetConfig: replicaSetConfig.WithDefault(_replicaSetConfig),
                 state: state.WithDefault(_state),
                 tags: tags.WithDefault(_tags),
@@ -646,6 +680,7 @@ namespace MongoDB.Driver.Core.Servers
                 electionId: _electionId,
                 heartbeatException: heartbeatException,
                 heartbeatInterval: _heartbeatInterval,
+                isCryptd: _isCryptd,
                 lastHeartbeatTimestamp: DateTime.UtcNow,
                 lastUpdateTimestamp: DateTime.UtcNow,
                 lastWriteTimestamp: _lastWriteTimestamp,
@@ -654,6 +689,7 @@ namespace MongoDB.Driver.Core.Servers
                 maxDocumentSize: _maxDocumentSize,
                 maxMessageSize: _maxMessageSize,
                 maxWireDocumentSize: _maxWireDocumentSize,
+                ninetiethPercentileRoundTripTime: _ninetiethPercentileRoundTripTime,
                 replicaSetConfig: _replicaSetConfig,
                 state: _state,
                 tags: _tags,

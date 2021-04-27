@@ -17,6 +17,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
@@ -24,23 +25,26 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
     {
         private readonly IMongoCollection<BsonDocument> _collection;
         private readonly FilterDefinition<BsonDocument> _filter;
+        private readonly FindOneAndReplaceOptions<BsonDocument> _options;
         private readonly BsonDocument _replacement;
 
         public UnifiedFindOneAndReplaceOperation(
             IMongoCollection<BsonDocument> collection,
             FilterDefinition<BsonDocument> filter,
-            BsonDocument replacement)
+            BsonDocument replacement,
+            FindOneAndReplaceOptions<BsonDocument> options)
         {
-            _collection = collection;
-            _filter = filter;
-            _replacement = replacement;
+            _collection = Ensure.IsNotNull(collection, nameof(collection));
+            _filter = Ensure.IsNotNull(filter, nameof(filter));
+            _replacement = Ensure.IsNotNull(replacement, nameof(replacement));
+            _options = options;
         }
 
         public OperationResult Execute(CancellationToken cancellationToken)
         {
             try
             {
-                var result = _collection.FindOneAndReplace(_filter, _replacement, cancellationToken: cancellationToken);
+                var result = _collection.FindOneAndReplace(_filter, _replacement, _options, cancellationToken: cancellationToken);
 
                 return OperationResult.FromResult(result);
             }
@@ -54,7 +58,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                var result = await _collection.FindOneAndReplaceAsync(_filter, _replacement, cancellationToken: cancellationToken);
+                var result = await _collection.FindOneAndReplaceAsync(_filter, _replacement, _options, cancellationToken: cancellationToken);
 
                 return OperationResult.FromResult(result);
             }
@@ -80,6 +84,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
             FilterDefinition<BsonDocument> filter = null;
             BsonDocument replacement = null;
+            var options = new FindOneAndReplaceOptions<BsonDocument>();
 
             foreach (var argument in arguments)
             {
@@ -91,12 +96,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "replacement":
                         replacement = argument.Value.AsBsonDocument;
                         break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
                     default:
                         throw new FormatException($"Invalid FindOneAndReplaceOperation argument name: '{argument.Name}'.");
                 }
             }
 
-            return new UnifiedFindOneAndReplaceOperation(collection, filter, replacement);
+            return new UnifiedFindOneAndReplaceOperation(collection, filter, replacement, options);
         }
     }
 }

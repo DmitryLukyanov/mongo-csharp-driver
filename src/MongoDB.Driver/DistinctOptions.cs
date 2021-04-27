@@ -26,6 +26,7 @@ namespace MongoDB.Driver
         // fields
         private Collation _collation;
         private TimeSpan? _maxTime;
+        private TimeSpan? _timeout;
 
         // properties
         /// <summary>
@@ -44,6 +45,15 @@ namespace MongoDB.Driver
         {
             get { return _maxTime; }
             set { _maxTime = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
     }
 }

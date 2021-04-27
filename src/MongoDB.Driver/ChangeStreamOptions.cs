@@ -32,6 +32,7 @@ namespace MongoDB.Driver
         private BsonDocument _resumeAfter;
         private BsonDocument _startAfter;
         private BsonTimestamp _startAtOperationTime;
+        private TimeSpan? _timeout;
 
         // public properties
         /// <summary>
@@ -116,6 +117,15 @@ namespace MongoDB.Driver
         {
             get { return _startAtOperationTime; }
             set { _startAtOperationTime = value; }
+        }
+
+        /// <summary>
+        /// TODO:
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = value; }
         }
     }
 }

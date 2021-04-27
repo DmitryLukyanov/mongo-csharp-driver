@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.Bindings
@@ -79,6 +80,13 @@ namespace MongoDB.Driver.Core.Bindings
         {
             ThrowIfDisposed();
             return _server.GetChannel(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken)
+        {
+            ThrowIfDisposed();
+            return _server.WithClientSideTimeout(timeout, cancellationToken, (server, tct) => server.GetChannel(timeout, tct));
         }
 
         /// <inheritdoc/>

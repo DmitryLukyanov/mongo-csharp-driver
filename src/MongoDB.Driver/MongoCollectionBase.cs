@@ -449,15 +449,15 @@ namespace MongoDB.Driver
 
         private void InsertOne(TDocument document, InsertOneOptions options, Action<IEnumerable<WriteModel<TDocument>>, BulkWriteOptions> bulkWrite)
         {
-            Ensure.IsNotNull((object)document, "document");
+            Ensure.IsNotNull((object)document, nameof(document));
 
             var model = new InsertOneModel<TDocument>(document);
             try
             {
-                var bulkWriteOptions = options == null ? null : new BulkWriteOptions
-                {
-                    BypassDocumentValidation = options.BypassDocumentValidation
-                };
+                var bulkWriteOptions = GetOrCreateNewOptionsIfRequired<InsertOneOptions, BulkWriteOptions>(options);
+                bulkWriteOptions.BypassDocumentValidation = options?.BypassDocumentValidation;
+                bulkWriteOptions.Timeout = GetEffectiveClientSideTimeout(options?.Timeout);
+
                 bulkWrite(new[] { model }, bulkWriteOptions);
             }
             catch (MongoBulkWriteException<TDocument> ex)
@@ -900,5 +900,21 @@ namespace MongoDB.Driver
 
         /// <inheritdoc />
         public abstract IMongoCollection<TDocument> WithWriteConcern(WriteConcern writeConcern);
+
+        // private methods TODO: protected?
+        private TimeSpan? GetEffectiveClientSideTimeout(TimeSpan? operationTimeout)
+        {
+            return operationTimeout ?? Settings?.Timeout;
+        }
+
+        private TOutputOptions GetOrCreateNewOptionsIfRequired<TInputOptions, TOutputOptions>(TInputOptions options) where TOutputOptions : class, new()
+        {
+            if (options != null || Settings.Timeout.HasValue)
+            {
+                return new TOutputOptions();
+            }
+
+            return null;
+        }
     }
 }

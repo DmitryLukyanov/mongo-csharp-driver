@@ -41,6 +41,9 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
                     case "isClientError":
                         AssertIsClientError(actualException, element.Value.AsBoolean);
                         break;
+                    case "isTimeoutError":
+                        AssertIsTimeoutError(actualException, element.Value.AsBoolean);
+                        break;
                     case "errorContains":
                         AssertErrorContains(actualException, element.Value.AsString);
                         break;
@@ -132,6 +135,11 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
             }
 
             actualException.Should().NotBeNull();
+        }
+
+        private void AssertIsTimeoutError(Exception actualException, bool isTimeoutError)
+        {
+            throw new NotImplementedException("TODO");
         }
     }
 }

@@ -272,7 +272,7 @@ namespace MongoDB.Driver.Core.Clusters
             ThrowIfDisposedOrNotOpen();
             Ensure.IsNotNull(selector, nameof(selector));
 
-            using (var helper = new SelectServerHelper(this, selector))
+            using (var helper = new SelectServerHelper(this, selector, cancellationToken))
             {
                 try
                 {
@@ -301,7 +301,7 @@ namespace MongoDB.Driver.Core.Clusters
             ThrowIfDisposedOrNotOpen();
             Ensure.IsNotNull(selector, nameof(selector));
 
-            using (var helper = new SelectServerHelper(this, selector))
+            using (var helper = new SelectServerHelper(this, selector, cancellationToken))
             {
                 try
                 {
@@ -400,6 +400,7 @@ namespace MongoDB.Driver.Core.Clusters
             }
         }
 
+        // TODO: avoid BC in err message
         private void ThrowTimeoutException(IServerSelector selector, ClusterDescription description)
         {
             var message = BuildTimeoutExceptionMessage(_settings.ServerSelectionTimeout, selector, description);
@@ -410,6 +411,7 @@ namespace MongoDB.Driver.Core.Clusters
         private class SelectServerHelper : IDisposable
         {
             private readonly Cluster _cluster;
+            private readonly CancellationToken _cancellationToken;
             private readonly List<IClusterableServer> _connectedServers;
             private readonly List<ServerDescription> _connectedServerDescriptions;
             private ClusterDescription _description;
@@ -418,19 +420,21 @@ namespace MongoDB.Driver.Core.Clusters
             private readonly IServerSelector _selector;
             private readonly OperationsCountServerSelector _operationCountServerSelector;
             private readonly Stopwatch _stopwatch;
-            private readonly DateTime _timeoutAt;
+            //private readonly DateTime _timeoutAt;
 
-            public SelectServerHelper(Cluster cluster, IServerSelector selector)
+            public SelectServerHelper(Cluster cluster, IServerSelector selector, CancellationToken cancellationToken)
             {
                 _cluster = cluster;
 
+                _cancellationToken = cancellationToken;
                 _connectedServers = new List<IClusterableServer>(_cluster._description?.Servers?.Count ?? 1);
                 _connectedServerDescriptions = new List<ServerDescription>(_connectedServers.Count);
                 _operationCountServerSelector = new OperationsCountServerSelector(_connectedServers);
 
                 _selector = DecorateSelector(selector);
-                _stopwatch = Stopwatch.StartNew();
-                _timeoutAt = DateTime.UtcNow + _cluster.Settings.ServerSelectionTimeout;
+                _stopwatch = Stopwatch.StartNew();  // 1
+                //_timeoutAt = DateTime.Now + (timeout?.CalculateEffectiveSelectionTimeout(_cluster.Settings.ServerSelectionTimeout)
+                //    ?? TimeSpan.FromSeconds(1000)); // temporary change
             }
 
             public ClusterDescription Description
@@ -450,7 +454,8 @@ namespace MongoDB.Driver.Core.Clusters
 
             public TimeSpan TimeoutRemaining
             {
-                get { return _timeoutAt - DateTime.UtcNow; }
+                // TODO:
+                get { return TimeSpan.FromSeconds(1000); }//return _timeoutAt.GetRemainingTime(); }//_timeoutAt - DateTime.UtcNow; }
             }
 
             public void Dispose()
@@ -495,7 +500,7 @@ namespace MongoDB.Driver.Core.Clusters
                     }
                 }
 
-                MongoIncompatibleDriverException.ThrowIfNotSupported(_description);
+                MongoIncompatibleDriverException.ThrowIfNotSupported(_description);  // 2
 
                 _connectedServers.Clear();
                 _connectedServerDescriptions.Clear();
@@ -511,7 +516,7 @@ namespace MongoDB.Driver.Core.Clusters
                 }
 
                 var selectedServersDescriptions = _selector
-                    .SelectServers(_description, _connectedServerDescriptions)
+                    .SelectServers(_description, _connectedServerDescriptions)   // 3(?)  (4) (5)
                     .ToList();
 
                 IServer selectedServer = null;
@@ -548,11 +553,7 @@ namespace MongoDB.Driver.Core.Clusters
                     _serverSelectionWaitQueueEntered = true;
                 }
 
-                var timeoutRemaining = _timeoutAt - DateTime.UtcNow;
-                if (timeoutRemaining <= TimeSpan.Zero)
-                {
-                    _cluster.ThrowTimeoutException(_selector, _description);
-                }
+                _cancellationToken.ThrowIfCancellationRequested(); // also responsible for timeout
             }
 
             private IServerSelector DecorateSelector(IServerSelector selector)

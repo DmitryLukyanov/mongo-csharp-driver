@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Core.TestHelpers
         private static IServer GetWriteableServer(ICluster cluster)
         {
             var selector = WritableServerSelector.Instance;
-            return cluster.SelectServer(selector, CancellationToken.None);
+            return cluster.SelectServer(selector, null, CancellationToken.None);
         }
         #endregion
 

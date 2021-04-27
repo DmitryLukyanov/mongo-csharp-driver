@@ -14,9 +14,7 @@
  * 
 */
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
 {
@@ -28,6 +26,7 @@ namespace MongoDB.Driver
         // fields
         private bool? _bypassDocumentValidation;
         private bool _isOrdered;
+        private TimeSpan? _timeout;
 
         // constructors
         /// <summary>
@@ -55,6 +54,15 @@ namespace MongoDB.Driver
         {
             get { return _isOrdered; }
             set { _isOrdered = value; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }
         }
     }
 }

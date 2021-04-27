@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             FilterDefinition<BsonDocument> filter = null;
-            ReplaceOptions options = null;
+            var options = new ReplaceOptions();
             BsonDocument replacement = null;
 
             foreach (var argument in arguments)
@@ -96,8 +96,10 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         replacement = argument.Value.AsBsonDocument;
                         break;
                     case "upsert":
-                        options = options ?? new ReplaceOptions();
                         options.IsUpsert = argument.Value.AsBoolean;
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid ReplaceOneOperation argument name: '{argument.Name}'.");

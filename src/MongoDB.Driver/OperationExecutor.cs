@@ -13,8 +13,10 @@
 * limitations under the License.
 */
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Operations;
 
@@ -41,7 +43,7 @@ namespace MongoDB.Driver
 
         public TResult ExecuteWriteOperation<TResult>(IWriteBinding binding, IWriteOperation<TResult> operation, CancellationToken cancellationToken)
         {
-            return operation.Execute(binding, cancellationToken);
+            return operation.WithClientSideTimeout(binding, inputCancellationToken: cancellationToken, (binding, tct) => operation.Execute(binding, tct));
         }
 
         public async Task<TResult> ExecuteWriteOperationAsync<TResult>(IWriteBinding binding, IWriteOperation<TResult> operation, CancellationToken cancellationToken)
@@ -57,6 +59,12 @@ namespace MongoDB.Driver
         public Task<IClientSessionHandle> StartImplicitSessionAsync(CancellationToken cancellationToken)
         {
             return _client.StartImplicitSessionAsync(cancellationToken);
+        }
+
+        // private methods
+        private CancellationToken CreateLinkedCancellationToken(ClientSideTimeout timeout, CancellationToken cancellationToken)
+        {
+            return CancellationTokenSource.CreateLinkedTokenSource(timeout.CancellationToken, cancellationToken).Token;
         }
     }
 }

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Operations;
@@ -47,6 +48,8 @@ namespace MongoDB.Driver.Tests
         {
             get { return _calls.Count; }
         }
+
+        public ClientSideTimeout ClientSideTimeout => throw new NotImplementedException();
 
         public void EnqueueResult<TResult>(TResult result)
         {

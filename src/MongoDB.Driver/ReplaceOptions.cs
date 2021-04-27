@@ -15,6 +15,7 @@
 
 using System;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
 {
@@ -59,6 +60,7 @@ namespace MongoDB.Driver
         private Collation _collation;
         private BsonValue _hint;
         private bool _isUpsert;
+        private TimeSpan? _timeout;
 
         // properties
         /// <summary>
@@ -95,6 +97,15 @@ namespace MongoDB.Driver
         {
             get { return _isUpsert; }
             set { _isUpsert = value; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
     }
 }

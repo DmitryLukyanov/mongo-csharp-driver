@@ -70,6 +70,12 @@ namespace MongoDB.Driver.Core.Bindings
             return GetChannelHelper();
         }
 
+        public IChannelHandle GetChannel(ClientSideTimeout timeout, CancellationToken cancellationToken)
+        {
+            ThrowIfDisposed();
+            return GetChannelHelper();
+        }
+
         public Task<IChannelHandle> GetChannelAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();

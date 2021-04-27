@@ -15,6 +15,7 @@
 
 using System;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver
 {
@@ -39,6 +40,7 @@ namespace MongoDB.Driver
         private int? _sphereIndexVersion;
         private BsonDocument _storageEngine;
         private int? _textIndexVersion;
+        private TimeSpan? _timeout;
         private bool? _unique;
         private int? _version;
         private BsonDocument _weights;
@@ -178,6 +180,15 @@ namespace MongoDB.Driver
         {
             get { return _textIndexVersion; }
             set { _textIndexVersion = value; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
 
         /// <summary>

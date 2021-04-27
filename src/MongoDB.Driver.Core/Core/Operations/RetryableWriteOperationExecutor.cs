@@ -35,6 +35,67 @@ namespace MongoDB.Driver.Core.Operations
 
         public static TResult Execute<TResult>(IRetryableWriteOperation<TResult> operation, RetryableWriteContext context, CancellationToken cancellationToken)
         {
+            //if (!AreRetriesAllowed(operation, context))
+            //{
+            //    return operation.ExecuteAttempt(context, 1, null, cancellationToken);
+            //}
+
+            //Exception originalException = null;
+            //for (int attempt = 1; !context.Binding.ClientSideTimeout.IsExpired; attempt++)
+            //{
+            //    var transactionNumber = context.Binding.Session.AdvanceTransactionNumber(); // TODO: check
+            //    try
+            //    {
+            //        return operation.ExecuteAttempt(context, attempt, transactionNumber, cancellationToken);
+            //    }
+            //    catch (Exception ex) when (RetryabilityHelper.IsRetryableWriteException(ex))
+            //    {
+            //        if (attempt == 1)
+            //        {
+            //            originalException = ex;
+            //        }
+            //        if (attempt > 1 && ShouldThrowOriginalException(ex))
+            //        {
+            //            throw originalException;
+            //        }
+
+            //        if (!TryReplaceChannel(context, cancellationToken))
+            //        {
+            //            throw originalException;
+            //        }
+            //        if (!AreRetryableWritesSupported(context.Channel.ConnectionDescription))
+            //        {
+            //            throw originalException;
+            //        }
+            //    }
+
+            //    //try
+            //    //{
+            //    //    context.ReplaceChannelSource(context.Binding.GetWriteChannelSource(cancellationToken));
+            //    //    context.ReplaceChannel(context.ChannelSource.GetChannel(cancellationToken));
+            //    //}
+            //    //catch
+            //    //{
+            //    //    throw originalException;
+            //    //}
+
+            //    //if (!AreRetryableWritesSupported(context.Channel.ConnectionDescription))
+            //    //{
+            //    //    throw originalException;
+            //    //}
+
+            //    //try
+            //    //{
+            //    //    return operation.ExecuteAttempt(context, 2, transactionNumber, cancellationToken);
+            //    //}
+            //    //catch (Exception ex) when (ShouldThrowOriginalException(ex))
+            //    //{
+            //    //    throw originalException;
+            //    //}
+            //}
+
+            //throw ClientSideTimeout.CreateTimeoutException(new OperationCanceledException("TODO", originalException));
+
             if (!AreRetriesAllowed(operation, context))
             {
                 return operation.ExecuteAttempt(context, 1, null, cancellationToken);
@@ -155,6 +216,20 @@ namespace MongoDB.Driver.Core.Operations
             return
                 writeConcern == null || // null means use server default write concern which implies acknowledged
                 writeConcern.IsAcknowledged;
+        }
+
+        private static bool TryReplaceChannel(RetryableWriteContext context, CancellationToken cancellationToken)
+        {
+            try
+            {
+                context.ReplaceChannelSource(context.Binding.GetWriteChannelSource(cancellationToken));
+                context.ReplaceChannel(context.ChannelSource.GetChannel(cancellationToken));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool ShouldThrowOriginalException(Exception retryException)

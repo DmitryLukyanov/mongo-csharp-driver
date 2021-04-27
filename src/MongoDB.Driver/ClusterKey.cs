@@ -59,6 +59,7 @@ namespace MongoDB.Driver
         private readonly TimeSpan _serverSelectionTimeout;
         private readonly TimeSpan _socketTimeout;
         private readonly SslSettings _sslSettings;
+        private readonly TimeSpan? _timeout;
         private readonly bool _useTls;
         private readonly int _waitQueueSize;
         private readonly TimeSpan _waitQueueTimeout;
@@ -96,6 +97,7 @@ namespace MongoDB.Driver
             TimeSpan serverSelectionTimeout,
             TimeSpan socketTimeout,
             SslSettings sslSettings,
+            TimeSpan? timeout,
             bool useTls,
             int waitQueueSize,
             TimeSpan waitQueueTimeout)
@@ -131,6 +133,7 @@ namespace MongoDB.Driver
             _serverSelectionTimeout = serverSelectionTimeout;
             _socketTimeout = socketTimeout;
             _sslSettings = sslSettings;
+            _timeout = timeout;
             _useTls = useTls;
             _waitQueueSize = waitQueueSize;
             _waitQueueTimeout = waitQueueTimeout;
@@ -192,6 +195,7 @@ namespace MongoDB.Driver
         public TimeSpan ServerSelectionTimeout { get { return _serverSelectionTimeout; } }
         public TimeSpan SocketTimeout { get { return _socketTimeout; } }
         public SslSettings SslSettings { get { return _sslSettings; } }
+        public TimeSpan? Timeout => _timeout;
         public bool UseTls => _useTls;
         public int WaitQueueSize { get { return _waitQueueSize; } }
         public TimeSpan WaitQueueTimeout { get { return _waitQueueTimeout; } }
@@ -244,6 +248,7 @@ namespace MongoDB.Driver
                 _serverSelectionTimeout == rhs._serverSelectionTimeout &&
                 _socketTimeout == rhs._socketTimeout &&
                 object.Equals(_sslSettings, rhs._sslSettings) &&
+                object.Equals(_timeout, rhs._timeout) &&
                 _useTls == rhs._useTls &&
                 _waitQueueSize == rhs._waitQueueSize &&
                 _waitQueueTimeout == rhs._waitQueueTimeout;

@@ -246,6 +246,31 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             return _sessions.ContainsKey(sessionId);
         }
 
+        public void MergeOrThrowIfKeyConflict(UnifiedEntityMap unifiedEntityMap)
+        {
+            AddRangeToSource(_buckets, unifiedEntityMap._buckets);
+            AddRangeToSource(_changeStreams, unifiedEntityMap._changeStreams);
+            AddRangeToSource(_clientEventCapturers, unifiedEntityMap._clientEventCapturers);
+            AddRangeToSource(_clients, unifiedEntityMap._clients);
+            AddRangeToSource(_collections, unifiedEntityMap._collections);
+            AddRangeToSource(_databases, unifiedEntityMap._databases);
+            AddRangeToSource(_errorDocuments, unifiedEntityMap._errorDocuments);
+            AddRangeToSource(_failureDocuments, unifiedEntityMap._failureDocuments);
+            AddRangeToSource(_iterationCounts, unifiedEntityMap._iterationCounts);
+            AddRangeToSource(_results, unifiedEntityMap._results);
+            AddRangeToSource(_sessions, unifiedEntityMap._sessions);
+            AddRangeToSource(_sessionIds, unifiedEntityMap._sessionIds);
+            AddRangeToSource(_successCounts, unifiedEntityMap._successCounts);
+
+            void AddRangeToSource<TKey, TValue>(Dictionary<TKey, TValue> source, Dictionary<TKey, TValue> appended)
+            {
+                foreach (var item in appended)
+                {
+                    source.Add(item.Key, item.Value);
+                }
+            }
+        }
+
         // private methods
         private void ThrowIfDisposed()
         {
@@ -392,13 +417,18 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var clientEventCapturers = new Dictionary<string, EventCapturer>();
             string clientId = null;
             var commandNamesToSkipInEvents = new List<string>();
+            TimeSpan? connectTimeout = null;
             List<(string Key, IEnumerable<string> Events, List<string> CommandNotToCapture)> eventTypesToCapture = new ();
+            string appName = null;
             var readConcern = ReadConcern.Default;
             var retryReads = true;
             var retryWrites = true;
+            TimeSpan? socketTimeout = null;
             var useMultipleShardRouters = false;
-            var writeConcern = WriteConcern.Acknowledged;
+            int? wValue = null;
+            TimeSpan? wTimeout = null;
             ServerApi serverApi = null;
+            TimeSpan? timeout = null;
 
             foreach (var element in entity)
             {
@@ -424,8 +454,25 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                                     readConcern = new ReadConcern(level);
                                     break;
                                 case "w":
-                                    writeConcern = new WriteConcern(option.Value.AsInt32);
+                                    wValue = option.Value.AsInt32;
                                     break;
+                                case "appName":
+                                    appName = option.Value.AsString;
+                                    break;
+                                case "connectTimeoutMS":
+                                    connectTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                                    break;
+                                case "socketTimeoutMS":
+                                    socketTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                                    break;
+                                case "timeoutMS":
+                                    timeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                                    break;
+                                case "wTimeoutMS":
+                                    wTimeout = TimeSpan.FromMilliseconds(option.Value.ToInt32());
+                                    break;
+                                case "waitQueueTimeoutMS":
+                                    throw new NotImplementedException();
                                 default:
                                     throw new FormatException($"Unrecognized client uriOption name: '{option.Name}'.");
                             }
@@ -519,12 +566,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var client = DriverTestConfiguration.CreateDisposableClient(
                 settings =>
                 {
+                    settings.ConnectTimeout = connectTimeout.GetValueOrDefault(settings.ConnectTimeout);
+                    settings.HeartbeatInterval = TimeSpan.FromMilliseconds(5); // the default value for spec tests
                     settings.RetryReads = retryReads;
                     settings.RetryWrites = retryWrites;
                     settings.ReadConcern = readConcern;
-                    settings.WriteConcern = writeConcern;
-                    settings.HeartbeatInterval = TimeSpan.FromMilliseconds(5); // the default value for spec tests
                     settings.ServerApi = serverApi;
+                    settings.SocketTimeout = socketTimeout.GetValueOrDefault(settings.SocketTimeout);
+                    settings.Timeout = timeout;
+                    settings.WriteConcern = wValue.HasValue ? new WriteConcern(wValue.Value, wTimeout: wTimeout) : WriteConcern.Acknowledged;
                     if (eventCapturers.Length > 0)
                     {
                         settings.ClusterConfigurator = c =>
@@ -569,6 +619,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                             {
                                 case "readConcern":
                                     settings.ReadConcern = ReadConcern.FromBsonDocument(option.Value.AsBsonDocument);
+                                    break;
+                                case "timeoutMS":
+                                    settings.Timeout = TimeSpan.FromMilliseconds(option.Value.AsInt32);
                                     break;
                                 default:
                                     throw new FormatException($"Unrecognized collection option field: '{option.Name}'.");
@@ -697,6 +750,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                                     ReadConcern readConcern = null;
                                     ReadPreference readPreference = null;
                                     WriteConcern writeConcern = null;
+                                    TimeSpan? maxCommitTime = null;
+                                    //TimeSpan? timeout = null;
                                     foreach (var transactionOption in option.Value.AsBsonDocument)
                                     {
                                         switch (transactionOption.Name)
@@ -710,12 +765,17 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                                             case "writeConcern":
                                                 writeConcern = WriteConcern.FromBsonDocument(transactionOption.Value.AsBsonDocument);
                                                 break;
+                                            case "maxCommitTimeMS":
+                                                maxCommitTime = TimeSpan.FromMilliseconds(transactionOption.Value.ToInt32());
+                                                break;
                                             default:
                                                 throw new FormatException($"Invalid session transaction option: '{transactionOption.Name}'.");
                                         }
                                     }
-                                    options.DefaultTransactionOptions = new TransactionOptions(readConcern, readPreference, writeConcern);
+                                    options.DefaultTransactionOptions = new TransactionOptions(readConcern, readPreference, writeConcern, maxCommitTime);
                                     break;
+                                case "defaultTimeoutMS":
+                                    throw new NotImplementedException();
                                 default:
                                     throw new FormatException($"Unrecognized session option: '{option.Name}'.");
                             }

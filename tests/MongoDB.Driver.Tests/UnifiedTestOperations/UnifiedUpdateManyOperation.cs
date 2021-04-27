@@ -103,7 +103,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             FilterDefinition<BsonDocument> filter = null;
-            UpdateOptions options = null;
+            var options = new UpdateOptions();
             IClientSessionHandle session = null;
             UpdateDefinition<BsonDocument> update = null;
 
@@ -120,20 +120,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "update":
                         update = argument.Value.AsBsonDocument;
                         break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
                     default:
                         throw new FormatException($"Invalid UpdateManyOperation argument name: '{argument.Name}'.");
                 }
             }
 
             return new UnifiedUpdateManyOperation(session, collection, filter, update, options);
-        }
-    }
-
-    public class UnifiedUpdateManyOperationResultConverter
-    {
-        public OperationResult Convert(UpdateResult result)
-        {
-            throw new NotImplementedException("Specification requirements are not clear on result format.");
         }
     }
 }

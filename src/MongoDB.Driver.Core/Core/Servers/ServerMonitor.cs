@@ -364,6 +364,7 @@ namespace MongoDB.Driver.Core.Servers
                     }
 
                     var averageRoundTripTime = _roundTripTimeMonitor.Average;
+                    var ninetiethPercentile = _roundTripTimeMonitor.NinetiethPercentile;
                     var averageRoundTripTimeRounded = TimeSpan.FromMilliseconds(Math.Round(averageRoundTripTime.TotalMilliseconds));
 
                     newDescription = _baseDescription.With(
@@ -375,6 +376,7 @@ namespace MongoDB.Driver.Core.Servers
                         maxBatchCount: heartbeatIsMasterResult.MaxBatchCount,
                         maxDocumentSize: heartbeatIsMasterResult.MaxDocumentSize,
                         maxMessageSize: heartbeatIsMasterResult.MaxMessageSize,
+                        ninetiethPercentileRoundTripTime: ninetiethPercentile, // TODO: sync naming
                         replicaSetConfig: heartbeatIsMasterResult.GetReplicaSetConfig(),
                         state: ServerState.Connected,
                         tags: heartbeatIsMasterResult.Tags,

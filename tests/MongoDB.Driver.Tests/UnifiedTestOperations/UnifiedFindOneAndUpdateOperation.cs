@@ -82,7 +82,8 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             FilterDefinition<BsonDocument> filter = null;
-            FindOneAndUpdateOptions<BsonDocument> options = null;
+            var options = new FindOneAndUpdateOptions<BsonDocument>();
+
             UpdateDefinition<BsonDocument> update = null;
 
             foreach (var argument in arguments)
@@ -93,15 +94,16 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         filter = new BsonDocumentFilterDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
                     case "returnDocument":
-                        options = options ?? new FindOneAndUpdateOptions<BsonDocument>();
                         options.ReturnDocument = (ReturnDocument)Enum.Parse(typeof(ReturnDocument), argument.Value.AsString);
                         break;
                     case "sort":
-                        options = options ?? new FindOneAndUpdateOptions<BsonDocument>();
                         options.Sort = new BsonDocumentSortDefinition<BsonDocument>(argument.Value.AsBsonDocument);
                         break;
                     case "update":
                         update = new BsonDocumentUpdateDefinition<BsonDocument>(argument.Value.AsBsonDocument);
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid FindOneAndUpdateOperation argument name: '{argument.Name}'.");

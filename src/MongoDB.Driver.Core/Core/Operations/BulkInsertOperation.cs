@@ -27,8 +27,9 @@ namespace MongoDB.Driver.Core.Operations
         public BulkInsertOperation(
             CollectionNamespace collectionNamespace,
             IEnumerable<InsertRequest> requests,
+            ClientSideTimeout clientSideTimeout,
             MessageEncoderSettings messageEncoderSettings)
-            : base(collectionNamespace, requests, messageEncoderSettings)
+            : base(collectionNamespace, requests, clientSideTimeout, messageEncoderSettings)
         {
         }
 

@@ -98,7 +98,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var collection = _entityMap.GetCollection(targetCollectionId);
 
             List<BsonDocument> documents = null;
-            InsertManyOptions options = null;
+            var options = new InsertManyOptions();
             IClientSessionHandle session = null;
 
             foreach (var argument in arguments)
@@ -109,11 +109,13 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         documents = argument.Value.AsBsonArray.Cast<BsonDocument>().ToList();
                         break;
                     case "ordered":
-                        options = options ?? new InsertManyOptions();
                         options.IsOrdered = argument.Value.AsBoolean;
                         break;
                     case "session":
                         session = _entityMap.GetSession(argument.Value.AsString);
+                        break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
                         break;
                     default:
                         throw new FormatException($"Invalid InsertManyOperation argument name: '{argument.Name}'.");

@@ -37,6 +37,7 @@ namespace MongoDB.Driver
         private ProjectionDefinition<TDocument, TProjection> _projection;
         private ReturnDocument _returnDocument;
         private SortDefinition<TDocument> _sort;
+        private TimeSpan? _timeout;
 
         // constructors
         /// <summary>
@@ -130,6 +131,15 @@ namespace MongoDB.Driver
         {
             get { return _sort; }
             set { _sort = value; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
     }
 

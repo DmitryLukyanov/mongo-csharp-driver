@@ -17,6 +17,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
@@ -25,15 +26,22 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private readonly IMongoDatabase _database;
         private readonly string _commandName;
         private readonly BsonDocument _command;
+        private readonly TimeSpan? _timeout;
 
         public UnifiedRunCommandOperation(
             IMongoDatabase database,
             string commandName,
-            BsonDocument command)
+            BsonDocument command,
+            TimeSpan? timeout)
         {
-            _database = database;
-            _commandName = commandName;
-            _command = command;
+            _database = Ensure.IsNotNull(database, nameof(database));
+            _commandName = Ensure.IsNotNull(commandName, nameof(commandName));
+            _command = Ensure.IsNotNull(command, nameof(command));
+            _timeout = timeout; // can be null
+            if (_timeout.HasValue)
+            {
+                throw new Exception("test");
+            }
         }
 
         public OperationResult Execute(CancellationToken cancellationToken)
@@ -80,6 +88,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
             string commandName = null;
             BsonDocument command = null;
+            TimeSpan? timeout = null;
 
             foreach (var argument in arguments)
             {
@@ -91,12 +100,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "command":
                         command = argument.Value.AsBsonDocument;
                         break;
+                    case "timeoutMS":
+                        timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
                     default:
                         throw new FormatException($"Invalid RunCommandOperation argument name: '{argument.Name}'.");
                 }
             }
 
-            return new UnifiedRunCommandOperation(database, commandName, command);
+            return new UnifiedRunCommandOperation(database, commandName, command, timeout);
         }
     }
 }

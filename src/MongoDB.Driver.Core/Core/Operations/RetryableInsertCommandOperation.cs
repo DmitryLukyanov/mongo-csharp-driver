@@ -117,7 +117,8 @@ namespace MongoDB.Driver.Core.Operations
                 { "ordered", IsOrdered },
                 { "bypassDocumentValidation", () => _bypassDocumentValidation, _bypassDocumentValidation.HasValue },
                 { "writeConcern", writeConcern, writeConcern != null },
-                { "txnNumber", () => transactionNumber.Value, transactionNumber.HasValue }
+                { "txnNumber", () => transactionNumber.Value, transactionNumber.HasValue },
+               // { "maxTimeMS", connectionDescription.nin } 90th percentile RTT handling
             };
         }
 

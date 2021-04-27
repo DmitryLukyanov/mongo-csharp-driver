@@ -112,6 +112,10 @@ namespace MongoDB.Driver.Tests.Specifications.unified_test_format
                                     actualDocument.Names.Should().NotContain(expectedName);
                                 }
                                 continue;
+                            case "$$lte":
+                                var actualValue = actualDocument[expectedName];
+                                actualValue.ToInt32().Should().BeLessOrEqualTo(operatorValue.ToInt32());
+                                break;
                             case "$$type":
                                 actualDocument.Names.Should().Contain(expectedName);
                                 AssertExpectedType(actualDocument[expectedName], operatorValue);

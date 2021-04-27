@@ -158,6 +158,7 @@
     <Compile Include="..\MongoDB.Shared\MaxTimeHelper.cs" Link="Core\Operations\MaxTimeHelper.cs" />
     <Compile Include="..\MongoDB.Shared\OperatingSystemHelper.cs" Link="Core\Misc\OperatingSystemHelper.cs" />
     <Compile Include="..\MongoDB.Shared\SecureStringHelper.cs" Link="Core\Misc\SecureStringHelper.cs" />
+    <Compile Include="..\MongoDB.Shared\StringBuilderExtensionMethods.cs" Link="Core\Misc\StringBuilderExtensionMethods.cs" />
   </ItemGroup>
 
   <ItemGroup>

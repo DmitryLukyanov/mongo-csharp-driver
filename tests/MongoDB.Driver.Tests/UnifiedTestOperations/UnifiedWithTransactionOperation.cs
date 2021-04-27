@@ -82,7 +82,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
             var session = _entityMap.GetSession(targetSessionId);
 
             BsonArray operations = null;
-            TransactionOptions options = null;
+            var options = new TransactionOptions();
 
             foreach (var argument in arguments)
             {
@@ -92,16 +92,16 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                         operations = argument.Value.AsBsonArray;
                         break;
                     case "readConcern":
-                        options = options ?? new TransactionOptions();
                         options = options.With(readConcern: ReadConcern.FromBsonDocument(argument.Value.AsBsonDocument));
                         break;
                     case "readPreference":
-                        options = options ?? new TransactionOptions();
                         options = options.With(readPreference: ReadPreference.FromBsonDocument(argument.Value.AsBsonDocument));
                         break;
                     case "writeConcern":
-                        options = options ?? new TransactionOptions();
                         options = options.With(writeConcern: WriteConcern.FromBsonDocument(argument.Value.AsBsonDocument));
+                        break;
+                    case "timeoutMS":
+                        options = options.With(timeout: TimeSpan.FromMilliseconds(argument.Value.ToInt32()));
                         break;
                     default:
                         throw new FormatException($"Invalid WithTransactionOperation argument name: '{argument.Name}'.");

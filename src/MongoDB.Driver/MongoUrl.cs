@@ -72,6 +72,7 @@ namespace MongoDB.Driver
         private readonly IEnumerable<MongoServerAddress> _servers;
         private readonly TimeSpan _serverSelectionTimeout;
         private readonly TimeSpan _socketTimeout;
+        private readonly TimeSpan? _timeout;
         private readonly bool _tlsDisableCertificateRevocationCheck;
         private readonly string _username;
         private readonly bool _useTls;
@@ -141,6 +142,7 @@ namespace MongoDB.Driver
             _servers = builder.Servers;
             _serverSelectionTimeout = builder.ServerSelectionTimeout;
             _socketTimeout = builder.SocketTimeout;
+            _timeout = null;
             _tlsDisableCertificateRevocationCheck = builder.TlsDisableCertificateRevocationCheck;
             _username = builder.Username;
             _useTls = builder.UseTls;
@@ -493,6 +495,11 @@ namespace MongoDB.Driver
         {
             get { return _socketTimeout; }
         }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout => _timeout;
 
         /// <summary>
         /// Gets whether or not to disable checking certificate revocation status during the TLS handshake.

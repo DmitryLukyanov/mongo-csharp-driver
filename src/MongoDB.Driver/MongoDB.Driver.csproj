@@ -68,6 +68,7 @@
     <Compile Include="..\MongoDB.Shared\Hasher.cs" Link="Support\Hasher.cs" />
     <Compile Include="..\MongoDB.Shared\OperatingSystemHelper.cs" Link="Support\OperatingSystemHelper.cs" />
     <Compile Include="..\MongoDB.Shared\SecureStringHelper.cs" Link="Support\SecureStringHelper.cs" />
+    <Compile Include="..\MongoDB.Shared\StringBuilderExtensionMethods.cs" Link="Support\StringBuilderExtensionMethods.cs" />
   </ItemGroup>
 
   <ItemGroup>

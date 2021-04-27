@@ -14,11 +14,11 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Shared;
 
 namespace MongoDB.Driver
 {
@@ -32,6 +32,7 @@ namespace MongoDB.Driver
         private Setting<ReadConcern> _readConcern;
         private Setting<UTF8Encoding> _readEncoding;
         private Setting<ReadPreference> _readPreference;
+        private Setting<TimeSpan?> _timeout;      // TODO
         private Setting<WriteConcern> _writeConcern;
         private Setting<UTF8Encoding> _writeEncoding;
 
@@ -134,6 +135,15 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout.Value; }
+            set { _timeout.Value = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the WriteConcern to use.
         /// </summary>
         public WriteConcern WriteConcern
@@ -175,6 +185,7 @@ namespace MongoDB.Driver
             clone._readConcern = _readConcern.Clone();
             clone._readEncoding = _readEncoding.Clone();
             clone._readPreference = _readPreference.Clone();
+            clone._timeout = _timeout.Clone();  // Clone?
             clone._writeConcern = _writeConcern.Clone();
             clone._writeEncoding = _writeEncoding.Clone();
             return clone;
@@ -206,7 +217,8 @@ namespace MongoDB.Driver
                         object.Equals(_readEncoding, rhs._readEncoding) &&
                         object.Equals(_readPreference.Value, rhs._readPreference.Value) &&
                         _writeConcern.Value == rhs._writeConcern.Value &&
-                        object.Equals(_writeEncoding, rhs._writeEncoding);
+                        object.Equals(_writeEncoding, rhs._writeEncoding) &&
+                        object.Equals(_timeout, rhs._timeout);
                 }
             }
         }
@@ -275,20 +287,15 @@ namespace MongoDB.Driver
                 return _frozenStringRepresentation;
             }
 
-            var parts = new List<string>();
-            parts.Add(string.Format("GuidRepresentation={0}", _guidRepresentation.Value));
-            parts.Add(string.Format("ReadConcern={0}", _readConcern.Value));
-            if (_readEncoding.HasBeenSet)
-            {
-                parts.Add(string.Format("ReadEncoding={0}", (_readEncoding.Value == null) ? "null" : "UTF8Encoding"));
-            }
-            parts.Add(string.Format("ReadPreference={0}", _readPreference.Value));
-            parts.Add(string.Format("WriteConcern={0}", _writeConcern.Value));
-            if (_writeEncoding.HasBeenSet)
-            {
-                parts.Add(string.Format("WriteEncoding={0}", (_writeEncoding.Value == null) ? "null" : "UTF8Encoding"));
-            }
-            return string.Join(";", parts.ToArray());
+            var builder = new StringBuilder();
+            builder.Append($"GuidRepresentation={_guidRepresentation.Value};");
+            builder.Append($"ReadConcern={_readConcern.Value};");
+            builder.AppendFormatIf(_readEncoding.HasBeenSet, "ReadEncoding={0};", _readEncoding.Value == null ? "null" : "UTF8Encoding");
+            builder.Append($"ReadPreference={_readPreference.Value};");
+            builder.AppendFormatIf(_timeout.HasBeenSet, $"Timeout={_timeout.Value};");
+            builder.Append($"WriteConcern={_writeConcern.Value};");
+            builder.AppendFormatIf(_writeEncoding.HasBeenSet, "WriteEncoding={0};", _writeEncoding.Value == null ? "null" : "UTF8Encoding");
+            return builder.ToString();
         }
 
         // internal methods
@@ -319,6 +326,11 @@ namespace MongoDB.Driver
             if (!_writeEncoding.HasBeenSet)
             {
                 WriteEncoding = clientSettings.WriteEncoding;
+            }
+            if (!_timeout.HasBeenSet)
+            {
+                // TODO:
+                // Timeout = clientSettings.time 
             }
         }
     }

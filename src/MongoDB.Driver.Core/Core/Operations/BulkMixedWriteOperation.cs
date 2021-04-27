@@ -29,10 +29,11 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents a mixed write bulk operation.
     /// </summary>
-    public class BulkMixedWriteOperation : IWriteOperation<BulkWriteOperationResult>
+    public class BulkMixedWriteOperation : IWriteOperation<BulkWriteOperationResult>, IWithClientSideTimeout
     {
         // fields
         private bool? _bypassDocumentValidation;
+        private ClientSideTimeout _clientSideTimeout; // readonly
         private readonly CollectionNamespace _collectionNamespace;
         private bool _isOrdered = true;
         private int? _maxBatchCount;
@@ -42,6 +43,7 @@ namespace MongoDB.Driver.Core.Operations
         private readonly MessageEncoderSettings _messageEncoderSettings;
         private readonly List<WriteRequest> _requests;
         private bool _retryRequested;
+        //private readonly ClientSideTimeout _timeout = new ClientSideTimeout();
         private WriteConcern _writeConcern;
 
         // constructors
@@ -87,6 +89,15 @@ namespace MongoDB.Driver.Core.Operations
         {
             get { return _bypassDocumentValidation; }
             set { _bypassDocumentValidation = value; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public ClientSideTimeout ClientSideTimeout
+        {
+            get { return _clientSideTimeout; }
+            set { _clientSideTimeout = value; }
         }
 
         /// <summary>
@@ -210,6 +221,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <inheritdoc/>
         public BulkWriteOperationResult Execute(IWriteBinding binding, CancellationToken cancellationToken)
         {
+            //_timeout.InitializeIfNotAlreadyInitialized(TimeSpan.FromMinutes(10));
             using (EventContext.BeginOperation())
             using (var context = RetryableWriteContext.Create(binding, _retryRequested, cancellationToken))
             {
@@ -246,8 +258,8 @@ namespace MongoDB.Driver.Core.Operations
         // private methods
         private IExecutableInRetryableWriteContext<BulkWriteOperationResult> CreateBulkDeleteOperation(Batch batch)
         {
-            var requests = batch.Requests.Cast<DeleteRequest>();
-            return new BulkDeleteOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            var requests = batch.Requests.Cast<DeleteRequest>();                // TODO
+            return new BulkDeleteOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 MaxBatchCount = _maxBatchCount,
                 MaxBatchLength = _maxBatchLength,
@@ -259,7 +271,7 @@ namespace MongoDB.Driver.Core.Operations
         private IExecutableInRetryableWriteContext<BulkWriteOperationResult> CreateBulkInsertOperation(Batch batch)
         {
             var requests = batch.Requests.Cast<InsertRequest>();
-            return new BulkInsertOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            return new BulkInsertOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 BypassDocumentValidation = _bypassDocumentValidation,
                 IsOrdered = _isOrdered,
@@ -273,8 +285,8 @@ namespace MongoDB.Driver.Core.Operations
 
         private IExecutableInRetryableWriteContext<BulkWriteOperationResult> CreateBulkUpdateOperation(Batch batch)
         {
-            var requests = batch.Requests.Cast<UpdateRequest>();
-            return new BulkUpdateOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            var requests = batch.Requests.Cast<UpdateRequest>();                //TODO
+            return new BulkUpdateOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 BypassDocumentValidation = _bypassDocumentValidation,
                 IsOrdered = _isOrdered,

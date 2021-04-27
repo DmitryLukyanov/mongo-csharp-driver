@@ -260,7 +260,7 @@ namespace MongoDB.Driver.Core.Operations
             ExecuteOperation(createIndexOperation);
 
             var insertRequests = new[] { new InsertRequest(new BsonDocument("x", 1)) };
-            var insertOperation = new BulkInsertOperation(collectionNamespace, insertRequests, _messageEncoderSettings);
+            var insertOperation = new BulkInsertOperation(collectionNamespace, insertRequests, null,_messageEncoderSettings);
             ExecuteOperation(insertOperation);
         }
 

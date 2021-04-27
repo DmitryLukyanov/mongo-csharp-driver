@@ -113,8 +113,8 @@ namespace MongoDB.Driver.Core.Operations
         // private methods
         private BulkDeleteOperation CreateOperation()
         {
-            var requests = new[] { _request };
-            return new BulkDeleteOperation(_collectionNamespace, requests, _messageEncoderSettings)
+            var requests = new[] { _request };                                   // TODO
+            return new BulkDeleteOperation(_collectionNamespace, requests, null, _messageEncoderSettings)
             {
                 RetryRequested = _retryRequested,
                 WriteConcern = _writeConcern

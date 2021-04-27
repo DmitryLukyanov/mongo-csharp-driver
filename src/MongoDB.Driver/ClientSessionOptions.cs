@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Driver.Core.Bindings;
 
 namespace MongoDB.Driver
@@ -36,6 +37,11 @@ namespace MongoDB.Driver
         /// The default transaction options.
         /// </value>
         public TransactionOptions DefaultTransactionOptions { get; set; }
+
+        /// <summary>
+        /// TODO: do we reall need this? Or transactionOptions?
+        /// </summary>
+        public TimeSpan Timeout { get; set; }
 
         // internal methods
         internal CoreSessionOptions ToCore(bool isImplicit = false)

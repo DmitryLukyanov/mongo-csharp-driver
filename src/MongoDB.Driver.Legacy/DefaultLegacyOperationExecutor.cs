@@ -16,6 +16,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Driver.Core;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Operations;
 
@@ -24,6 +25,8 @@ namespace MongoDB.Driver
     // used when the application uses the deprecated MongoServer, MongoDatabase and MongoCollection constructors
     internal class DefaultLegacyOperationExecutor : IOperationExecutor
     {
+        public ClientSideTimeout ClientSideTimeout => throw new NotImplementedException();
+
         public TResult ExecuteReadOperation<TResult>(IReadBinding binding, IReadOperation<TResult> operation, CancellationToken cancellationToken)
         {
             return operation.Execute(binding, cancellationToken);

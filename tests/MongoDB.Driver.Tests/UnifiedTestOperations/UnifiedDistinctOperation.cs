@@ -17,6 +17,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Tests.UnifiedTestOperations
 {
@@ -25,22 +26,25 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         private readonly IMongoCollection<BsonDocument> _collection;
         private readonly string _fieldName;
         private readonly FilterDefinition<BsonDocument> _filter;
+        private readonly DistinctOptions _distinctOptions;
 
         public UnifiedDistinctOperation(
             IMongoCollection<BsonDocument> collection,
             string fieldName,
-            FilterDefinition<BsonDocument> filter)
+            FilterDefinition<BsonDocument> filter,
+            DistinctOptions distinctOptions)
         {
-            _collection = collection;
-            _fieldName = fieldName;
-            _filter = filter;
+            _collection = Ensure.IsNotNull(collection, nameof(collection));
+            _fieldName = Ensure.IsNotNull(fieldName, nameof(fieldName));
+            _filter = Ensure.IsNotNull(filter, nameof(filter));
+            _distinctOptions = distinctOptions; // can be null
         }
 
         public OperationResult Execute(CancellationToken cancellationToken)
         {
             try
             {
-                var cursor = _collection.Distinct<BsonValue>(_fieldName, _filter, cancellationToken: cancellationToken);
+                var cursor = _collection.Distinct<BsonValue>(_fieldName, _filter, options: _distinctOptions, cancellationToken: cancellationToken);
                 var result = cursor.ToList();
 
                 return OperationResult.FromResult(new BsonArray(result));
@@ -55,7 +59,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
         {
             try
             {
-                var cursor = await _collection.DistinctAsync<BsonValue>(_fieldName, _filter, cancellationToken: cancellationToken);
+                var cursor = await _collection.DistinctAsync<BsonValue>(_fieldName, _filter, options: _distinctOptions, cancellationToken: cancellationToken);
                 var result = cursor.ToList();
 
                 return OperationResult.FromResult(new BsonArray(result));
@@ -82,6 +86,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
             string fieldName = null;
             FilterDefinition<BsonDocument> filter = null;
+            var options = new DistinctOptions();
 
             foreach (var argument in arguments)
             {
@@ -93,12 +98,15 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                     case "filter":
                         filter = argument.Value.AsBsonDocument;
                         break;
+                    case "timeoutMS":
+                        options.Timeout = TimeSpan.FromMilliseconds(argument.Value.ToInt32());
+                        break;
                     default:
                         throw new FormatException($"Invalid DistinctOperation argument name: '{argument.Name}'.");
                 }
             }
 
-            return new UnifiedDistinctOperation(collection, fieldName, filter);
+            return new UnifiedDistinctOperation(collection, fieldName, filter, options);
         }
     }
 }

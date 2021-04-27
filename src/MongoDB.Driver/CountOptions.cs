@@ -30,6 +30,7 @@ namespace MongoDB.Driver
         private long? _limit;
         private TimeSpan? _maxTime;
         private long? _skip;
+        private TimeSpan? _timeout;
 
         // properties
         /// <summary>
@@ -75,6 +76,15 @@ namespace MongoDB.Driver
         {
             get { return _skip; }
             set { _skip = value; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }   // TODO
         }
     }
 }

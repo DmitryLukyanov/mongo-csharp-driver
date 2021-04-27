@@ -41,6 +41,7 @@ namespace MongoDB.Driver
         private bool? _oplogReplay;
         private bool? _returnKey;
         private bool? _showRecordId;
+        private TimeSpan? _timeout;
 
         // constructors
         /// <summary>
@@ -164,7 +165,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets whether a cursor will time out.
         /// </summary>
-        public bool? NoCursorTimeout
+        public bool? NoCursorTimeout      // TODO:?
         {
             get { return _noCursorTimeout; }
             set { _noCursorTimeout = value; }
@@ -196,6 +197,15 @@ namespace MongoDB.Driver
         {
             get { return _showRecordId; }
             set { _showRecordId = value; }
+        }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public TimeSpan? Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = Ensure.IsNullOrInfiniteOrGreaterThanOrEqualToZero(value, nameof(value)); }
         }
     }
 

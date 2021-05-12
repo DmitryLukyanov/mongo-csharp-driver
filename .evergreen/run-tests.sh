@@ -112,7 +112,7 @@ for var in TMP TEMP NUGET_PACKAGES NUGET_HTTP_CACHE_PATH APPDATA; do
 done
 
 if [[ "$CLIENT_PEM" != "nil" ]]; then
-  CLIENT_PEM=${CLIENT_PEM} source evergreen/convert-client-cert-to-pkcs12.sh
+  CLIENT_PEM=${CLIENT_PEM} source .evergreen/convert-client-cert-to-pkcs12.sh
 fi
 
 if [[ "$OS" =~ Windows|windows ]]; then

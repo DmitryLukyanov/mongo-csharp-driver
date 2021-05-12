@@ -34,8 +34,8 @@ if [ "Windows_NT" = "$OS" ]; then
   powershell.exe .\\build.ps1 -target $TARGET
 else
   echo "Setting krb5 config file"
-  touch ${PROJECT_DIRECTORY}/evergreen/krb5.conf.empty
-  export KRB5_CONFIG=${PROJECT_DIRECTORY}/evergreen/krb5.conf.empty
+  touch ${PROJECT_DIRECTORY}/.evergreen/krb5.conf.empty
+  export KRB5_CONFIG=${PROJECT_DIRECTORY}/.evergreen/krb5.conf.empty
 
   for var in TMP TEMP NUGET_PACKAGES NUGET_HTTP_CACHE_PATH APPDATA; do
     export $var=/data/tmp;

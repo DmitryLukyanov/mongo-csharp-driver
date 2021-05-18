@@ -83,7 +83,13 @@ namespace MongoDB.Driver.Core.Connections
             get { return _shouldTrackState; }
         }
 
-        public void BeforeSending(IEnumerable<RequestMessage> messages, ConnectionId connectionId, IByteBuffer buffer, MessageEncoderSettings encoderSettings, Stopwatch stopwatch)
+        public void BeforeSending(
+            IEnumerable<RequestMessage> messages,
+            ConnectionId connectionId,
+            ObjectId? serviceId,
+            IByteBuffer buffer,
+            MessageEncoderSettings encoderSettings,
+            Stopwatch stopwatch)
         {
             using (var stream = new ByteBufferStream(buffer, ownsBuffer: false))
             {
@@ -91,12 +97,12 @@ namespace MongoDB.Driver.Core.Connections
 
                 while (messageQueue.Count > 0)
                 {
-                    ProcessRequestMessages(messageQueue, connectionId, stream, encoderSettings, stopwatch);
+                    ProcessRequestMessages(messageQueue, connectionId, serviceId, stream, encoderSettings, stopwatch);
                 }
             }
         }
 
-        public void AfterSending(IEnumerable<RequestMessage> messages, ConnectionId connectionId)
+        public void AfterSending(IEnumerable<RequestMessage> messages, ConnectionId connectionId, ObjectId? serviceId)
         {
             foreach (var message in messages)
             {
@@ -113,6 +119,7 @@ namespace MongoDB.Driver.Core.Connections
                             state.OperationId,
                             message.RequestId,
                             connectionId,
+                            serviceId,
                             state.Stopwatch.Elapsed);
 
                         _succeededEvent(@event);
@@ -123,7 +130,7 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        public void ErrorSending(IEnumerable<RequestMessage> messages, ConnectionId connectionId, Exception exception)
+        public void ErrorSending(IEnumerable<RequestMessage> messages, ConnectionId connectionId, ObjectId? serviceId, Exception exception)
         {
             foreach (var message in messages)
             {
@@ -139,6 +146,7 @@ namespace MongoDB.Driver.Core.Connections
                             state.OperationId,
                             message.RequestId,
                             connectionId,
+                            serviceId,
                             state.Stopwatch.Elapsed);
 
                         _failedEvent(@event);
@@ -147,7 +155,7 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        public void AfterReceiving(ResponseMessage message, IByteBuffer buffer, ConnectionId connectionId, MessageEncoderSettings encoderSettings)
+        public void AfterReceiving(ResponseMessage message, IByteBuffer buffer, ConnectionId connectionId, ObjectId? serviceId, MessageEncoderSettings encoderSettings)
         {
             CommandState state;
             if (!_state.TryRemove(message.ResponseTo, out state))
@@ -158,7 +166,7 @@ namespace MongoDB.Driver.Core.Connections
 
             if (message is CommandResponseMessage)
             {
-                ProcessCommandResponseMessage(state, (CommandResponseMessage)message, buffer, connectionId, encoderSettings);
+                ProcessCommandResponseMessage(state, (CommandResponseMessage)message, buffer, connectionId, serviceId, encoderSettings);
             }
             else
             {
@@ -166,7 +174,7 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        public void ErrorReceiving(int responseTo, ConnectionId connectionId, Exception exception)
+        public void ErrorReceiving(int responseTo, ConnectionId connectionId, ObjectId? serviceId, Exception exception)
         {
             CommandState state;
             if (!_state.TryRemove(responseTo, out state))
@@ -184,11 +192,12 @@ namespace MongoDB.Driver.Core.Connections
                     state.OperationId,
                     responseTo,
                     connectionId,
+                    serviceId,
                     state.Stopwatch.Elapsed));
             }
         }
 
-        public void ConnectionFailed(ConnectionId connectionId, Exception exception)
+        public void ConnectionFailed(ConnectionId connectionId, ObjectId? serviceId, Exception exception)
         {
             if (_failedEvent == null)
             {
@@ -208,6 +217,7 @@ namespace MongoDB.Driver.Core.Connections
                         state.OperationId,
                         requestId,
                         connectionId,
+                        serviceId,
                         state.Stopwatch.Elapsed);
 
                     _failedEvent(@event);
@@ -215,13 +225,13 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private void ProcessRequestMessages(Queue<RequestMessage> messageQueue, ConnectionId connectionId, Stream stream, MessageEncoderSettings encoderSettings, Stopwatch stopwatch)
+        private void ProcessRequestMessages(Queue<RequestMessage> messageQueue, ConnectionId connectionId, ObjectId? serviceId, Stream stream, MessageEncoderSettings encoderSettings, Stopwatch stopwatch)
         {
             var message = messageQueue.Dequeue();
             switch (message.MessageType)
             {
                 case MongoDBMessageType.Command:
-                    ProcessCommandRequestMessage((CommandRequestMessage)message, messageQueue, connectionId, new CommandMessageBinaryEncoder(stream, encoderSettings), stopwatch);
+                    ProcessCommandRequestMessage((CommandRequestMessage)message, messageQueue, connectionId, serviceId, new CommandMessageBinaryEncoder(stream, encoderSettings), stopwatch);
                     break;
                 case MongoDBMessageType.Delete:
                     ProcessDeleteMessage((DeleteMessage)message, messageQueue, connectionId, new DeleteMessageBinaryEncoder(stream, encoderSettings), stopwatch);
@@ -246,7 +256,7 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private void ProcessCommandRequestMessage(CommandRequestMessage originalMessage, Queue<RequestMessage> messageQueue, ConnectionId connectionId, CommandMessageBinaryEncoder encoder, Stopwatch stopwatch)
+        private void ProcessCommandRequestMessage(CommandRequestMessage originalMessage, Queue<RequestMessage> messageQueue, ConnectionId connectionId, ObjectId? serviceId, CommandMessageBinaryEncoder encoder, Stopwatch stopwatch)
         {
             var requestId = originalMessage.RequestId;
             var operationId = EventContext.OperationId;
@@ -278,14 +288,14 @@ namespace MongoDB.Driver.Core.Connections
 
                 if (_startedEvent != null)
                 {
-
                     var @event = new CommandStartedEvent(
                         commandName,
                         command,
                         databaseNamespace,
                         operationId,
                         requestId,
-                        connectionId);
+                        connectionId,
+                        serviceId);
 
                     _startedEvent(@event);
                 }
@@ -305,7 +315,7 @@ namespace MongoDB.Driver.Core.Connections
             }
         }
 
-        private void ProcessCommandResponseMessage(CommandState state, CommandResponseMessage message, IByteBuffer buffer, ConnectionId connectionId, MessageEncoderSettings encoderSettings)
+        private void ProcessCommandResponseMessage(CommandState state, CommandResponseMessage message, IByteBuffer buffer, ConnectionId connectionId, ObjectId? serviceId, MessageEncoderSettings encoderSettings)
         {
             var wrappedMessage = message.WrappedMessage;
             var type0Section = wrappedMessage.Sections.OfType<Type0CommandMessageSection<RawBsonDocument>>().Single();
@@ -334,6 +344,7 @@ namespace MongoDB.Driver.Core.Connections
                         state.OperationId,
                         message.ResponseTo,
                         connectionId,
+                        serviceId,
                         state.Stopwatch.Elapsed));
                 }
             }
@@ -351,6 +362,7 @@ namespace MongoDB.Driver.Core.Connections
                         state.OperationId,
                         message.ResponseTo,
                         connectionId,
+                        serviceId,
                         state.Stopwatch.Elapsed));
                 }
             }

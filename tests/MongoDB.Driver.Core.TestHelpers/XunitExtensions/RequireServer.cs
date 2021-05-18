@@ -44,7 +44,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
 
         public RequireServer Authentication(bool authentication)
         {
-            var actualAuthentication = CoreTestConfiguration.ConnectionString.Username != null;
+            var actualAuthentication = IsAuthenticated();
             if (actualAuthentication == authentication)
             {
                 return this;
@@ -71,6 +71,16 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
             }
             var clusterTypesString = string.Join(", ", clusterTypes.Select(t => t.ToString()));
             throw new SkipException($"Test skipped because cluster type is {actualClusterType} and not one of ({clusterTypesString}).");
+        }
+
+        public RequireServer LoadBalancing(bool enabled)
+        {
+            var isLoadBalancing = CoreTestConfiguration.ConnectionString.LoadBalanced;
+            if (isLoadBalancing == enabled)
+            {
+                return this;
+            }
+            throw new SkipException($"Test skipped because load balancing mode is {(isLoadBalancing ? "on" : "off")}.");
         }
 
         public RequireServer RunOn(BsonArray requirements)
@@ -112,7 +122,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
         public RequireServer SupportsSessions()
         {
             var clusterDescription = CoreTestConfiguration.Cluster.Description;
-            if (clusterDescription.LogicalSessionTimeout != null)
+            if (clusterDescription.LogicalSessionTimeout != null || clusterDescription.Type == Clusters.ClusterType.LoadBalanced)
             {
                 return this;
             }
@@ -222,6 +232,10 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
             {
                 switch (item.Name)
                 {
+                    case "auth":
+                        {
+                            return IsAuthenticated() == item.Value.ToBoolean();
+                        }
                     case "minServerVersion":
                         {
                             var actualVersion = CoreTestConfiguration.ServerVersion;
@@ -265,6 +279,8 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
                             }
                         }
                         break;
+                    case "serverless":
+                        return false; // TODO:
                     default:
                         throw new FormatException($"Unrecognized requirement field: '{item.Name}'");
                 }
@@ -272,6 +288,8 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
 
             return true;
         }
+
+        private bool IsAuthenticated() => CoreTestConfiguration.ConnectionString.Username != null;
 
         private ClusterType MapTopologyToClusterType(string topology)
         {
@@ -281,6 +299,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
                 case "replicaset": return Clusters.ClusterType.ReplicaSet;
                 case "sharded-replicaset":
                 case "sharded": return Clusters.ClusterType.Sharded;
+                case "load-balanced": return Clusters.ClusterType.LoadBalanced;
                 default: throw new ArgumentException($"Invalid topology: \"{topology}\".", nameof(topology));
             }
         }

@@ -22,7 +22,7 @@ using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.ConnectionPools
 {
-    internal sealed class ExclusiveConnectionPoolFactory : IConnectionPoolFactory
+    internal sealed class ExclusiveConnectionPoolFactory : ITrackedConnectionPoolFactory
     {
         // fields
         private readonly IConnectionFactory _connectionFactory;
@@ -37,6 +37,17 @@ namespace MongoDB.Driver.Core.ConnectionPools
         }
 
         public IConnectionPool CreateConnectionPool(ServerId serverId, EndPoint endPoint)
+        {
+            return CreateConnectionPool(serverId, endPoint);
+        }
+
+        /// <summary>
+        /// Creates a tracked connection pool.
+        /// </summary>
+        /// <param name="serverId">The server identifier.</param>
+        /// <param name="endPoint">The end point.</param>
+        /// <returns>A connection pool.</returns>
+        public ITrackedConnectionPool CreateTrackedConnectionPool(ServerId serverId, EndPoint endPoint)
         {
             Ensure.IsNotNull(serverId, nameof(serverId));
             Ensure.IsNotNull(endPoint, nameof(endPoint));

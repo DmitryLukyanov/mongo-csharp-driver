@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Core.Servers
         private readonly ClusterConnectionMode _clusterConnectionMode;
         private readonly ConnectionModeSwitch _connectionModeSwitch;
 #pragma warning restore CS0618 // Type or member is obsolete
-        private readonly IConnectionPoolFactory _connectionPoolFactory;
+        private readonly ITrackedConnectionPoolFactory _connectionPoolFactory;
         private readonly bool? _directConnection;
         private readonly IServerMonitorFactory _serverMonitorFactory;
         private readonly IEventSubscriber _eventSubscriber;
@@ -44,7 +44,7 @@ namespace MongoDB.Driver.Core.Servers
 #pragma warning restore CS0618 // Type or member is obsolete
             bool? directConnection,
             ServerSettings settings,
-            IConnectionPoolFactory connectionPoolFactory,
+            ITrackedConnectionPoolFactory connectionPoolFactory,
             IServerMonitorFactory serverMonitoryFactory,
             IEventSubscriber eventSubscriber,
             ServerApi serverApi)
@@ -63,20 +63,32 @@ namespace MongoDB.Driver.Core.Servers
 
         // methods
         /// <inheritdoc/>
-        public IClusterableServer CreateServer(ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
-        {
-            return new Server(
-                clusterId,
-                clusterClock,
-                _clusterConnectionMode,
-                _connectionModeSwitch,
-                _directConnection,
-                _settings,
-                endPoint,
-                _connectionPoolFactory,
-                _serverMonitorFactory,
-                _eventSubscriber,
-                _serverApi);
-        }
+        public IClusterableServer CreateServer(ClusterType clusterType, ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint) =>
+            clusterType switch
+            {
+                ClusterType.LoadBalanced =>
+                    new LoadBalancedServer(
+                        clusterId,
+                        clusterClock,
+                        _settings,
+                        endPoint,
+                        _connectionPoolFactory,
+                        _eventSubscriber,
+                        _serverApi),
+
+                _ =>
+                    new DefaultServer(
+                        clusterId,
+                        clusterClock,
+                        _clusterConnectionMode,
+                        _connectionModeSwitch,
+                        _directConnection,
+                        _settings,
+                        endPoint,
+                        _connectionPoolFactory,
+                        _serverMonitorFactory,
+                        _eventSubscriber,
+                        _serverApi),
+            };
     }
 }

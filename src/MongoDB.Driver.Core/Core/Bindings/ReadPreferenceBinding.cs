@@ -32,6 +32,7 @@ namespace MongoDB.Driver.Core.Bindings
         private readonly ICluster _cluster;
         private bool _disposed;
         private readonly ReadPreference _readPreference;
+        private readonly IServerChannelSourceFactory _serverChannelSourceFactory;
         private readonly IServerSelector _serverSelector;
         private readonly ICoreSessionHandle _session;
 
@@ -43,10 +44,16 @@ namespace MongoDB.Driver.Core.Bindings
         /// <param name="readPreference">The read preference.</param>
         /// <param name="session">The session.</param>
         public ReadPreferenceBinding(ICluster cluster, ReadPreference readPreference, ICoreSessionHandle session)
+            : this(cluster, readPreference, session, DefaultServerChannelSourceFactory.CreateDefault())
+        {
+        }
+
+        internal ReadPreferenceBinding(ICluster cluster, ReadPreference readPreference, ICoreSessionHandle session, IServerChannelSourceFactory serverChannelSourceFactory)
         {
             _cluster = Ensure.IsNotNull(cluster, nameof(cluster));
             _readPreference = Ensure.IsNotNull(readPreference, nameof(readPreference));
             _session = Ensure.IsNotNull(session, nameof(session));
+            _serverChannelSourceFactory = serverChannelSourceFactory;
             _serverSelector = new ReadPreferenceServerSelector(readPreference);
         }
 
@@ -82,7 +89,7 @@ namespace MongoDB.Driver.Core.Bindings
 
         private IChannelSourceHandle GetChannelSourceHelper(IServer server)
         {
-            return new ChannelSourceHandle(new ServerChannelSource(server, _session.Fork()));
+            return new ChannelSourceHandle(_serverChannelSourceFactory.CreateServerChannelSource(server, _session.Fork()));
         }
 
         /// <inheritdoc/>

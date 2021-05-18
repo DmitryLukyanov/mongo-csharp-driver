@@ -40,7 +40,7 @@ namespace MongoDB.Driver.Core.Helpers
             _eventSubscriber = eventSubscriber;
         }
 
-        public IClusterableServer CreateServer(ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
+        public IClusterableServer CreateServer(ClusterType clusterType, ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
         {
             ServerTuple result;
             if (!_servers.TryGetValue(endPoint, out result) || result.HasBeenRemoved)
@@ -97,14 +97,38 @@ namespace MongoDB.Driver.Core.Helpers
                         .Callback(acquireConnectionCallback)
                         .ReturnsAsync(mockConnection.Object);
                     mockConnectionPool.Setup(p => p.Clear()).Callback(() => { ++poolGeneration; });
-                    var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory> { DefaultValue = DefaultValue.Mock };
+                    var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory> { DefaultValue = DefaultValue.Mock };
                     mockConnectionPoolFactory
                         .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), endPoint))
                         .Returns(mockConnectionPool.Object);
 
                     result = new ServerTuple
                     {
-                        Server = new Server(
+                        Server = CreateServer(clusterType, mockConnectionPoolFactory.Object, mockMonitorFactory.Object),
+                        Monitor = mockMonitor.Object
+                    };
+                }
+
+                _servers[endPoint] = result;
+            }
+
+            return result.Server;
+
+            IClusterableServer CreateServer(ClusterType clusterType, ITrackedConnectionPoolFactory connectionPoolFactory, IServerMonitorFactory serverMonitorFactory)
+            {
+                switch (clusterType)
+                {
+                    case ClusterType.LoadBalanced:
+                        return new LoadBalancedServer(
+                            clusterId,
+                            clusterClock,
+                            new ServerSettings(),
+                            endPoint,
+                            connectionPoolFactory,
+                            _eventSubscriber,
+                            serverApi: null);
+                    default:
+                        return new DefaultServer(
                             clusterId,
                             clusterClock,
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -114,18 +138,12 @@ namespace MongoDB.Driver.Core.Helpers
                             directConnection: null,
                             new ServerSettings(),
                             endPoint,
-                            mockConnectionPoolFactory.Object,
-                            mockMonitorFactory.Object,
+                            connectionPoolFactory,
+                            serverMonitorFactory,
                             _eventSubscriber,
-                            serverApi: null),
-                        Monitor = mockMonitor.Object
-                    };
-                }
-
-                _servers[endPoint] = result;
+                            serverApi: null);
+                    }
             }
-
-            return result.Server;
         }
 
         public IClusterableServer GetServer(EndPoint endPoint)

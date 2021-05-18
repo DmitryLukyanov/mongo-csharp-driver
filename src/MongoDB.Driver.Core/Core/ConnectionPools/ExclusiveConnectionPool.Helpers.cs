@@ -29,7 +29,7 @@ using MongoDB.Driver.Core.WireProtocol.Messages.Encoders;
 
 namespace MongoDB.Driver.Core.ConnectionPools
 {
-    internal sealed partial class ExclusiveConnectionPool : IConnectionPool
+    internal sealed partial class ExclusiveConnectionPool
     {
         // nested classes
         private static class State
@@ -39,17 +39,74 @@ namespace MongoDB.Driver.Core.ConnectionPools
             public const int Disposed = 2;
         }
 
+        private sealed class CheckedOutTracker
+        {
+            public int _unspecifiedCheckoutsNumber = 0;
+            public int _cursorCheckoutsNumber = 0;
+            public int _transactionCheckoutsNumber = 0;
+
+            public int GetCheckedOutNumber(CheckedOutReason reasonBy) =>
+                reasonBy switch
+                {
+                    CheckedOutReason.NotSet => _unspecifiedCheckoutsNumber,
+                    CheckedOutReason.Cursor => _cursorCheckoutsNumber,
+                    CheckedOutReason.Transaction => _transactionCheckoutsNumber,
+                    // should not be reached
+                    _ => throw new InvalidOperationException("Unsupported checked out reason."),
+                };
+
+            public void CheckOut(CheckedOutReason reasonBy)
+            {
+                switch (reasonBy)
+                {
+                    case CheckedOutReason.NotSet:
+                        Interlocked.Increment(ref _unspecifiedCheckoutsNumber);
+                        break;
+                    case CheckedOutReason.Cursor:
+                        Interlocked.Increment(ref _cursorCheckoutsNumber);
+                        break;
+                    case CheckedOutReason.Transaction:
+                        Interlocked.Increment(ref _transactionCheckoutsNumber);
+                        break;
+                    default:
+                        // should not be reached
+                        throw new InvalidOperationException($"Unsupported checked out reason {reasonBy}.");
+                }
+            }
+
+            public void CheckIn(CheckedOutReason reasonBy)
+            {
+                switch (reasonBy)
+                {
+                    case CheckedOutReason.NotSet:
+                        Interlocked.Decrement(ref _unspecifiedCheckoutsNumber);
+                        break;
+                    case CheckedOutReason.Cursor:
+                        Interlocked.Decrement(ref _cursorCheckoutsNumber);
+                        break;
+                    case CheckedOutReason.Transaction:
+                        Interlocked.Decrement(ref _transactionCheckoutsNumber);
+                        break;
+                    default:
+                        // should not be reached
+                        throw new InvalidOperationException($"Unsupported checked out reason {reasonBy}.");
+                }
+            }
+        }
+
         private sealed class AcquireConnectionHelper
         {
             // private fields
+            private readonly CheckedOutReason _checkedOutReason;
             private readonly ExclusiveConnectionPool _pool;
             private bool _enteredPool;
             private bool _enteredWaitQueue;
             private Stopwatch _stopwatch;
 
             // constructors
-            public AcquireConnectionHelper(ExclusiveConnectionPool pool)
+            public AcquireConnectionHelper(ExclusiveConnectionPool pool, CheckedOutReason checkedOutReason)
             {
+                _checkedOutReason = checkedOutReason;
                 _pool = pool;
             }
 
@@ -82,7 +139,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 if (enteredPool)
                 {
                     var timeSpentInWaitQueue = _stopwatch.Elapsed;
-                    using (var connectionCreator = new ConnectionCreator(_pool, _pool._settings.WaitQueueTimeout - timeSpentInWaitQueue))
+                    using (var connectionCreator = new ConnectionCreator(_pool, _pool._settings.WaitQueueTimeout - timeSpentInWaitQueue, _checkedOutReason))
                     {
                         connection = connectionCreator.CreateOpenedOrReuse(cancellationToken);
                     }
@@ -99,7 +156,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 if (enteredPool)
                 {
                     var timeSpentInWaitQueue = _stopwatch.Elapsed;
-                    using (var connectionCreator = new ConnectionCreator(_pool, _pool._settings.WaitQueueTimeout - timeSpentInWaitQueue))
+                    using (var connectionCreator = new ConnectionCreator(_pool, _pool._settings.WaitQueueTimeout - timeSpentInWaitQueue, _checkedOutReason))
                     {
                         connection = await connectionCreator.CreateOpenedOrReuseAsync(cancellationToken).ConfigureAwait(false);
                     }
@@ -112,6 +169,9 @@ namespace MongoDB.Driver.Core.ConnectionPools
             {
                 if (pooledConnection != null)
                 {
+                    pooledConnection.SetCheckedOutReason(_checkedOutReason);
+                    _pool._checkedOutTracker.CheckOut(_checkedOutReason);
+
                     var reference = new ReferenceCounted<PooledConnection>(pooledConnection, _pool.ReleaseConnection);
                     var connectionHandle = new AcquiredConnection(_pool, reference);
 
@@ -124,7 +184,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 {
                     _stopwatch.Stop();
 
-                    var message = $"Timed out waiting for a connection after {_stopwatch.ElapsedMilliseconds}ms.";
+                    var message =
+                        "Timeout waiting for connection from the connection pool. " +
+                        $"maxPoolSize: {_pool._settings.MaxConnections}, " +
+                        $"connections in use by cursors: {_pool._checkedOutTracker.GetCheckedOutNumber(CheckedOutReason.Cursor)}, " +
+                        $"connections in use by transactions: {_pool._checkedOutTracker.GetCheckedOutNumber(CheckedOutReason.Transaction)}, " +
+                        $"connections in use by other operations: {_pool._checkedOutTracker.GetCheckedOutNumber(CheckedOutReason.NotSet)}";
                     throw new TimeoutException(message);
                 }
             }
@@ -175,9 +240,10 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
         private sealed class PooledConnection : IConnection
         {
+            private CheckedOutReason _checkedOutReason;
             private readonly IConnection _connection;
             private readonly ExclusiveConnectionPool _connectionPool;
-            private readonly int _generation;
+            private int _generation;
             private bool _disposed;
 
             public PooledConnection(ExclusiveConnectionPool connectionPool, IConnection connection)
@@ -185,6 +251,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 _connectionPool = connectionPool;
                 _connection = connection;
                 _generation = connectionPool._generation;
+            }
+
+            public CheckedOutReason CheckedOutReason
+            {
+                get { return _checkedOutReason; }
             }
 
             public ConnectionId ConnectionId
@@ -214,7 +285,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
             public bool IsExpired
             {
-                get { return _disposed || _generation < _connectionPool.Generation || _connection.IsExpired; }
+                get { return _disposed || _generation < _connectionPool.GetEffectivePoolGenerationForConnection(_connection.Description) || _connection.IsExpired; } //TODO
             }
 
             public ConnectionSettings Settings
@@ -236,12 +307,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 try
                 {
                     _connection.Open(cancellationToken);
+                    SetEffectiveGenerationIfRequired(_connection.Description);
                 }
                 catch (MongoConnectionException ex)
                 {
-                    // TODO temporary workaround for propagating exception generation to server
-                    // Will be reconsider after SDAM spec error handling adjustments
-                    ex.Generation = Generation;
+                    EnrichExceptionDetails(ex);
                     throw;
                 }
             }
@@ -251,39 +321,93 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 try
                 {
                     await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    SetEffectiveGenerationIfRequired(_connection.Description);
                 }
                 catch (MongoConnectionException ex)
                 {
-                    // TODO temporary workaround for propagating exception generation to server
-                    // Will be reconsider after SDAM spec error handling adjustments
-                    ex.Generation = Generation;
+                    EnrichExceptionDetails(ex);
                     throw;
                 }
             }
 
             public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
-            public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
+            public async Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    return await _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
             public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                _connection.SendMessages(messages, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    _connection.SendMessages(messages, messageEncoderSettings, cancellationToken);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
-            public Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
+            public async Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    await _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
+            }
+
+            public void SetCheckedOutReason(CheckedOutReason reason)
+            {
+                _checkedOutReason = reason;
             }
 
             public void SetReadTimeout(TimeSpan timeout)
             {
                 _connection.SetReadTimeout(timeout);
+            }
+
+            // private methods
+            private void EnrichExceptionDetails(MongoConnectionException ex)
+            {
+                // should be refactored in CSHARP-3720
+                ex.Generation = _generation;
+                ex.ServiceId = _connection?.Description?.ServiceId;
+            }
+
+            private void SetEffectiveGenerationIfRequired(ConnectionDescription description)
+            {
+                var serviceId = description.ServiceId;
+                if (serviceId.HasValue)
+                {
+                    _generation = _connectionPool.GetEffectivePoolGenerationForConnection(description);
+                    _connectionPool._connectionsState.AddConnectionState(serviceId.Value);
+                }
             }
         }
 
@@ -573,6 +697,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
         private sealed class ConnectionCreator : IDisposable
         {
+            private readonly CheckedOutReason _checkedOutReason;
             private readonly ExclusiveConnectionPool _pool;
             private readonly TimeSpan _connectingTimeout;
 
@@ -583,8 +708,9 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
             private Stopwatch _stopwatch;
 
-            public ConnectionCreator(ExclusiveConnectionPool pool, TimeSpan connectingTimeout)
+            public ConnectionCreator(ExclusiveConnectionPool pool, TimeSpan connectingTimeout, CheckedOutReason checkedOutReason)
             {
+                _checkedOutReason = checkedOutReason;
                 _pool = pool;
                 _connectingTimeout = connectingTimeout;
                 _connectingWaitStatus = SemaphoreSlimSignalable.SemaphoreWaitResult.None;
@@ -706,6 +832,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 StartCreating(cancellationToken);
 
                 await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                var serviceId = _connection.Description.ServiceId;
+                if (serviceId.HasValue)
+                {
+                    _pool._connectionsState.AddConnectionState(serviceId.Value);
+                }
 
                 FinishCreating();
 

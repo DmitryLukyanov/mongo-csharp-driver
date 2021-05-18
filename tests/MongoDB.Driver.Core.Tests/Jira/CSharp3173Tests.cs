@@ -157,9 +157,9 @@ namespace MongoDB.Driver.Core.Tests.Jira
             AssertEvent(@event, expectedEndPoint, expectedServerType, expectedReasonStart, exceptionType);
         }
 
-        private IConnectionPoolFactory CreateAndSetupConnectionPoolFactory(params (ServerId ServerId, EndPoint Endpoint, bool IsHealthy)[] serverInfoCollection)
+        private ITrackedConnectionPoolFactory CreateAndSetupConnectionPoolFactory(params (ServerId ServerId, EndPoint Endpoint, bool IsHealthy)[] serverInfoCollection)
         {
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
 
             foreach (var serverInfo in serverInfoCollection)
             {
@@ -189,7 +189,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
                     .Throws(CreateDnsException(connection.ConnectionId)); // throw command dns exception
             }
 
-            void SetupConnectionPoolFactory(Mock<IConnectionPoolFactory> mockFactory, IConnectionPool connectionPool, ServerId serverId, EndPoint endPoint)
+            void SetupConnectionPoolFactory(Mock<ITrackedConnectionPoolFactory> mockFactory, IConnectionPool connectionPool, ServerId serverId, EndPoint endPoint)
             {
                 mockFactory.Setup(c => c.CreateConnectionPool(serverId, endPoint)).Returns(connectionPool);
             }
@@ -263,7 +263,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
         private void ForceClusterId(MultiServerCluster cluster, ClusterId clusterId)
         {
             Reflector.SetFieldValue(cluster, "_clusterId", clusterId);
-            Reflector.SetFieldValue(cluster, "_description", ClusterDescription.CreateInitial(clusterId, __clusterConnectionMode, __connectionModeSwitch, __directConnection));
+            Reflector.SetFieldValue(cluster, "_description", ClusterDescription.CreateInitial(clusterId, __clusterConnectionMode, __connectionModeSwitch, __directConnection, loadBalanced: false));
         }
 
         private void SetupServerMonitorConnection(

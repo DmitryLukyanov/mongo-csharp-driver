@@ -91,6 +91,7 @@ namespace MongoDB.Driver
                 directConnection: directConnection,
                 endPoints: Optional.Enumerable(endPoints),
                 kmsProviders: Optional.Create(clusterKey.KmsProviders),
+                loadBalanced: clusterKey.LoadBalanced,
                 localThreshold: clusterKey.LocalThreshold,
                 replicaSetName: clusterKey.ReplicaSetName,
                 maxServerSelectionWaitQueueSize: clusterKey.WaitQueueSize,
@@ -117,6 +118,7 @@ namespace MongoDB.Driver
             return settings.With(
                 authenticatorFactories: Optional.Enumerable<IAuthenticatorFactory>(authenticatorFactories),
                 compressors: Optional.Enumerable(clusterKey.Compressors),
+                loadBalanced: clusterKey.LoadBalanced,
                 maxIdleTime: clusterKey.MaxConnectionIdleTime,
                 maxLifeTime: clusterKey.MaxConnectionLifeTime,
                 applicationName: clusterKey.ApplicationName);

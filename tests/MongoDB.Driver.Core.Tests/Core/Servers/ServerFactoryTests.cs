@@ -106,7 +106,7 @@ namespace MongoDB.Driver.Core.Servers
             var subject = new ServerFactory(_clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _connectionPoolFactory, _serverMonitorFactory, _eventSubscriber, _serverApi);
             var clusterClock = new Mock<IClusterClock>().Object;
 
-            Action act = () => subject.CreateServer(null, clusterClock, _endPoint);
+            Action act = () => subject.CreateServer(ClusterType.Unknown, null, clusterClock, _endPoint);
 
             act.ShouldThrow<ArgumentNullException>();
         }
@@ -117,7 +117,7 @@ namespace MongoDB.Driver.Core.Servers
             var subject = new ServerFactory(_clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _connectionPoolFactory, _serverMonitorFactory, _eventSubscriber, _serverApi);
             var clusterId = new ClusterId();
 
-            Action act = () => subject.CreateServer(clusterId, null, _endPoint);
+            Action act = () => subject.CreateServer(ClusterType.Unknown, clusterId, null, _endPoint);
 
             act.ShouldThrow<ArgumentNullException>();
         }
@@ -128,7 +128,7 @@ namespace MongoDB.Driver.Core.Servers
             var subject = new ServerFactory(_clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _connectionPoolFactory, _serverMonitorFactory, _eventSubscriber, _serverApi);
             var clusterClock = new Mock<IClusterClock>().Object;
 
-            Action act = () => subject.CreateServer(_clusterId, clusterClock, null);
+            Action act = () => subject.CreateServer(ClusterType.Unknown, _clusterId, clusterClock, null);
 
             act.ShouldThrow<ArgumentNullException>();
         }
@@ -139,7 +139,7 @@ namespace MongoDB.Driver.Core.Servers
             var subject = new ServerFactory(_clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _connectionPoolFactory, _serverMonitorFactory, _eventSubscriber, _serverApi);
             var clusterClock = new Mock<IClusterClock>().Object;
 
-            var result = subject.CreateServer(_clusterId, clusterClock, _endPoint);
+            var result = subject.CreateServer(ClusterType.Unknown, _clusterId, clusterClock, _endPoint);
 
             result.Should().NotBeNull();
             result.Should().BeOfType<Server>();

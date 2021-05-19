@@ -71,5 +71,25 @@ namespace MongoDB.Driver
         {
         }
 #endif
+
+        /// <summary>
+        /// TODO: through ctor?
+        /// </summary>
+        /// <returns>TODO</returns>
+        public bool IsShutdownError
+        {
+            get
+            {
+                var errorCode = (ServerErrorCode)Code;
+                switch (errorCode)
+                {
+                    case ServerErrorCode.InterruptedAtShutdown: // 1160
+                    case ServerErrorCode.ShutdownInProgress: // 91
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
     }
 }

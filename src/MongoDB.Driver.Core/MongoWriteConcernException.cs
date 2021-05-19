@@ -14,9 +14,9 @@
 */
 
 #if !NETSTANDARD1_5
-using System;
 using System.Runtime.Serialization;
 #endif
+using System;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Misc;
 
@@ -43,9 +43,21 @@ namespace MongoDB.Driver
                 }
             }
         }
+
+        private static Exception CreateNestedExceptionOrNull(ConnectionId connectionId, WriteConcernResult writeConcernResult)
+        {
+            var response = writeConcernResult.Response;
+            var writeConcernError = response["writeConcernError"].AsBsonDocument;
+            if (writeConcernError != null)
+            {
+                return ExceptionMapper.Map(connectionId, writeConcernError);
+            }
+            return null;
+        }
         #endregion
 
         // fields
+        private readonly Exception _nestedException;
         private readonly WriteConcernResult _writeConcernResult;
 
         // constructors
@@ -59,7 +71,7 @@ namespace MongoDB.Driver
             : base(connectionId, message, null, writeConcernResult.Response)
         {
             _writeConcernResult = Ensure.IsNotNull(writeConcernResult, nameof(writeConcernResult));
-
+            _nestedException = CreateNestedExceptionOrNull(connectionId, _writeConcernResult);
             AddErrorLabelsFromWriteConcernResult(this, _writeConcernResult);
         }
 
@@ -72,13 +84,23 @@ namespace MongoDB.Driver
         public MongoWriteConcernException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            // TODO:
+            //_connectionId = (ConnectionId)info.GetValue("_connectionId", typeof(ConnectionId));
             _writeConcernResult = (WriteConcernResult)info.GetValue("_writeConcernResult", typeof(WriteConcernResult));
-
+            _nestedException = CreateNestedExceptionOrNull(/*_connectionId*/null, _writeConcernResult);
             AddErrorLabelsFromWriteConcernResult(this, _writeConcernResult);
         }
 #endif
 
         // properties
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public Exception NestedException
+        {
+            get { return _nestedException; }
+        }
+
         /// <summary>
         /// Gets the write concern result.
         /// </summary>

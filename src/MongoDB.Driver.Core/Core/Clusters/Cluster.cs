@@ -112,7 +112,12 @@ namespace MongoDB.Driver.Core.Clusters
                 var connectionModeSwitch = _settings.ConnectionModeSwitch;
                 var clusterConnectionMode = connectionModeSwitch == ConnectionModeSwitch.UseConnectionMode ? _settings.ConnectionMode : default;
                 var directConnection = connectionModeSwitch == ConnectionModeSwitch.UseDirectConnection ? _settings.DirectConnection : default;
-                return ClusterDescription.CreateInitial(_clusterId, clusterConnectionMode, _settings.ConnectionModeSwitch, directConnection);
+                return ClusterDescription.CreateInitial(
+                    settings.GetInitialClusterType(),
+                    _clusterId,
+                    clusterConnectionMode,
+                    _settings.ConnectionModeSwitch,
+                    directConnection);
 #pragma warning restore CS0618 // Type or member is obsolete
             }
         }
@@ -155,7 +160,7 @@ namespace MongoDB.Driver.Core.Clusters
 
         protected IClusterableServer CreateServer(EndPoint endPoint)
         {
-            return _serverFactory.CreateServer(_clusterId, _clusterClock, endPoint);
+            return _serverFactory.CreateServer(_settings.GetInitialClusterType() /*just bool?*/, _clusterId, _clusterClock, endPoint);
         }
 
         public void Dispose()

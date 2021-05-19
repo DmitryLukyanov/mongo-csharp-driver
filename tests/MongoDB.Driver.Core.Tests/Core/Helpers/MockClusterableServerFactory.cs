@@ -40,7 +40,7 @@ namespace MongoDB.Driver.Core.Helpers
             _eventSubscriber = eventSubscriber;
         }
 
-        public IClusterableServer CreateServer(ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
+        public IClusterableServer CreateServer(ClusterType clusterType, ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
         {
             ServerTuple result;
             if (!_servers.TryGetValue(endPoint, out result) || result.HasBeenRemoved)
@@ -104,20 +104,21 @@ namespace MongoDB.Driver.Core.Helpers
 
                     result = new ServerTuple
                     {
-                        Server = new Server(
-                            clusterId,
-                            clusterClock,
-#pragma warning disable CS0618 // Type or member is obsolete
-                            ClusterConnectionMode.Automatic,
-                            ConnectionModeSwitch.UseConnectionMode,
-#pragma warning restore CS0618 // Type or member is obsolete
-                            directConnection: null,
-                            new ServerSettings(),
-                            endPoint,
-                            mockConnectionPoolFactory.Object,
-                            mockMonitorFactory.Object,
-                            _eventSubscriber,
-                            serverApi: null),
+                        Server = null,
+//                        new Server(
+//                            clusterId,
+//                            clusterClock,
+//#pragma warning disable CS0618 // Type or member is obsolete
+//                            ClusterConnectionMode.Automatic,
+//                            ConnectionModeSwitch.UseConnectionMode,
+//#pragma warning restore CS0618 // Type or member is obsolete
+//                            directConnection: null,
+//                            new ServerSettings(),
+//                            endPoint,
+//                            mockConnectionPoolFactory.Object,
+//                            mockMonitorFactory.Object,
+//                            _eventSubscriber,
+//                            serverApi: null),
                         Monitor = mockMonitor.Object
                     };
                 }

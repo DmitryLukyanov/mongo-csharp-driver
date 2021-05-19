@@ -130,6 +130,7 @@ namespace MongoDB.Driver.Core.Clusters.ServerSelectors
             return __noServers;
         }
 
+        // loadBalanced: todo?
         private IEnumerable<ServerDescription> SelectForReplicaSet(ClusterDescription cluster, IEnumerable<ServerDescription> servers)
         {
             EnsureMaxStalenessIsValid(cluster);

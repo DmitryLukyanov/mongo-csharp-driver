@@ -837,6 +837,13 @@ namespace MongoDB.Driver
 #pragma warning restore CS0618 // Type or member is obsolete
                     resolveHosts = connectionMode == ConnectionMode.Direct || connectionMode == ConnectionMode.Standalone;
                 }
+
+                if (!resolveHosts)
+                {
+                    // TODO
+                    // TODO2: Check other places
+                    resolveHosts = url.LoadBalanced;
+                }
                 url = url.Resolve(resolveHosts);
             }
 
@@ -1259,7 +1266,7 @@ namespace MongoDB.Driver
 
             if (_loadBalanced)
             {
-                if (_servers.Count > 1) // validation after srv resolution will happen on the cluster level
+                if (_servers.Count > 1)
                 {
                     throw new InvalidOperationException("Load balanced cannot be used with multiple host names.");
                 }

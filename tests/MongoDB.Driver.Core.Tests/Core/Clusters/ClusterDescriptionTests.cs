@@ -61,7 +61,7 @@ namespace MongoDB.Driver.Core.Clusters
         [InlineData(ConnectionModeSwitch.UseDirectConnection, ClusterConnectionMode.Automatic, true)]
         public void CreateInitial_should_return_initial_description(ConnectionModeSwitch connectionModeSwitch, ClusterConnectionMode connectionMode, bool? directConnection)
         {
-            var subject = ClusterDescription.CreateInitial(__clusterId, connectionMode, connectionModeSwitch, directConnection);
+            var subject = ClusterDescription.CreateInitial(ClusterType.Unknown, __clusterId, connectionMode, connectionModeSwitch, directConnection);
 
             subject.ClusterId.Should().Be(__clusterId);
             subject.ConnectionModeSwitch.Should().Be(connectionModeSwitch);
@@ -160,7 +160,7 @@ namespace MongoDB.Driver.Core.Clusters
 #pragma warning disable CS0618
             var connectionMode = ClusterConnectionMode.Automatic;
             var connectionModeSwitch = ConnectionModeSwitch.NotSet;
-            var subject = ClusterDescription.CreateInitial(clusterId, connectionMode, connectionModeSwitch, directConnection: null);
+            var subject = ClusterDescription.CreateInitial(ClusterType.Unknown, clusterId, connectionMode, connectionModeSwitch, directConnection: null);
 #pragma warning restore CS0618
             for (var i = 0; i < wireRanges.Length; i++)
             {
@@ -197,7 +197,7 @@ namespace MongoDB.Driver.Core.Clusters
 #pragma warning disable CS0618 // Type or member is obsolete
             var connectionMode = ClusterConnectionMode.Automatic;
             var connectionModeSwitch = ConnectionModeSwitch.NotSet;
-            var subject = ClusterDescription.CreateInitial(clusterId, connectionMode, connectionModeSwitch, directConnection: null);
+            var subject = ClusterDescription.CreateInitial(ClusterType.Unknown, clusterId, connectionMode, connectionModeSwitch, directConnection: null);
 #pragma warning restore CS0618 // Type or member is obsolete
             for (var i = 0; i < wireRanges.Length; i++)
             {

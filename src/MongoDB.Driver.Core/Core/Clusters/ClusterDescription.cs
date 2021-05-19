@@ -31,16 +31,35 @@ namespace MongoDB.Driver.Core.Clusters
         #region static
         // internal static methods
 #pragma warning disable CS0618 // Type or member is obsolete
-        internal static ClusterDescription CreateInitial(ClusterId clusterId, ClusterConnectionMode connectionMode, ConnectionModeSwitch connectionModeSwitch, bool? directConnection)
+        internal static ClusterDescription CreateInitial( // TODO: two methods?
+            ClusterType clusterType,
+            ClusterId clusterId,
+            ClusterConnectionMode connectionMode,
+            ConnectionModeSwitch connectionModeSwitch,
+            bool? directConnection)
         {
-            return new ClusterDescription(
-                clusterId,
-                connectionMode,
-                connectionModeSwitch,
-                directConnection,
-                dnsMonitorException: null,
-                type: ClusterType.Unknown,
-                servers: Enumerable.Empty<ServerDescription>());
+            if (clusterType == ClusterType.LoadBalanced)
+            {
+                return new ClusterDescription(
+                    clusterId,
+                    connectionMode, // TODO:
+                    connectionModeSwitch, // TODO
+                    directConnection, // TODO
+                    dnsMonitorException: null,
+                    type: ClusterType.LoadBalanced,
+                    servers: Enumerable.Empty<ServerDescription>()); // will be updated futher
+            }
+            else
+            {
+                return new ClusterDescription(
+                    clusterId,
+                    connectionMode,
+                    connectionModeSwitch,
+                    directConnection,
+                    dnsMonitorException: null,
+                    type: ClusterType.Unknown,
+                    servers: Enumerable.Empty<ServerDescription>());
+            }
         }
 #pragma warning restore CS0618 // Type or member is obsolete
 

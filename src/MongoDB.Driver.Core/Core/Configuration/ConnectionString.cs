@@ -892,7 +892,7 @@ namespace MongoDB.Driver.Core.Configuration
 
             if (_loadBalanced)
             {
-                if (_hosts.Count > 1) // validation after srv resolution will happen on the cluster level
+                if (_hosts.Count > 1)
                 {
                     throw new MongoConfigurationException("Load balanced cannot be used with multiple host names.");
                 }
@@ -1397,7 +1397,7 @@ namespace MongoDB.Driver.Core.Configuration
 
         private void ValidateResolvedOptions(IEnumerable<string> optionNames)
         {
-            var allowedOptionsInTxtRecords = new[] { "authSource", "replicaSet", "loadbalanced" };
+            var allowedOptionsInTxtRecords = new[] { "authSource", "replicaSet", "loadBalanced" };
             if (optionNames.Any(o => !allowedOptionsInTxtRecords.Contains(o)))
             {
                 throw new MongoConfigurationException($"Only {string.Join(", ", allowedOptionsInTxtRecords)} are allowed in a TXT record.");

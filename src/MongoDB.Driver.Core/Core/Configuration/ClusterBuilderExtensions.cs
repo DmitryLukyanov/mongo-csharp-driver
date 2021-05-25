@@ -109,6 +109,13 @@ namespace MongoDB.Driver.Core.Configuration
 #pragma warning restore CS0618 // Type or member is obsolete
                 }
 
+                if (!resolveHosts)
+                {
+                    // TODO
+                    // TODO:2 Check other places
+                    resolveHosts = connectionString.LoadBalanced;
+                }
+
                 connectionString = connectionString.Resolve(resolveHosts);
             }
 
@@ -212,7 +219,14 @@ namespace MongoDB.Driver.Core.Configuration
             var connectionModeSwitch = connectionString.ConnectionModeSwitch;
             var connectionMode = connectionModeSwitch == ConnectionModeSwitch.UseConnectionMode ? connectionString.Connect : default;
             var directConnection = connectionModeSwitch == ConnectionModeSwitch.UseDirectConnection ? connectionString.DirectConnection : default;
-            builder = builder.ConfigureCluster(s => s.With(connectionMode: connectionMode, connectionModeSwitch: connectionModeSwitch, directConnection: directConnection, scheme: connectionString.Scheme));
+            builder = builder.ConfigureCluster(
+                s =>
+                    s.With(
+                        connectionMode: connectionMode,
+                        connectionModeSwitch: connectionModeSwitch,
+                        directConnection: directConnection,
+                        scheme: connectionString.Scheme,
+                        loadBalanced: connectionString.LoadBalanced));
 #pragma warning restore CS0618 // Type or member is obsolete
             if (connectionString.Hosts.Count > 0)
             {

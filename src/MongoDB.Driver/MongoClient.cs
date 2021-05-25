@@ -467,7 +467,8 @@ namespace MongoDB.Driver
 
         private bool? AreSessionsSupported(ClusterDescription clusterDescription)
         {
-            if (clusterDescription.LogicalSessionTimeout.HasValue)
+            if (clusterDescription.Type == ClusterType.LoadBalanced || // When the TopologyType is LoadBalanced, sessions are always supported.
+                clusterDescription.LogicalSessionTimeout.HasValue)
             {
                 return true;
             }

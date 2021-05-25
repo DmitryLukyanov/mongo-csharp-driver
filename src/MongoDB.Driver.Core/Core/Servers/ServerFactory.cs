@@ -19,6 +19,7 @@ using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
+using MongoDB.Driver.Core.Servers.Strategies;
 
 namespace MongoDB.Driver.Core.Servers
 {
@@ -63,20 +64,34 @@ namespace MongoDB.Driver.Core.Servers
 
         // methods
         /// <inheritdoc/>
-        public IClusterableServer CreateServer(ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
+        public IClusterableServer CreateServer(ClusterType clusterType, ClusterId clusterId, IClusterClock clusterClock, EndPoint endPoint)
         {
+            var serverId = new ServerId(clusterId, endPoint);
+            var connectionPool = _connectionPoolFactory.CreateConnectionPool(serverId, endPoint);
+
+            IServerStrategy serverStrategy = null;
+            switch (clusterType)
+            {
+                case ClusterType.LoadBalanced:
+                    serverStrategy = new LoadBalancedServerStrategy(serverId, endPoint, connectionPool);
+                    break;
+                default:
+                    serverStrategy = new DefaultServerStrategy(serverId, endPoint, _serverMonitorFactory, connectionPool, _settings);
+                    break;
+            }
+
             return new Server(
-                clusterId,
+                serverId,
                 clusterClock,
                 _clusterConnectionMode,
                 _connectionModeSwitch,
                 _directConnection,
                 _settings,
                 endPoint,
-                _connectionPoolFactory,
-                _serverMonitorFactory,
+                connectionPool,
                 _eventSubscriber,
-                _serverApi);
+                _serverApi,
+                serverStrategy);
         }
     }
 }

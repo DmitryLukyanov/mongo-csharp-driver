@@ -30,17 +30,21 @@ namespace MongoDB.Driver.Core.Tests.Core.NativeLibraryLoader
         [InlineData("mongo-csharp-driver", "mongo-csharp-driver")]
         [InlineData("mongo csharp driver", "mongo csharp driver")]
         [InlineData("&mongo$csharp@driver%", "&mongo$csharp@driver%")]
+        [InlineData("mongo$csharp@driver%_#", "mongo$csharp@driver%_#")]
         public void GetLibraryBasePath_should_get_correct_paths(string rootTestFolder, string expectedRootTestFolder)
         {
             string testAssemblyCodeBaseUri = null; // use a default one for null
             if (rootTestFolder != null)
             {
-                var assemblyPath = Path.Combine(
-                    RequirePlatform.GetCurrentOperatingSystem() == SupportedOperatingSystem.Windows ? "C:/" : @"\\data",
-                    rootTestFolder,
-                    GetCommonTestAssemblyFolderEnding(),
-                    "MongoDB.Driver.Core.dll");
-                testAssemblyCodeBaseUri = new Uri(assemblyPath).ToString();
+                var assemblyPath = Path
+                    .Combine(
+                        RequirePlatform.GetCurrentOperatingSystem() == SupportedOperatingSystem.Windows ? "C:\\" : "data",
+                        rootTestFolder,
+                        GetCommonTestAssemblyFolderEnding(),
+                        "MongoDB.Driver.Core.dll")
+                    .Replace("\\", "/"); // not really needed but add this to ensure that Uri is well-formed
+                
+                testAssemblyCodeBaseUri = $"file:///{assemblyPath}";
             }
 
             var subject = new TestRelativeLibraryLocator(testAssemblyCodeBaseUri);

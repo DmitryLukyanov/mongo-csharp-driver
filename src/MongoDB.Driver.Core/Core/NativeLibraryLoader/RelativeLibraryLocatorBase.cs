@@ -38,7 +38,7 @@ namespace MongoDB.Driver.Core.NativeLibraryLoader
         {
             var baseAssemblyPathUri = GetBaseAssemblyUri();
             var uri = new Uri(baseAssemblyPathUri);
-            return Uri.UnescapeDataString(uri.AbsolutePath);
+            return Uri.UnescapeDataString(uri.AbsolutePath + uri.Fragment);
         }
 
         public virtual string GetLibraryBasePath()

@@ -23,6 +23,41 @@ using MongoDB.Driver.Core.Misc;
 
 namespace MongoDB.Driver.Core.Operations
 {
+    internal static class RetryableReadContextExtensions
+    {
+        public static void PinConnectionIfRequired(this RetryableReadContext context, CancellationToken cancellationToken)
+        {
+            //if (context.Channel.ConnectionDescription.ServiceId.HasValue) // load balanced mode
+            {
+                var channelChannelSource = new ChannelSourceHandle(
+                    new ChannelChannelSource(
+                        context.ChannelSource.Server,
+                        context.Channel.Fork(),
+                        context.Binding.Session.Fork()));
+                // ReplaceChannelSource calls Dispose for channel and ChannelSource, but Forking protect them
+                context.ReplaceChannelSource(channelChannelSource);
+                context.ReplaceChannel(context.ChannelSource.GetChannel(cancellationToken));
+            }
+        }
+
+        //TODO: take idea, change implementation
+        public static IChannelSource CreateEffectiveChannelSource(this IChannelSourceHandle channelSource, CancellationToken cancellationToken)
+        {
+            //if (channelSource.ServerDescription.Type == Servers.ServerType.LoadBalanced)
+            {
+                var channel = channelSource.GetChannel(cancellationToken);
+                return new ChannelChannelSource(
+                        channelSource.Server,
+                        channel,
+                        channelSource.Session.Fork());
+            }
+            //else
+            //{
+            //    return new ServerChannelSource(channelSource.Server, channelSource.Session.Fork());
+            //}
+        }
+    }
+
     /// <summary>
     /// Represents a context for retryable reads.
     /// </summary>

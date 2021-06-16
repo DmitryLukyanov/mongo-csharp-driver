@@ -450,7 +450,9 @@ namespace MongoDB.Driver.Core.Operations
 
             using (var context = RetryableReadContext.Create(binding, _retryRequested, cancellationToken))
             {
-                return Execute(context, cancellationToken);
+                context.PinConnectionIfRequired(cancellationToken);
+                var cursor = Execute(context, cancellationToken);
+                return cursor;
             }
         }
 

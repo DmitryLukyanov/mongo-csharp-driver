@@ -13,9 +13,11 @@
 * limitations under the License.
 */
 
+using System;
 using System.Threading;
 using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core
@@ -25,70 +27,88 @@ namespace MongoDB.Driver.Core
     /// </summary>
     public static class ChannelPinningHelper
     {
-        // public because it's used in the driver project
         /// <summary>
-        /// Create effective read binding.
+        /// Create effective read binding handle.
         /// </summary>
         /// <param name="cluster">The cluster,</param>
         /// <param name="session">The session.</param>
         /// <param name="readPreference">The read preference.</param>
         /// <returns>An effective read binging.</returns>
-        public static IReadBinding CreateEffectiveReadBindings(ICluster cluster, ICoreSessionHandle session, ReadPreference readPreference)
+        public static IReadBindingHandle CreateEffectiveReadBinding(ICluster cluster, ICoreSessionHandle session, ReadPreference readPreference)
         {
-            // this is used on collection level to not create WritableServerBinding if a connection is already pinned
-            if (session.IsInTransaction && session.CurrentTransaction.IsConnectionPinned)
+            IReadBinding readBinding;
+            if (session.IsInTransaction &&
+                IsConnectionPinned(session.CurrentTransaction) &&
+                session.CurrentTransaction.State != CoreTransactionState.Starting)
             {
-                return new ChannelReadWriteBinding(
+                readBinding = new ChannelReadWriteBinding(
                     session.CurrentTransaction.PinnedServer,
                     session.CurrentTransaction.PinnedChannel,
-                    session.Fork());
+                    session);
             }
             else
             {
-                return new ReadPreferenceBinding(cluster, readPreference, session.Fork());
+                if (IsInLoadBalancedMode(cluster.Description) && IsConnectionPinned(session.CurrentTransaction))
+                {
+                    // unpin if the next operation is not under transaction
+                    session.CurrentTransaction.UnpinAll();
+                }
+                readBinding = new ReadPreferenceBinding(cluster, readPreference, session);
             }
+
+            return new ReadBindingHandle(readBinding);
         }
 
-        // public because it's used in the driver project
         /// <summary>
-        /// Create effective readwrite binding.
+        /// Create effective readwrite binding handle.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         /// <param name="session">The session.</param>
         /// <returns></returns>
-        public static IReadWriteBinding CreateEffectiveReadWriteBindings(ICluster cluster, ICoreSessionHandle session)
+        public static IReadWriteBindingHandle CreateEffectiveReadWriteBinding(ICluster cluster, ICoreSessionHandle session)
         {
-            // this is used on collection level to not create WritableServerBinding if a connection is already pinned
-            if (session.IsInTransaction && session.CurrentTransaction.IsConnectionPinned)
+            IReadWriteBinding readWriteBinding;
+            if (session.IsInTransaction &&
+                IsConnectionPinned(session.CurrentTransaction) &&
+                session.CurrentTransaction.State != CoreTransactionState.Starting)
             {
-                return new ChannelReadWriteBinding(
+                readWriteBinding = new ChannelReadWriteBinding(
                     session.CurrentTransaction.PinnedServer,
                     session.CurrentTransaction.PinnedChannel,
-                    session.Fork());
+                    session);
             }
             else
             {
-                return new WritableServerBinding(cluster, session.Fork());
+                if (IsInLoadBalancedMode(cluster.Description) && IsConnectionPinned(session.CurrentTransaction))
+                {
+                    // unpin if the next operation is not under transaction
+                    session.CurrentTransaction.UnpinAll();
+                }
+                readWriteBinding = new WritableServerBinding(cluster, session);
             }
+
+            return new ReadWriteBindingHandle(readWriteBinding);
         }
 
-        internal static IChannelSource CreateEffectiveGetMoreChannelSource(IChannelSourceHandle channelSource, /*should not be here*/IChannelHandle channel, long cursorId)
+        internal static IChannelSourceHandle CreateEffectiveGetMoreChannelSource(IChannelSourceHandle channelSource, long cursorId)
         {
-            if (channelSource.ServerDescription.Type == ServerType.LoadBalanced && cursorId != 0)
+            IChannelSource effectiveChannelSource;
+            if (IsInLoadBalancedMode(channelSource.ServerDescription) && cursorId != 0)
             {
-                // The below if-else if workaround, should be reconsidered
                 var getMoreChannel = channelSource.GetChannel(CancellationToken.None); // no need for cancellation token since we already have channel in the source
                 var getMoreSession = channelSource.Session.Fork();
 
-                return new ChannelChannelSource(
+                effectiveChannelSource = new ChannelChannelSource(
                     channelSource.Server,
                     getMoreChannel,
                     getMoreSession);
             }
             else
             {
-                return new ServerChannelSource(channelSource.Server, channelSource.Session.Fork());
+                effectiveChannelSource = new ServerChannelSource(channelSource.Server, channelSource.Session.Fork());
             }
+
+            return new ChannelSourceHandle(effectiveChannelSource);
         }
 
         internal static bool TryCreatePinnedChannelSourceAndPinChannel(
@@ -98,7 +118,7 @@ namespace MongoDB.Driver.Core
             out (IChannelSourceHandle PinnedChannelSource, IChannelHandle Channel) pinnedChannel)
         {
             pinnedChannel = default;
-            if (channel.ConnectionDescription.ServiceId.HasValue) // load banced mode
+            if (IsInLoadBalancedMode(channel.ConnectionDescription))
             {
                 var server = channelSource.Server;
                 var forkedChannel = channel.Fork(); // channel is valid, but fork it to protect agains disposing in ReplaceChannel
@@ -112,8 +132,7 @@ namespace MongoDB.Driver.Core
 
                 if (session.IsInTransaction)
                 {
-                    session.CurrentTransaction.PinnedChannel = forkedChannel.Fork(); // protect channel against disposing after current operation
-                    session.CurrentTransaction.PinnedServer = server;
+                    PinToTheSession(forkedChannel.Fork(), server, session);
                 }
 
                 pinnedChannel = (pinnedChannelSource, forkedChannel);
@@ -124,6 +143,32 @@ namespace MongoDB.Driver.Core
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Pin the channel and the server to the session if required.
+        /// </summary>
+        /// <param name="getChannelFunc">The protected channel getter.</param>
+        /// <param name="server">The server.</param>
+        /// <param name="session">The session.</param>
+        internal static void PinToTheSessionIfAlreadyNotUnpinned(Func<IChannelHandle> getChannelFunc, IServer server, ICoreSessionHandle session)
+        {
+            if (IsInLoadBalancedMode(server.Description) && IsConnectionPinned(session.CurrentTransaction))
+            {
+                PinToTheSession(getChannelFunc(), server, session);
+            }
+        }
+
+        // private methods
+        private static bool IsInLoadBalancedMode(ConnectionDescription connectionDescription) => connectionDescription.ServiceId.HasValue;
+        private static bool IsInLoadBalancedMode(ServerDescription serverDescription) => serverDescription.Type == ServerType.LoadBalanced;
+        private static bool IsInLoadBalancedMode(ClusterDescription clusterDescription) => clusterDescription.Type == ClusterType.LoadBalanced;
+        private static bool IsConnectionPinned(CoreTransaction coreTransaction) => coreTransaction?.IsConnectionPinned ?? false;
+
+        private static void PinToTheSession(IChannelHandle channel, IServer server, ICoreSessionHandle session)
+        {
+            session.CurrentTransaction.PinConnection(channel);
+            session.CurrentTransaction.PinnedServer = server;
         }
     }
 }

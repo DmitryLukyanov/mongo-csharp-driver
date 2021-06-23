@@ -228,6 +228,7 @@ namespace MongoDB.Driver
 
         private static ConnectionString GetConnectionString()
         {
+            // TODO: move this to EG config level
             var uri = "mongodb://localhost:17017?loadBalanced=true";
             //var uri = "mongodb://localhost17018?loadBalanced=true";
             //    var uri = Environment.GetEnvironmentVariable("MONGODB_URI") ?? Environment.GetEnvironmentVariable("MONGO_URI");
@@ -385,7 +386,7 @@ namespace MongoDB.Driver
         {
             return
                 clusterDescription.Servers.Any(s => s.State == ServerState.Connected) &&
-                clusterDescription.LogicalSessionTimeout.HasValue;
+                (clusterDescription.LogicalSessionTimeout.HasValue || clusterDescription.Type == ClusterType.LoadBalanced);
         }
 
         private static IReadBindingHandle CreateReadBinding(ICoreSessionHandle session)

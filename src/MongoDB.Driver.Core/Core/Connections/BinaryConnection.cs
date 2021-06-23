@@ -25,7 +25,6 @@ using System.Threading.Tasks;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Compression;
 using MongoDB.Driver.Core.Configuration;
-using MongoDB.Driver.Core.ConnectionPools;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Core.Servers;

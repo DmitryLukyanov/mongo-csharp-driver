@@ -185,6 +185,7 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
                 var eventType = eventItem.GetValue("eventType", defaultValue: "command").AsString;
                 var actualEvents = UnifiedEventMatcher.FilterEventsByType(eventCapturer.Events, eventType);
 
+                unifiedEventMatcher.AssertEventsMatch(actualEvents, eventItem["events"].AsBsonArray);
             }
         }
 
@@ -249,6 +250,11 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations
 
         private void AssertResult(OperationResult actualResult, BsonDocument operation, UnifiedEntityMap entityMap)
         {
+            if (operation.GetValue("ignoreResultAndError", defaultValue: false).ToBoolean())
+            {
+                return;
+            }
+
             if (operation.TryGetValue("expectResult", out var expectedResult))
             {
                 actualResult.Exception.Should().BeNull();

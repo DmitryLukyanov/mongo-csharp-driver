@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
         public RequireServer SupportsSessions()
         {
             var clusterDescription = CoreTestConfiguration.Cluster.Description;
-            if (clusterDescription.LogicalSessionTimeout != null)
+            if (clusterDescription.LogicalSessionTimeout != null || clusterDescription.Type == Clusters.ClusterType.LoadBalanced)
             {
                 return this;
             }
@@ -279,6 +279,8 @@ namespace MongoDB.Driver.Core.TestHelpers.XunitExtensions
                             }
                         }
                         break;
+                    case "serverless":
+                        return false; // TODO:
                     default:
                         throw new FormatException($"Unrecognized requirement field: '{item.Name}'");
                 }

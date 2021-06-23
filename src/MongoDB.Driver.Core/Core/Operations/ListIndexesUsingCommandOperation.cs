@@ -124,7 +124,7 @@ namespace MongoDB.Driver.Core.Operations
                 try
                 {
                     var result = operation.Execute(context, cancellationToken);
-                    return CreateCursor(context.ChannelSource, context.Channel, result, operation.Command);
+                    return CreateCursor(context.ChannelSource, result, operation.Command);
                 }
                 catch (MongoCommandException ex) when (IsCollectionNotFoundException(ex))
                 {
@@ -156,7 +156,7 @@ namespace MongoDB.Driver.Core.Operations
                 try
                 {
                     var result = await operation.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
-                    return CreateCursor(context.ChannelSource, context.Channel, result, operation.Command);
+                    return CreateCursor(context.ChannelSource, result, operation.Command);
                 }
                 catch (MongoCommandException ex) when (IsCollectionNotFoundException(ex))
                 {
@@ -180,11 +180,11 @@ namespace MongoDB.Driver.Core.Operations
             };
         }
 
-        private IAsyncCursor<BsonDocument> CreateCursor(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument result, BsonDocument command)
+        private IAsyncCursor<BsonDocument> CreateCursor(IChannelSourceHandle channelSource, BsonDocument result, BsonDocument command)
         {
             var cursorDocument = result["cursor"].AsBsonDocument;
             var cursorId = cursorDocument["id"].ToInt64();
-            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, channel, cursorId);
+            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, cursorId);
             var cursor = new AsyncCursor<BsonDocument>(
                 getMoreChannelSource,
                 CollectionNamespace.FromFullName(cursorDocument["ns"].AsString),

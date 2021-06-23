@@ -479,12 +479,12 @@ namespace MongoDB.Driver.Core.Operations
             };
         }
 
-        private AsyncCursor<TDocument> CreateCursor(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument commandResult)
+        private AsyncCursor<TDocument> CreateCursor(IChannelSourceHandle channelSource, BsonDocument commandResult)
         {
             var cursorDocument = commandResult["cursor"].AsBsonDocument;
             var collectionNamespace = CollectionNamespace.FromFullName(cursorDocument["ns"].AsString);
             var firstBatch = CreateFirstCursorBatch(cursorDocument);
-            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, channel, firstBatch.CursorId);
+            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, firstBatch.CursorId);
 
             return new AsyncCursor<TDocument>(
                 getMoreChannelSource,
@@ -533,7 +533,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var commandResult = operation.Execute(context, cancellationToken);
-                return CreateCursor(context.ChannelSource, context.Channel, commandResult);
+                return CreateCursor(context.ChannelSource, commandResult);
             }
         }
 
@@ -559,7 +559,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var commandResult = await operation.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
-                return CreateCursor(context.ChannelSource, context.Channel, commandResult);
+                return CreateCursor(context.ChannelSource, commandResult);
             }
         }
 

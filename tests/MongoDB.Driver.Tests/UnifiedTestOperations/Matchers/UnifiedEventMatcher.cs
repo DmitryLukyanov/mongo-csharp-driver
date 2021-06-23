@@ -110,6 +110,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                                 case "databaseName":
                                     commandStartedEvent.DatabaseNamespace.DatabaseName.Should().Be(element.Value.AsString);
                                     break;
+                                case "hasServiceId":
+                                    // TODO
+                                    break;
                                 default:
                                     throw new FormatException($"Unexpected commandStartedEvent field: '{element.Name}'.");
                             }
@@ -127,6 +130,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                                 case "commandName":
                                     commandSucceededEvent.CommandName.Should().Be(element.Value.AsString);
                                     break;
+                                case "hasServiceId":
+                                    // TODO
+                                    break;
                                 default:
                                     throw new FormatException($"Unexpected commandStartedEvent field: '{element.Name}'.");
                             }
@@ -140,6 +146,9 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                             {
                                 case "commandName":
                                     commandFailedEvent.CommandName.Should().Be(element.Value.AsString);
+                                    break;
+                                case "hasServiceId":
+                                    // TODO
                                     break;
                                 default:
                                     throw new FormatException($"Unexpected commandStartedEvent field: '{element.Name}'.");
@@ -159,9 +168,38 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                         expectedEventValue.ElementCount.Should().Be(0); // empty document
                         break;
                     case "connectionClosedEvent":
-                        var connectionClosedEvent = actualEvent.Should().BeOfType<ConnectionClosedEvent>().Subject;
-                        var reason = expectedEventValue.Single(e => e.Name == "reason").Value;
-                        //connectionClosedEvent.Reason.Should().Be(reason); // not implemented
+                        {
+                            var connectionClosedEvent = actualEvent.Should().BeOfType<ConnectionClosedEvent>().Subject;
+                            expectedEventValue.ElementCount.Should().Be(1); // only reason
+                            var reason = expectedEventValue.Single(e => e.Name == "reason").Value;
+                            //connectionClosedEvent.Reason.Should().Be(reason); // TODO: should be implemented in the scope of CSHARP-3219
+                        }
+                        break;
+                    case "connectionCreatedEvent":
+                        actualEvent.Should().BeOfType<ConnectionCreatedEvent>();
+                        expectedEventValue.ElementCount.Should().Be(0); // empty document
+                        break;
+                    case "connectionCheckOutFailedEvent":
+                        {
+                            var connectionCheckOutFailedEvent = actualEvent.Should().BeOfType<ConnectionPoolCheckingOutConnectionFailedEvent>().Subject;
+                            expectedEventValue.ElementCount.Should().Be(1); // only reason
+                            var reason = expectedEventValue.Single(e => e.Name == "reason").Value.ToString(); 
+                            connectionCheckOutFailedEvent.Reason.ToString().ToLower().Should().Be(reason.ToLower());
+                        }
+                        break;
+                    case "poolClearedEvent":
+                        var poolClearedEvent = actualEvent.Should().BeOfType<ConnectionPoolClearedEvent>().Subject;
+                        foreach (var element in expectedEventValue)
+                        {
+                            switch (element.Name)
+                            {
+                                case "hasServiceId":
+                                    // TODO
+                                    break;
+                                default:
+                                    throw new FormatException($"Unexpected {expectedEventType} field: '{element.Name}'.");
+                            }
+                        }
                         break;
                     default:
                         throw new FormatException($"Unrecognized event type: '{expectedEventType}'.");

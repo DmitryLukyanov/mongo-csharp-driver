@@ -468,7 +468,7 @@ namespace MongoDB.Driver.Core.Operations
                 var wrappedQuery = CreateWrappedQuery(serverDescription.Type, readPreference, out var slaveOk);
 
                 var batch = ExecuteProtocol(context.Channel, wrappedQuery, slaveOk, cancellationToken);
-                return CreateCursor(context.ChannelSource, context.Channel, wrappedQuery, batch);
+                return CreateCursor(context.ChannelSource, wrappedQuery, batch);
             }
         }
 
@@ -497,7 +497,7 @@ namespace MongoDB.Driver.Core.Operations
                 var wrappedQuery = CreateWrappedQuery(serverDescription.Type, readPreference, out var slaveOk);
 
                 var batch = await ExecuteProtocolAsync(context.Channel, wrappedQuery, slaveOk, cancellationToken).ConfigureAwait(false);
-                return CreateCursor(context.ChannelSource, context.Channel, wrappedQuery, batch);
+                return CreateCursor(context.ChannelSource, wrappedQuery, batch);
             }
         }
 
@@ -540,9 +540,9 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
-        private IAsyncCursor<TDocument> CreateCursor(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument query, CursorBatch<TDocument> batch)
+        private IAsyncCursor<TDocument> CreateCursor(IChannelSourceHandle channelSource, BsonDocument query, CursorBatch<TDocument> batch)
         {
-            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, channel, batch.CursorId);
+            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, batch.CursorId);
 
             return new AsyncCursor<TDocument>(
                 getMoreChannelSource,

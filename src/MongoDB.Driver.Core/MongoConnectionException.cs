@@ -158,7 +158,9 @@ namespace MongoDB.Driver
             }
         }
 
-        // TODO temporary property for propagating exception generation to server
+        /// <summary>
+        /// A value for propagating a serviceId to the SDAM logic after handshake completed but before acquiring connection.
+        /// </summary>
         internal ObjectId? ServiceId
         {
             get { return _serviceId; }

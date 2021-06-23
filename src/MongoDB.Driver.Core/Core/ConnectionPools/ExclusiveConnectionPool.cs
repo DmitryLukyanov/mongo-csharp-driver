@@ -213,7 +213,13 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
         public void Clear(ObjectId serviceId)
         {
-            // TODO:
+            ThrowIfNotOpen();
+
+            _clearingEventHandler?.Invoke(new ConnectionPoolClearingEvent(_serverId, _settings));
+
+            // TODO
+
+            _clearedEventHandler?.Invoke(new ConnectionPoolClearedEvent(_serverId, _settings));
         }
 
         private PooledConnection CreateNewConnection()

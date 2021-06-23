@@ -77,7 +77,7 @@ namespace MongoDB.Driver.Core.Servers
         {
             lock (_connectionPoolLock)
             {
-                if (ex is MongoConnectionException mongoConnectionException &&   // TODO: only in open?
+                if (ex is MongoConnectionException mongoConnectionException &&
                     mongoConnectionException.Generation != null &&
                     mongoConnectionException.Generation != ConnectionPool.Generation)
                 {

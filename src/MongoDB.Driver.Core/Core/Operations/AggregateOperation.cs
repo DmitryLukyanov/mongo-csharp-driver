@@ -283,7 +283,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var result = operation.Execute(context, cancellationToken);
-                return CreateCursor(context.ChannelSource, context.Channel, operation.Command, result);
+                return CreateCursor(context.ChannelSource, operation.Command, result);
             }
         }
 
@@ -309,7 +309,7 @@ namespace MongoDB.Driver.Core.Operations
             {
                 var operation = CreateOperation(context);
                 var result = await operation.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
-                return CreateCursor(context.ChannelSource, context.Channel, operation.Command, result);
+                return CreateCursor(context.ChannelSource, operation.Command, result);
             }
         }
 
@@ -369,11 +369,11 @@ namespace MongoDB.Driver.Core.Operations
             };
         }
 
-        private AsyncCursor<TResult> CreateCursor(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument command, AggregateResult result)
+        private AsyncCursor<TResult> CreateCursor(IChannelSourceHandle channelSource, BsonDocument command, AggregateResult result)
         {
             if (result.CursorId.HasValue)
             {
-                return CreateCursorFromCursorResult(channelSource, channel, command, result);
+                return CreateCursorFromCursorResult(channelSource, command, result);
             }
             else
             {
@@ -382,10 +382,10 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private AsyncCursor<TResult> CreateCursorFromCursorResult(IChannelSourceHandle channelSource, IChannelHandle channel, BsonDocument command, AggregateResult result)
+        private AsyncCursor<TResult> CreateCursorFromCursorResult(IChannelSourceHandle channelSource, BsonDocument command, AggregateResult result)
         {
             var cursorId = result.CursorId.GetValueOrDefault(0);
-            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, channel, cursorId);
+            var getMoreChannelSource = ChannelPinningHelper.CreateEffectiveGetMoreChannelSource(channelSource, cursorId);
             return new AsyncCursor<TResult>(
                 getMoreChannelSource,
                 result.CollectionNamespace,

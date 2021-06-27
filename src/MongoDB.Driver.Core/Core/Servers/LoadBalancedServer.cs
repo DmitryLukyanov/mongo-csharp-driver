@@ -35,7 +35,7 @@ namespace MongoDB.Driver.Core.Servers
             IClusterClock clusterClock,
             ServerSettings serverSettings,
             EndPoint endPoint,
-            IConnectionPoolFactory connectionPoolFactory,
+            ITrackedConnectionPoolFactory connectionPoolFactory,
             IEventSubscriber eventSubscriber,
             ServerApi serverApi)
             : base(

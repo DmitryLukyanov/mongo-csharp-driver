@@ -730,7 +730,13 @@ namespace MongoDB.Driver
                 throw new InvalidOperationException("Read preference in a transaction must be primary.");
             }
 
-            return ChannelPinningHelper.CreateEffectiveReadBinding(_cluster, session.WrappedCoreSession.Fork(), readPreference);
+            return ChannelPinningHelper.CreateEffectiveReadBinding(
+                _cluster,
+                session.WrappedCoreSession.Fork(),
+                readPreference,
+                // all operations in this file returns cursor,
+                // other than RunCommand that should not be considered as with a cursor result
+                withCursorResult: true);
         }
 
         private IWriteBindingHandle CreateReadWriteBinding(IClientSessionHandle session)

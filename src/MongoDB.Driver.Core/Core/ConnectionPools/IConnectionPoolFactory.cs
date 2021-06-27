@@ -13,12 +13,7 @@
 * limitations under the License.
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using MongoDB.Driver.Core.Servers;
 
 namespace MongoDB.Driver.Core.ConnectionPools
@@ -36,5 +31,17 @@ namespace MongoDB.Driver.Core.ConnectionPools
         /// <param name="endPoint">The end point.</param>
         /// <returns>A connection pool.</returns>
         IConnectionPool CreateConnectionPool(ServerId serverId, EndPoint endPoint);
+    }
+
+    internal interface ITrackedConnectionPoolFactory : IConnectionPoolFactory
+    {
+        // methods
+        /// <summary>
+        /// Creates a connection pool.
+        /// </summary>
+        /// <param name="serverId">The server identifier.</param>
+        /// <param name="endPoint">The end point.</param>
+        /// <returns>A connection pool.</returns>
+        ITrackedConnectionPool CreateTrackedConnectionPool(ServerId serverId, EndPoint endPoint);
     }
 }

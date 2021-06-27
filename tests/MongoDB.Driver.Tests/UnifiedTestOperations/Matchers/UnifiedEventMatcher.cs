@@ -170,9 +170,17 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                     case "connectionClosedEvent":
                         {
                             var connectionClosedEvent = actualEvent.Should().BeOfType<ConnectionClosedEvent>().Subject;
-                            expectedEventValue.ElementCount.Should().Be(1); // only reason
-                            var reason = expectedEventValue.Single(e => e.Name == "reason").Value;
-                            //connectionClosedEvent.Reason.Should().Be(reason); // TODO: should be implemented in the scope of CSHARP-3219
+                            foreach (var element in expectedEventValue)
+                            {
+                                switch (element.Name)
+                                {
+                                    case "reason":
+                                        //connectionClosedEvent.Reason.Should().Be(reason); // TODO: should be implemented in the scope of CSHARP-3219
+                                        break;
+                                    default:
+                                        throw new FormatException($"Unexpected {expectedEventType} field: '{element.Name}'.");
+                                }
+                            }
                         }
                         break;
                     case "connectionCreatedEvent":
@@ -182,9 +190,17 @@ namespace MongoDB.Driver.Tests.UnifiedTestOperations.Matchers
                     case "connectionCheckOutFailedEvent":
                         {
                             var connectionCheckOutFailedEvent = actualEvent.Should().BeOfType<ConnectionPoolCheckingOutConnectionFailedEvent>().Subject;
-                            expectedEventValue.ElementCount.Should().Be(1); // only reason
-                            var reason = expectedEventValue.Single(e => e.Name == "reason").Value.ToString(); 
-                            connectionCheckOutFailedEvent.Reason.ToString().ToLower().Should().Be(reason.ToLower());
+                            foreach (var element in expectedEventValue)
+                            {
+                                switch (element.Name)
+                                {
+                                    case "reason":
+                                        connectionCheckOutFailedEvent.Reason.ToString().ToLower().Should().Be(element.Value.ToString().ToLower());
+                                        break;
+                                    default:
+                                        throw new FormatException($"Unexpected {expectedEventType} field: '{element.Name}'.");
+                                }
+                            }
                         }
                         break;
                     case "poolClearedEvent":

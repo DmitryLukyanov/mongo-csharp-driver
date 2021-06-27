@@ -54,7 +54,7 @@ namespace MongoDB.Driver.Core.Servers
 #pragma warning restore CS0618 // Type or member is obsolete
         private bool? _directConnection;
         private Mock<IConnectionPool> _mockConnectionPool;
-        private Mock<IConnectionPoolFactory> _mockConnectionPoolFactory;
+        private Mock<ITrackedConnectionPoolFactory> _mockConnectionPoolFactory;
         private EndPoint _endPoint;
         private EventCapturer _capturedEvents;
         private Mock<IServerMonitor> _mockServerMonitor;
@@ -77,7 +77,7 @@ namespace MongoDB.Driver.Core.Servers
             _mockConnectionPool = new Mock<IConnectionPool>();
             _mockConnectionPool.Setup(p => p.AcquireConnection(It.IsAny<CancellationToken>())).Returns(new Mock<IConnectionHandle>().Object);
             _mockConnectionPool.Setup(p => p.AcquireConnectionAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(new Mock<IConnectionHandle>().Object));
-            _mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            _mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             _mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(_mockConnectionPool.Object);
@@ -212,7 +212,7 @@ namespace MongoDB.Driver.Core.Servers
                 .Throws(new MongoAuthenticationException(connectionId, "Invalid login."));
             mockConnectionPool.Setup(p => p.Clear());
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(mockConnectionPool.Object);
@@ -381,7 +381,7 @@ namespace MongoDB.Driver.Core.Servers
             var connectionPoolSettings = new ConnectionPoolSettings();
             var connectionPool = new ExclusiveConnectionPool(serverId, _endPoint, connectionPoolSettings, connectionFactory.Object, new EventAggregator());
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(connectionPool);
@@ -411,7 +411,7 @@ namespace MongoDB.Driver.Core.Servers
             subject.Description.Type.Should().Be(ServerType.Unknown);
             subject.Description.ReasonChanged.Should().Contain("ChannelException during handshake");
         }
- 
+
         [Theory]
         [InlineData(nameof(MongoConnectionException), true)]
         [InlineData("MongoConnectionExceptionWithSocketTimeout", false)]
@@ -443,7 +443,7 @@ namespace MongoDB.Driver.Core.Servers
             var mockConnectionPool = new Mock<IConnectionPool>();
             mockConnectionPool.Setup(p => p.AcquireConnection(It.IsAny<CancellationToken>())).Returns(mockConnection.Object);
             mockConnectionPool.Setup(p => p.AcquireConnectionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(mockConnection.Object);
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(mockConnectionPool.Object);
@@ -453,7 +453,7 @@ namespace MongoDB.Driver.Core.Servers
             mockServerMonitor.SetupGet(m => m.Lock).Returns(new object());
             var mockServerMonitorFactory = new Mock<IServerMonitorFactory>();
             mockServerMonitorFactory.Setup(f => f.Create(It.IsAny<ServerId>(), _endPoint)).Returns(mockServerMonitor.Object);
-            var subject = new DefaultServer (_clusterId, _clusterClock, _clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _endPoint, mockConnectionPoolFactory.Object, mockServerMonitorFactory.Object, _capturedEvents, _serverApi);
+            var subject = new DefaultServer(_clusterId, _clusterClock, _clusterConnectionMode, _connectionModeSwitch, _directConnection, _settings, _endPoint, mockConnectionPoolFactory.Object, mockServerMonitorFactory.Object, _capturedEvents, _serverApi);
             subject.Initialize();
             var heartbeatDescription = mockMonitorServerInitialDescription.With(reasonChanged: "Heartbeat", type: ServerType.Standalone);
             mockServerMonitor.Setup(m => m.Description).Returns(heartbeatDescription);
@@ -562,7 +562,7 @@ namespace MongoDB.Driver.Core.Servers
 
             exception.Should().BeNull();
         }
-        
+
         [Theory]
         [InlineData(null, false, null)]
         [InlineData("abc", false, null)]
@@ -828,7 +828,7 @@ namespace MongoDB.Driver.Core.Servers
                 mockConnectionPool.Setup(p => p.Clear());
             }
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(mockConnectionPool.Object);

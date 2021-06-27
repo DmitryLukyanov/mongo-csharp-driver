@@ -97,7 +97,7 @@ namespace MongoDB.Driver.Core.Helpers
                         .Callback(acquireConnectionCallback)
                         .ReturnsAsync(mockConnection.Object);
                     mockConnectionPool.Setup(p => p.Clear()).Callback(() => { ++poolGeneration; });
-                    var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory> { DefaultValue = DefaultValue.Mock };
+                    var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory> { DefaultValue = DefaultValue.Mock };
                     mockConnectionPoolFactory
                         .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), endPoint))
                         .Returns(mockConnectionPool.Object);
@@ -114,7 +114,7 @@ namespace MongoDB.Driver.Core.Helpers
 
             return result.Server;
 
-            IClusterableServer CreateServer(ClusterType clusterType, IConnectionPoolFactory connectionPoolFactory, IServerMonitorFactory serverMonitorFactory)
+            IClusterableServer CreateServer(ClusterType clusterType, ITrackedConnectionPoolFactory connectionPoolFactory, IServerMonitorFactory serverMonitorFactory)
             {
                 switch (clusterType)
                 {

@@ -221,7 +221,7 @@ namespace MongoDB.Driver.Core.Configuration
                 _eventAggregator);
         }
 
-        private IConnectionPoolFactory CreateConnectionPoolFactory()
+        private ITrackedConnectionPoolFactory CreateConnectionPoolFactory()
         {
             var streamFactory = CreateTcpStreamFactory(_tcpStreamSettings);
 

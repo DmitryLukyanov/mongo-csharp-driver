@@ -42,7 +42,7 @@ namespace MongoDB.Driver.Core.Servers
         private ClusterId _clusterId;
         private ConnectionId _connectionId;
         private Mock<IConnectionPool> _mockConnectionPool;
-        private Mock<IConnectionPoolFactory> _mockConnectionPoolFactory;
+        private Mock<ITrackedConnectionPoolFactory> _mockConnectionPoolFactory;
         private EndPoint _endPoint;
         private EventCapturer _capturedEvents;
         private ServerApi _serverApi;
@@ -58,7 +58,7 @@ namespace MongoDB.Driver.Core.Servers
             _mockConnectionPool = new Mock<IConnectionPool>();
             _mockConnectionPool.Setup(p => p.AcquireConnection(It.IsAny<CancellationToken>())).Returns(new Mock<IConnectionHandle>().Object);
             _mockConnectionPool.Setup(p => p.AcquireConnectionAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(new Mock<IConnectionHandle>().Object));
-            _mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            _mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             _mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(_mockConnectionPool.Object);
@@ -178,7 +178,7 @@ namespace MongoDB.Driver.Core.Servers
                 .Throws(new MongoAuthenticationException(connectionId, "Invalid login."));
             mockConnectionPool.Setup(p => p.Clear());
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(mockConnectionPool.Object);
@@ -340,7 +340,7 @@ namespace MongoDB.Driver.Core.Servers
             var connectionPoolSettings = new ConnectionPoolSettings();
             var connectionPool = new ExclusiveConnectionPool(serverId, _endPoint, connectionPoolSettings, connectionFactory.Object, new EventAggregator());
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(connectionPool);
@@ -432,7 +432,7 @@ namespace MongoDB.Driver.Core.Servers
                 mockConnectionPool.Setup(p => p.Clear());
             }
 
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
             mockConnectionPoolFactory
                 .Setup(f => f.CreateConnectionPool(It.IsAny<ServerId>(), _endPoint))
                 .Returns(mockConnectionPool.Object);

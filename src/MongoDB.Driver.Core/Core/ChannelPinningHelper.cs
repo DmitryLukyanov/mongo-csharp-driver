@@ -33,8 +33,9 @@ namespace MongoDB.Driver.Core
         /// <param name="cluster">The cluster,</param>
         /// <param name="session">The session.</param>
         /// <param name="readPreference">The read preference.</param>
+        /// <param name="withCursorResult">Determines whether operation result is a cursor.</param>
         /// <returns>An effective read binging.</returns>
-        public static IReadBindingHandle CreateEffectiveReadBinding(ICluster cluster, ICoreSessionHandle session, ReadPreference readPreference)
+        public static IReadBindingHandle CreateEffectiveReadBinding(ICluster cluster, ICoreSessionHandle session, ReadPreference readPreference, bool withCursorResult)
         {
             IReadBinding readBinding;
             if (session.IsInTransaction &&
@@ -48,12 +49,24 @@ namespace MongoDB.Driver.Core
             }
             else
             {
-                if (IsInLoadBalancedMode(cluster.Description) && IsConnectionPinned(session.CurrentTransaction))
+                IServerChannelSourceFactory trackedServerChannelSourceFactory;
+                if (IsInLoadBalancedMode(cluster.Description))
                 {
-                    // unpin if the next operation is not under transaction
-                    session.CurrentTransaction.UnpinAll();
+                    // configure tracking for getChannel reasons
+                    var trackedRunContext = TrackedRunContext.CreateTrackedRunContext(session, withCursorResult);
+                    trackedServerChannelSourceFactory = TrackedChannelHelper.CreateTrackedServerChannelSource(trackedRunContext);
+
+                    if (IsConnectionPinned(session.CurrentTransaction))
+                    {
+                        // unpin if the next operation is not under transaction
+                        session.CurrentTransaction.UnpinAll();
+                    }
                 }
-                readBinding = new ReadPreferenceBinding(cluster, readPreference, session);
+                else
+                {
+                    trackedServerChannelSourceFactory = DefaultServerChannelSourceFactory.CreateDefault();
+                }
+                readBinding = new ReadPreferenceBinding(cluster, readPreference, session, trackedServerChannelSourceFactory);
             }
 
             return new ReadBindingHandle(readBinding);
@@ -79,12 +92,24 @@ namespace MongoDB.Driver.Core
             }
             else
             {
-                if (IsInLoadBalancedMode(cluster.Description) && IsConnectionPinned(session.CurrentTransaction))
+                IServerChannelSourceFactory trackedServerChannelSourceFactory;
+                if (IsInLoadBalancedMode(cluster.Description))
                 {
-                    // unpin if the next operation is not under transaction
-                    session.CurrentTransaction.UnpinAll();
+                    // configure tracking for getChannel reasons
+                    var trackedRunContext = TrackedRunContext.CreateTrackedRunContext(session, withCursorResult: false); // we always don't work with AsyncCursor here
+                    trackedServerChannelSourceFactory = TrackedChannelHelper.CreateTrackedServerChannelSource(trackedRunContext);
+
+                    if (IsConnectionPinned(session.CurrentTransaction))
+                    {
+                        // unpin if the next operation is not under transaction
+                        session.CurrentTransaction.UnpinAll();
+                    }
                 }
-                readWriteBinding = new WritableServerBinding(cluster, session);
+                else
+                {
+                    trackedServerChannelSourceFactory = DefaultServerChannelSourceFactory.CreateDefault();
+                }
+                readWriteBinding = new WritableServerBinding(cluster, session, trackedServerChannelSourceFactory);
             }
 
             return new ReadWriteBindingHandle(readWriteBinding);

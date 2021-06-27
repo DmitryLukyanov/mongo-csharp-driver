@@ -57,7 +57,7 @@ namespace MongoDB.Driver.Core.Servers
             bool? directConnection,
             ServerSettings settings,
             EndPoint endPoint,
-            IConnectionPoolFactory connectionPoolFactory,
+            ITrackedConnectionPoolFactory connectionPoolFactory,
             IServerMonitorFactory monitorFactory,
             IEventSubscriber eventSubscriber,
             ServerApi serverApi)

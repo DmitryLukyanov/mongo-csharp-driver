@@ -170,9 +170,9 @@ namespace MongoDB.Driver.Core.Tests.Jira
         }
 
         // private methods
-        private IConnectionPoolFactory CreateAndSetupConnectionPoolFactory(params (ServerId ServerId, EndPoint Endpoint)[] serverInfoCollection)
+        private ITrackedConnectionPoolFactory CreateAndSetupConnectionPoolFactory(params (ServerId ServerId, EndPoint Endpoint)[] serverInfoCollection)
         {
-            var mockConnectionPoolFactory = new Mock<IConnectionPoolFactory>();
+            var mockConnectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>();
 
             foreach (var serverInfo in serverInfoCollection)
             {
@@ -202,7 +202,7 @@ namespace MongoDB.Driver.Core.Tests.Jira
                     .Returns(Task.FromResult(connection));
             }
 
-            void SetupConnectionPoolFactory(Mock<IConnectionPoolFactory> mockFactory, IConnectionPool connectionPool, ServerId serverId, EndPoint endPoint)
+            void SetupConnectionPoolFactory(Mock<ITrackedConnectionPoolFactory> mockFactory, IConnectionPool connectionPool, ServerId serverId, EndPoint endPoint)
             {
                 mockFactory.Setup(c => c.CreateConnectionPool(serverId, endPoint)).Returns(connectionPool);
             }

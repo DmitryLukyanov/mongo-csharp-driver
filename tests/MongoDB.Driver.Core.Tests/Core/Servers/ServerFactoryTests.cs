@@ -32,7 +32,7 @@ namespace MongoDB.Driver.Core.Servers
         private ClusterConnectionMode _clusterConnectionMode;
         private ConnectionModeSwitch _connectionModeSwitch;
 #pragma warning restore CS0618 // Type or member is obsolete
-        private IConnectionPoolFactory _connectionPoolFactory;
+        private ITrackedConnectionPoolFactory _connectionPoolFactory;
         private bool? _directConnection;
         private EndPoint _endPoint;
         private IEventSubscriber _eventSubscriber;
@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Core.Servers
             _clusterConnectionMode = ClusterConnectionMode.Standalone;
             _connectionModeSwitch = ConnectionModeSwitch.UseConnectionMode;
 #pragma warning restore CS0618 // Type or member is obsolete
-            _connectionPoolFactory = new Mock<IConnectionPoolFactory>().Object;
+            _connectionPoolFactory = new Mock<ITrackedConnectionPoolFactory>().Object;
             _directConnection = null;
             _endPoint = new DnsEndPoint("localhost", 27017);
             var mockServerMonitor = new Mock<IServerMonitor>();

@@ -155,6 +155,7 @@ namespace MongoDB.Driver.Core.Servers
             try
             {
                 Interlocked.Increment(ref _outstandingOperationsCount);
+
                 var checkOutReason = CreateCheckOutReason(runningContext);
                 var connection = _connectionPool.AcquireConnection(checkOutReason, cancellationToken);
                 return new ServerChannel(this, connection);

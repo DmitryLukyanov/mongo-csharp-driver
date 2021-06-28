@@ -243,7 +243,7 @@ namespace MongoDB.Driver.Core.Servers
             var exceptionsToCheck = new[]
             {
                 exception as MongoCommandException,
-                (exception as MongoWriteConcernException)?.MappedWriteConcernResultException 
+                (exception as MongoWriteConcernException)?.MappedWriteConcernResultException
             }
             .OfType<MongoCommandException>();
             foreach (MongoCommandException commandException in exceptionsToCheck)

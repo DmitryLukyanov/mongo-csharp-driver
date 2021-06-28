@@ -32,6 +32,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
         private readonly CheckedOutTracker _checkedOutTracker;
         private readonly IConnectionFactory _connectionFactory;
         private readonly ListConnectionHolder _connectionHolder;
+        private readonly ConnectionsState _connectionsState;
         private readonly EndPoint _endPoint;
         private int _generation;
         private readonly CancellationTokenSource _maintenanceCancellationTokenSource;
@@ -74,6 +75,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
             _checkedOutTracker = new CheckedOutTracker();
             _connectingQueue = new SemaphoreSlimSignalable(MongoInternalDefaults.ConnectionPool.MaxConnecting);
             _connectionHolder = new ListConnectionHolder(eventSubscriber, _connectingQueue);
+            _connectionsState = new();
             _poolQueue = new WaitQueue(settings.MaxConnections);
 #pragma warning disable 618
             _waitQueue = new SemaphoreSlim(settings.WaitQueueSize);
@@ -229,9 +231,9 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
             _clearingEventHandler?.Invoke(new ConnectionPoolClearingEvent(_serverId, _settings));
 
-            // TODO
+            _connectionsState.IncreamentGenerationAndCleanConnections(serviceId);
 
-            _clearedEventHandler?.Invoke(new ConnectionPoolClearedEvent(_serverId, _settings));
+            _clearedEventHandler?.Invoke(new ConnectionPoolClearedEvent(_serverId, _settings, serviceId));
         }
 
         private PooledConnection CreateNewConnection()
@@ -283,6 +285,18 @@ namespace MongoDB.Driver.Core.ConnectionPools
             }
         }
 
+        public int GetEffectivePoolGenerationForConnection(ConnectionDescription description)
+        {
+            if (description != null &&
+                description.ServiceId.HasValue &&
+                _connectionsState.TryGetGeneration(description.ServiceId.Value, out var generation))
+            {
+                return generation;
+            }
+            return Generation;
+        }
+
+        // private methods
         private async Task MaintainSizeAsync()
         {
             var maintenanceCancellationToken = _maintenanceCancellationTokenSource.Token;
@@ -390,6 +404,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
             }
             else
             {
+                var serviceId = connection.Description.ServiceId;
+                if (serviceId.HasValue)
+                {
+                    _connectionsState.RemoveConnectionState(serviceId.Value);
+                }
                 _connectionHolder.RemoveConnection(connection);
             }
 

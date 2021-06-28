@@ -70,6 +70,13 @@ namespace MongoDB.Driver.Core.ConnectionPools
         void Clear(ObjectId serviceId);
 
         /// <summary>
+        /// Gets the effective connection pool generation.
+        /// </summary>
+        /// <param name="description">The connection pool description.</param>
+        /// <returns>An effective connection pool generation.</returns>
+        int GetEffectivePoolGenerationForConnection(ConnectionDescription description);
+
+        /// <summary>
         /// Initializes the connection pool.
         /// </summary>
         void Initialize();

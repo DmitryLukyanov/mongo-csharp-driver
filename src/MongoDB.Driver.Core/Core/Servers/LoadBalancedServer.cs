@@ -16,6 +16,7 @@
 using System;
 using System.Net;
 using System.Threading;
+using MongoDB.Bson;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.ConnectionPools;
@@ -69,7 +70,7 @@ namespace MongoDB.Driver.Core.Servers
             if (ex is MongoAuthenticationException mongoAuthenticationException)
             {
                 // when requiring the connection pool to be cleared, MUST only clear connections for the serviceId.
-                ConnectionPool.Clear(mongoAuthenticationException.ServiceId.Value); // TODO: serviceId is not implemented yet
+                ConnectionPool.Clear(mongoAuthenticationException.ServiceId.Value);
             }
         }
 
@@ -78,8 +79,8 @@ namespace MongoDB.Driver.Core.Servers
             lock (_connectionPoolLock)
             {
                 if (ex is MongoConnectionException mongoConnectionException &&
-                    mongoConnectionException.Generation != null &&
-                    mongoConnectionException.Generation != ConnectionPool.Generation)
+                    mongoConnectionException.Generation.HasValue &&
+                    mongoConnectionException.Generation.Value != ConnectionPool.GetEffectivePoolGenerationForConnection(connection.Description))
                 {
                     return; // stale generation number
                 }
@@ -87,7 +88,7 @@ namespace MongoDB.Driver.Core.Servers
                 if (ShouldClearConnectionPoolForChannelException(ex, connection.Description.ServerVersion))
                 {
                     // when requiring the connection pool to be cleared, MUST only clear connections for the serviceId.
-                    ConnectionPool.Clear(connection.Description.ServiceId.Value); // TODO: serviceId is not implemented yet
+                    ConnectionPool.Clear(connection.Description.ServiceId.Value);
                 }
             }
         }

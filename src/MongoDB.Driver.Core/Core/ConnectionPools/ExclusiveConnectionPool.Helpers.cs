@@ -243,7 +243,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
             private CheckedOutReason _checkedOutReason;
             private readonly IConnection _connection;
             private readonly ExclusiveConnectionPool _connectionPool;
-            private readonly int _generation;
+            private int _generation;
             private bool _disposed;
 
             public PooledConnection(ExclusiveConnectionPool connectionPool, IConnection connection)
@@ -285,7 +285,7 @@ namespace MongoDB.Driver.Core.ConnectionPools
 
             public bool IsExpired
             {
-                get { return _disposed || _generation < _connectionPool.Generation || _connection.IsExpired; }
+                get { return _disposed || _generation < _connectionPool.GetEffectivePoolGenerationForConnection(_connection.Description) || _connection.IsExpired; } //TODO
             }
 
             public ConnectionSettings Settings
@@ -307,12 +307,11 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 try
                 {
                     _connection.Open(cancellationToken);
+                    SetEffectiveGenerationIfRequired(_connection.Description);
                 }
                 catch (MongoConnectionException ex)
                 {
-                    // TODO temporary workaround for propagating exception generation to server
-                    // Will be reconsider after SDAM spec error handling adjustments
-                    ex.Generation = Generation;
+                    EnrichExceptionDetails(ex);
                     throw;
                 }
             }
@@ -322,34 +321,65 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 try
                 {
                     await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    SetEffectiveGenerationIfRequired(_connection.Description);
                 }
                 catch (MongoConnectionException ex)
                 {
-                    // TODO temporary workaround for propagating exception generation to server
-                    // Will be reconsider after SDAM spec error handling adjustments
-                    ex.Generation = Generation;
+                    EnrichExceptionDetails(ex);
                     throw;
                 }
             }
 
             public ResponseMessage ReceiveMessage(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    return _connection.ReceiveMessage(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
-            public Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
+            public async Task<ResponseMessage> ReceiveMessageAsync(int responseTo, IMessageEncoderSelector encoderSelector, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    return await _connection.ReceiveMessageAsync(responseTo, encoderSelector, messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
             public void SendMessages(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                _connection.SendMessages(messages, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    _connection.SendMessages(messages, messageEncoderSettings, cancellationToken);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
-            public Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
+            public async Task SendMessagesAsync(IEnumerable<RequestMessage> messages, MessageEncoderSettings messageEncoderSettings, CancellationToken cancellationToken)
             {
-                return _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken);
+                try
+                {
+                    await _connection.SendMessagesAsync(messages, messageEncoderSettings, cancellationToken).ConfigureAwait(false);
+                }
+                catch (MongoConnectionException ex)
+                {
+                    EnrichExceptionDetails(ex);
+                    throw;
+                }
             }
 
             public void SetCheckedOutReason(CheckedOutReason reason)
@@ -360,6 +390,24 @@ namespace MongoDB.Driver.Core.ConnectionPools
             public void SetReadTimeout(TimeSpan timeout)
             {
                 _connection.SetReadTimeout(timeout);
+            }
+
+            // private methods
+            private void EnrichExceptionDetails(MongoConnectionException ex)
+            {
+                // should be refactored in CSHARP-3720
+                ex.Generation = _generation;
+                ex.ServiceId = _connection?.Description?.ServiceId;
+            }
+
+            private void SetEffectiveGenerationIfRequired(ConnectionDescription description)
+            {
+                var serviceId = description.ServiceId;
+                if (serviceId.HasValue)
+                {
+                    _generation = _connectionPool.GetEffectivePoolGenerationForConnection(description);
+                    _connectionPool._connectionsState.AddConnectionState(serviceId.Value);
+                }
             }
         }
 
@@ -784,6 +832,12 @@ namespace MongoDB.Driver.Core.ConnectionPools
                 StartCreating(cancellationToken);
 
                 await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                var serviceId = _connection.Description.ServiceId;
+                if (serviceId.HasValue)
+                {
+                    _pool._connectionsState.AddConnectionState(serviceId.Value);
+                }
 
                 FinishCreating();
 
